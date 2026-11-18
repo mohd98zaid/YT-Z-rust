@@ -1,0 +1,81 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-main: #0a0a0c;
+  --bg-surface: #141418;
+  --bg-elevated: #1e1e24;
+  --bg-glass: rgba(26, 26, 32, 0.75);
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-glass: rgba(255, 255, 255, 0.12);
+  --text-main: #ffffff;
+  --text-muted: #9e9ea7;
+  --text-subtle: #62626d;
+  --primary: #fa2d48;
+  --primary-hover: #fb4c62;
+  --accent: #fc3c44;
+  --accent-hover: #ff545b;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Plus Jakarta Sans', 'Inter', sans-serif;
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  user-select: none;
+  overflow: hidden;
+}
+
+/* Custom Sleek Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-subtle);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Apple Music Ambient Mesh Animations */
+@keyframes meshFloat1 {
+  0%, 100% { transform: translate3d(0px, 0px, 0) scale(1); }
+  50% { transform: translate3d(80px, -50px, 0) scale(1.2); }
+}
+
+@keyframes meshFloat2 {
+  0%, 100% { transform: translate3d(0px, 0px, 0) scale(1.1); }
+  50% { transform: translate3d(-70px, 60px, 0) scale(0.95); }
+}
+
+@keyframes meshFloat3 {
+  0%, 100% { transform: translate3d(0px, 0px, 0) scale(0.9); }
+  50% { transform: translate3d(50px, 70px, 0) scale(1.15); }
+}
+
+.animate-mesh-1 {
+  animation: meshFloat1 16s ease-in-out infinite;
+}
+
+.animate-mesh-2 {
+  animation: meshFloat2 22s ease-in-out infinite;
+}
+
+.animate-mesh-3 {
+  animation: meshFloat3 19s ease-in-out infinite;
+}

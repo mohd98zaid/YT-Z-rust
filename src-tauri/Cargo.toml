@@ -1,0 +1,32 @@
+[package]
+name = "yt-z"
+version = "2.0.0"
+description = "YT-Z Ultimate Music Player & Downloader (Rust Engine)"
+authors = ["Mohd Zaid <https://github.com/mohd98zaid>"]
+edition = "2021"
+
+[lib]
+name = "yt_z_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-shell = "2"
+tauri-plugin-fs = "2"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1", features = ["full"] }
+axum = { version = "0.7", features = ["ws"] }
+tower-http = { version = "0.5", features = ["cors", "fs"] }
+reqwest = { version = "0.12", features = ["json", "stream"] }
+rusqlite = { version = "0.31", features = ["bundled"] }
+dirs = "5.0"
+chrono = { version = "0.4", features = ["serde"] }
+anyhow = "1.0"
+futures-util = "0.3"
+rand = "0.8"
+urlencoding = "2.1"
+tracing = "0.1"
