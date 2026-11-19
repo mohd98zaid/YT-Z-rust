@@ -147,7 +147,8 @@ export const KeyboardShortcutsModal: React.FC = () => {
       onClick={() => setIsOpen(false)}
     >
       <div
-        className="bg-surface/95 border border-white/10 rounded-3xl p-6 w-full max-w-xl shadow-2xl relative overflow-hidden backdrop-blur-2xl space-y-6"
+        style={{ backgroundColor: 'var(--bg-surface)' }}
+        className="bg-surface border-2 border-border/80 rounded-3xl p-6 w-full max-w-xl shadow-[0_20px_50px_rgba(0,0,0,0.65)] relative overflow-hidden space-y-6"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

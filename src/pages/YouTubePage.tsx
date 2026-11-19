@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Play,
   Search,
@@ -11,6 +12,10 @@ import {
   Clipboard,
   X,
   PictureInPicture2,
+  ChevronDown,
+  Check,
+  Tv,
+  ShieldCheck,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { Track } from '../types';
@@ -53,6 +58,10 @@ export const YouTubePage: React.FC = () => {
     activeVideo,
     isPiP,
     isFullscreen,
+    videoQuality,
+    setVideoQuality,
+    useDirectVideo,
+    toggleDirectVideo,
     playVideo,
     closeVideo,
     togglePiP,
@@ -61,6 +70,51 @@ export const YouTubePage: React.FC = () => {
     reloadVideo,
     restoreCinema,
   } = useVideoStore();
+
+  const [qualityMenuOpen, setQualityMenuOpen] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number; width: number } | null>(null);
+  const qualityMenuRef = useRef<HTMLDivElement | null>(null);
+  const dropdownMenuRef = useRef<HTMLDivElement | null>(null);
+
+  const toggleQualityMenu = () => {
+    if (!qualityMenuOpen && qualityMenuRef.current) {
+      const rect = qualityMenuRef.current.getBoundingClientRect();
+      setDropdownPos({
+        top: Math.round(rect.bottom + 6),
+        right: Math.round(window.innerWidth - rect.right),
+        width: 260,
+      });
+      setQualityMenuOpen(true);
+    } else {
+      setQualityMenuOpen(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!qualityMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (
+        qualityMenuRef.current &&
+        !qualityMenuRef.current.contains(target) &&
+        dropdownMenuRef.current &&
+        !dropdownMenuRef.current.contains(target)
+      ) {
+        setQualityMenuOpen(false);
+      }
+    };
+    const handleScrollOrResize = () => {
+      setQualityMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    window.addEventListener('scroll', handleScrollOrResize, true);
+    window.addEventListener('resize', handleScrollOrResize);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleScrollOrResize, true);
+      window.removeEventListener('resize', handleScrollOrResize);
+    };
+  }, [qualityMenuOpen]);
 
   const { playTrack } = usePlayerStore();
   const { queueDownload } = useDownloadStore();
@@ -200,12 +254,23 @@ export const YouTubePage: React.FC = () => {
 
   const handleSelectVideo = (video: Track) => {
     const id = video.videoId || video.id;
-    playVideo({
-      id,
-      title: video.title,
-      artist: video.artist || 'YouTube',
-      thumbnail: video.thumbnail,
-    });
+    const currentList = searchResults.length > 0 ? searchResults : trendingVideos;
+    const queue = currentList.map((t) => ({
+      id: t.videoId || t.id,
+      title: t.title,
+      artist: t.artist || 'YouTube',
+      thumbnail: t.thumbnail,
+    }));
+
+    playVideo(
+      {
+        id,
+        title: video.title,
+        artist: video.artist || 'YouTube',
+        thumbnail: video.thumbnail,
+      },
+      queue
+    );
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -296,6 +361,119 @@ export const YouTubePage: React.FC = () => {
               Now Playing
             </span>
             <div className="flex items-center gap-2">
+              {/* Video Quality Dropdown */}
+              <div className="relative z-30" ref={qualityMenuRef}>
+                <button
+                  type="button"
+                  onClick={toggleQualityMenu}
+                  className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-xl transition-all border ${
+                    qualityMenuOpen
+                      ? 'bg-red-600 text-white border-red-500 shadow-md shadow-red-600/30'
+                      : 'bg-red-600/15 text-red-500 border-red-500/30 hover:bg-red-600/25'
+                  }`}
+                  title="Select Video Playback Quality (Default: 1080p Full HD)"
+                >
+                  <Tv className="w-3.5 h-3.5 text-red-500" />
+                  <span>
+                    {videoQuality === 'hd2160'
+                      ? '4K Ultra HD'
+                      : videoQuality === 'hd1440'
+                      ? '1440p QHD'
+                      : videoQuality === 'hd720'
+                      ? '720p HD'
+                      : videoQuality === 'large'
+                      ? '480p SD'
+                      : videoQuality === 'medium'
+                      ? '360p Data Saver'
+                      : videoQuality === 'auto'
+                      ? 'Auto Quality'
+                      : '1080p Full HD'}
+                  </span>
+                  <ChevronDown className={`w-3 h-3 transition-transform ${qualityMenuOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {qualityMenuOpen && dropdownPos && createPortal(
+                  <div
+                    ref={dropdownMenuRef}
+                    style={{
+                      position: 'fixed',
+                      top: `${dropdownPos.top}px`,
+                      right: `${dropdownPos.right}px`,
+                      width: `${dropdownPos.width}px`,
+                      zIndex: 99999,
+                      backgroundColor: 'var(--bg-surface)',
+                    }}
+                    className="bg-surface border-2 border-border/90 rounded-2xl p-2 shadow-[0_20px_50px_rgba(0,0,0,0.65)] animate-fadeIn space-y-1 select-none"
+                  >
+                    <div className="px-3 py-2 border-b border-border/40 mb-1">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-bold text-foreground">Playback Quality</p>
+                        <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-red-600/20 text-red-400 border border-red-500/30">
+                          {videoQuality === 'hd2160' ? '4K' : videoQuality === 'hd1440' ? '1440p' : videoQuality === 'hd720' ? '720p' : videoQuality === 'large' ? '480p' : videoQuality === 'medium' ? '360p' : videoQuality === 'auto' ? 'Auto' : '1080p'}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-foreground-muted">Default playback resolution</p>
+                    </div>
+
+                    <div className="space-y-0.5">
+                      {[
+                        { id: 'hd1080', label: '1080p Full HD', badge: 'Default', desc: 'Crisp 1080p high definition' },
+                        { id: 'hd2160', label: '4K Ultra HD', badge: '2160p', desc: 'Highest 4K cinema resolution' },
+                        { id: 'hd1440', label: '1440p Quad HD', badge: '2K', desc: 'Premium quad definition' },
+                        { id: 'hd720', label: '720p HD', badge: '720p', desc: 'Smooth high definition' },
+                        { id: 'large', label: '480p SD', badge: '480p', desc: 'Standard definition' },
+                        { id: 'medium', label: '360p Data Saver', badge: 'Saver', desc: 'Lowest data usage' },
+                        { id: 'auto', label: 'Auto (Adaptive)', badge: 'Auto', desc: 'Automatically matches network' },
+                      ].map((q) => {
+                        const isSelected = (videoQuality || 'hd1080') === q.id;
+                        return (
+                          <button
+                            key={q.id}
+                            type="button"
+                            onClick={() => {
+                              setVideoQuality(q.id);
+                              setQualityMenuOpen(false);
+                            }}
+                            className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-all ${
+                              isSelected
+                                ? 'bg-red-600/20 text-red-400 font-bold border border-red-500/40'
+                                : 'hover:bg-surface-elevated text-foreground-muted hover:text-foreground border border-transparent'
+                            }`}
+                          >
+                            <div>
+                              <div className="text-xs font-semibold">{q.label}</div>
+                              <div className="text-[10px] text-foreground-subtle leading-tight">{q.desc}</div>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-surface-elevated text-foreground-subtle border border-border/40">
+                                {q.badge}
+                              </span>
+                              {isSelected && <Check className="w-3.5 h-3.5 text-red-500 shrink-0" />}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>,
+                  document.body
+                )}
+              </div>
+
+              {/* Direct Video Bypass Toggle Button */}
+              <button
+                type="button"
+                onClick={toggleDirectVideo}
+                className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-xl transition-all border ${
+                  useDirectVideo
+                    ? 'bg-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-600/30'
+                    : 'text-foreground-muted hover:text-foreground hover:bg-surface-elevated border-border/50'
+                }`}
+                title={useDirectVideo ? 'Direct HTML5 Video Player Active (Bypasses Blocks)' : 'Switch to Direct Video Player (bypasses YouTube Error 150/152)'}
+              >
+                <ShieldCheck className={`w-3.5 h-3.5 ${useDirectVideo ? 'text-white' : 'text-emerald-400'}`} />
+                <span>{useDirectVideo ? 'Direct Active' : 'Bypass Blocks'}</span>
+              </button>
+
               {/* Picture-in-Picture Toggle Button */}
               <button
                 type="button"

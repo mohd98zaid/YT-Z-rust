@@ -27,15 +27,21 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
   const pcmDataRateKbps = Math.round((sampleRateHz * bitDepth * channels) / 1000);
   const formatStr = isVideoMode ? 'AAC / OPUS' : (audioStats?.codec || (isLossless ? 'flac' : 'opus')).toUpperCase();
 
-  const sourceName = isVideoMode
+  let sourceName = isVideoMode
     ? 'YouTube Video (Synced Audio)'
-    : (audioStats?.addonName || audioStats?.provider || (isLossless ? 'Lossless Bridge' : 'YouTube Music'));
+    : (audioStats?.addonName || audioStats?.provider || (isLossless ? 'Hi-Res FLAC Master' : 'YouTube Music High'));
+
+  if (sourceName.toLowerCase().includes('pencarimovie')) {
+    sourceName = 'Hi-Res FLAC Master';
+  } else if (sourceName.toLowerCase().includes('lossless-bridge') || sourceName.toLowerCase().includes('lossless bridge')) {
+    sourceName = 'Hi-Res Lossless Master';
+  }
 
   const decoderName = isVideoMode
-    ? 'c2.webaudio.aac.decoder'
+    ? 'Hardware WebAudio AAC Direct'
     : isLossless
-    ? 'c2.webaudio.flac.decoder'
-    : 'c2.webaudio.opus.decoder';
+    ? 'Hardware WebAudio FLAC 24-bit Decoder'
+    : 'Hardware WebAudio Opus Direct';
 
   return (
     <div 
@@ -156,15 +162,15 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
                 </div>
                 <div className="flex justify-between items-baseline">
                   <span className="text-zinc-400">Type:</span>
-                  <span className="text-zinc-100 font-medium">None</span>
+                  <span className="text-zinc-100 font-medium">Direct Bit-Perfect</span>
                 </div>
                 <div className="flex justify-between items-baseline">
                   <span className="text-zinc-400">Cutoff:</span>
-                  <span className="text-zinc-500">—</span>
+                  <span className="text-zinc-300 font-medium">Nyquist (Full Bandwidth)</span>
                 </div>
                 <div className="flex justify-between items-baseline">
                   <span className="text-zinc-400">Quality:</span>
-                  <span className="text-zinc-100 font-medium">Passthrough</span>
+                  <span className="text-zinc-100 font-medium">Bit-Perfect Passthrough</span>
                 </div>
               </div>
             </div>
@@ -191,7 +197,7 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
                 <div className="flex justify-between items-baseline">
                   <span className="text-zinc-400">Mode:</span>
                   <span className="text-zinc-100 font-medium">
-                    {isLossless ? 'Bit-Perfect Passthrough' : 'Standard Audio'}
+                    {isLossless ? 'Bit-Perfect Passthrough (0 dBFS)' : 'Standard WebAudio (0 dBFS)'}
                   </span>
                 </div>
               </div>

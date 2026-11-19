@@ -195,6 +195,12 @@ export const api = {
       body: JSON.stringify({ name, description, thumbnail }),
     }),
   getCustomPlaylist: (id: string) => fetchJson<any>(`${API_BASE}/api/playlists/custom/${id}`),
+  updateCustomPlaylist: (id: string, data: { name?: string; description?: string; thumbnail?: string }) =>
+    fetchJson<any>(`${API_BASE}/api/playlists/custom/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }),
   deleteCustomPlaylist: (id: string) => fetchJson<any>(`${API_BASE}/api/playlists/custom/${id}`, { method: 'DELETE' }),
   addTrackToPlaylist: (playlistId: string, track: Track) =>
     fetchJson<any>(`${API_BASE}/api/playlists/custom/${playlistId}/tracks`, {

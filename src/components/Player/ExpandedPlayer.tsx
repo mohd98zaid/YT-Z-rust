@@ -30,6 +30,9 @@ import {
   ShieldCheck,
   Maximize2,
   Minimize2,
+  Zap,
+  Leaf,
+  Check,
 } from 'lucide-react';
 import { usePlayerStore } from '../../stores/usePlayerStore';
 import { useDownloadStore } from '../../stores/useDownloadStore';
@@ -68,6 +71,7 @@ export const ExpandedPlayer: React.FC = () => {
     toggleShuffle,
     cycleRepeat,
     toggleEqualizer,
+    isEqualizerOpen,
     toggleStatsForNerds,
     playTrack,
     pause,
@@ -102,10 +106,77 @@ export const ExpandedPlayer: React.FC = () => {
   const [matchedIndex, setMatchedIndex] = useState(0);
   const [resolvingVideo, setResolvingVideo] = useState(false);
   const [useDirectVideo, setUseDirectVideo] = useState(false);
+  const [qualityMenuOpen, setQualityMenuOpen] = useState(false);
+  const qualityMenuRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const videoElementRef = useRef<HTMLVideoElement>(null);
   const matchedVideosRef = useRef<string[]>([]);
   matchedVideosRef.current = matchedVideos;
+
+  // Close quality dropdown when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (qualityMenuRef.current && !qualityMenuRef.current.contains(e.target as Node)) {
+        setQualityMenuOpen(false);
+      }
+    };
+    if (qualityMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [qualityMenuOpen]);
+
+  const qualityOptions: {
+    id: 'lossless' | 'high' | 'standard' | 'data_saver' | 'auto';
+    label: string;
+    badge: string;
+    desc: string;
+    icon: any;
+    color: string;
+  }[] = [
+    {
+      id: 'lossless',
+      label: 'Lossless / Hi-Res',
+      badge: 'FLAC 24-bit',
+      desc: 'Bit-perfect audiophile stream up to 96kHz / 1411k+',
+      icon: Sparkles,
+      color: 'text-amber-400 bg-amber-500/10 border-amber-500/30',
+    },
+    {
+      id: 'high',
+      label: 'High Quality',
+      badge: '256k–320k',
+      desc: 'Maximum YouTube Music Opus fidelity & clarity',
+      icon: Zap,
+      color: 'text-primary bg-primary/10 border-primary/30',
+    },
+    {
+      id: 'standard',
+      label: 'Standard',
+      badge: '128k–160k',
+      desc: 'Balanced audio fidelity with smooth buffering',
+      icon: Gauge,
+      color: 'text-blue-400 bg-blue-500/10 border-blue-500/30',
+    },
+    {
+      id: 'data_saver',
+      label: 'Data Saver',
+      badge: '48k–70k',
+      desc: 'Uses 70%+ less data — ideal for mobile & metered data',
+      icon: Leaf,
+      color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
+    },
+    {
+      id: 'auto',
+      label: 'Auto (Adaptive)',
+      badge: 'Auto',
+      desc: 'Optimized dynamically based on track and connection',
+      icon: RefreshCw,
+      color: 'text-purple-400 bg-purple-500/10 border-purple-500/30',
+    },
+  ];
 
   // Automatically resolve official embeddable public video when entering Watch Video mode
   // and switch video immediately when track changes without waiting for search
@@ -161,14 +232,23 @@ export const ExpandedPlayer: React.FC = () => {
   React.useEffect(() => {
     if (!isVideoMode) return;
 
+    let playbackStarted = false;
+    const directFallbackTimer = setTimeout(() => {
+      if (!playbackStarted) {
+        console.warn('Expanded player video embed timed out (likely Error 152). Activating direct video...');
+        setUseDirectVideo(true);
+      }
+    }, 2800);
+
     const handleMessage = (event: MessageEvent) => {
       try {
         const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
         if (!data) return;
 
-        // Auto-recover from video embed errors (code 150/152 = restricted embed by owner)
-        if (data.event === 'onError' || (data.info && typeof data.info.errorCode === 'number')) {
-          console.warn('YouTube embed restriction detected, activating Direct Video Player fallback:', data);
+        // Auto-recover from video embed restrictions (code 150/152 = restricted embed by owner)
+        const errCode = typeof data?.info?.errorCode === 'number' ? data.info.errorCode : (typeof data?.data === 'number' ? data.data : 0);
+        if (errCode === 150 || errCode === 152 || errCode === 101) {
+          console.warn('YouTube embed restriction detected (code ' + errCode + '), activating Direct Video Player fallback:', data);
           setUseDirectVideo(true);
           return;
         }
@@ -176,6 +256,10 @@ export const ExpandedPlayer: React.FC = () => {
         // YouTube IFrame API posts 'infoDelivery' and 'initialDelivery'
         if ((data.event === 'infoDelivery' || data.event === 'initialDelivery') && data.info) {
           const info = data.info;
+          if (info.playerState === 1 || info.currentTime > 0) {
+            playbackStarted = true;
+            clearTimeout(directFallbackTimer);
+          }
 
           // Sync current playback time in real-time -> drives Synced Lyrics & bottom timeline scrubber
           if (typeof info.currentTime === 'number' && !isNaN(info.currentTime)) {
@@ -217,6 +301,7 @@ export const ExpandedPlayer: React.FC = () => {
     }, 500);
 
     return () => {
+      clearTimeout(directFallbackTimer);
       clearInterval(pingInterval);
       window.removeEventListener('message', handleMessage);
     };
@@ -257,14 +342,18 @@ export const ExpandedPlayer: React.FC = () => {
   const handleDownloadCurrent = async () => {
     if (!currentTrack) return;
     try {
+      const isLossless = Boolean(audioStats?.isLossless || audioQuality === 'lossless');
+      const playingFormat = isLossless ? 'flac' : 'mp3';
+      const playingQuality = isLossless ? 'lossless' : (audioStats?.bitrate ? String(audioStats.bitrate) : '320');
+
       const url = currentTrack.isLocal
         ? currentTrack.filePath || ''
         : `https://www.youtube.com/watch?v=${currentTrack.videoId || currentTrack.id}`;
       await queueDownload({
         url,
         download_type: 'audio',
-        format: 'mp3',
-        quality: '320',
+        format: playingFormat,
+        quality: playingQuality,
         title: currentTrack.title,
         artist: currentTrack.artist,
         thumbnail: currentTrack.thumbnail,
@@ -296,7 +385,7 @@ export const ExpandedPlayer: React.FC = () => {
       </div>
 
       {/* Top Header Bar */}
-      <header className="relative z-10 flex items-center justify-between px-6 py-2.5 sm:py-3 border-b border-border/40 shrink-0">
+      <header className="relative z-50 flex items-center justify-between px-6 py-2.5 sm:py-3 border-b border-border/40 shrink-0">
         <button
           onClick={() => {
             setExpanded(false);
@@ -305,14 +394,14 @@ export const ExpandedPlayer: React.FC = () => {
               setActiveVideoSource(null);
             }
           }}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-elevated/70 border border-border text-foreground-muted hover:text-foreground text-xs font-semibold backdrop-blur-md transition-all hover:scale-105"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-elevated hover:bg-surface border border-border text-foreground hover:text-primary text-xs font-semibold transition-all hover:scale-105 shadow-sm"
         >
           <ChevronDown className="w-4 h-4" />
           <span>Minimize</span>
         </button>
 
         {/* Tab Selector: Lyrics vs Up Next */}
-        <div className="flex items-center gap-1 p-1 rounded-full bg-surface-elevated/80 border border-border backdrop-blur-md">
+        <div className="flex items-center gap-1 p-1 rounded-full bg-surface-elevated border border-border shadow-sm">
           {lyricsEnabled && (
             <button
               onClick={() => {
@@ -328,7 +417,7 @@ export const ExpandedPlayer: React.FC = () => {
               className={`flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-bold transition-all ${
                 activeTab === 'lyrics' && lyricsLayoutMode !== 'off'
                   ? 'bg-primary text-white shadow-md shadow-primary/20'
-                  : 'text-foreground-muted hover:text-foreground'
+                  : 'text-foreground/80 hover:text-foreground'
               }`}
             >
               <Mic2 className="w-3.5 h-3.5" />
@@ -351,7 +440,7 @@ export const ExpandedPlayer: React.FC = () => {
             className={`flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-bold transition-all ${
               activeTab === 'queue'
                 ? 'bg-primary text-white shadow-md shadow-primary/20'
-                : 'text-foreground-muted hover:text-foreground'
+                : 'text-foreground/80 hover:text-foreground'
             }`}
           >
             <ListMusic className="w-3.5 h-3.5" />
@@ -382,10 +471,10 @@ export const ExpandedPlayer: React.FC = () => {
                   ? 'Split Lyrics (Click for Fullscreen)'
                   : 'Lyrics hidden (Click to show lyrics)'
               }
-              className={`p-1.5 sm:p-2 rounded-full border transition-all ${
+              className={`p-1.5 sm:p-2 rounded-full border transition-all shadow-sm ${
                 lyricsLayoutMode !== 'off' && activeTab === 'lyrics'
-                  ? 'bg-primary/20 text-primary border-primary/40'
-                  : 'bg-surface-elevated/70 text-foreground-muted border-border hover:text-foreground'
+                  ? 'bg-primary text-white border-primary shadow-md shadow-primary/30'
+                  : 'bg-surface-elevated hover:bg-surface text-foreground border-border hover:text-primary hover:border-primary/50'
               }`}
             >
               <Mic2 className="w-4 h-4" />
@@ -396,7 +485,7 @@ export const ExpandedPlayer: React.FC = () => {
             <button
               onClick={() => startRadio()}
               title="Start Endless Song Radio"
-              className="p-1.5 sm:p-2 rounded-full bg-surface-elevated/70 border border-border text-foreground-muted hover:text-primary transition-all hover:scale-105"
+              className="p-1.5 sm:p-2 rounded-full bg-surface-elevated hover:bg-surface border border-border text-foreground hover:text-primary hover:border-primary/50 transition-all hover:scale-105 shadow-sm"
             >
               <Radio className="w-4 h-4" />
             </button>
@@ -406,10 +495,10 @@ export const ExpandedPlayer: React.FC = () => {
           <button
             onClick={toggleSleepTimer}
             title="Sleep Timer"
-            className={`p-1.5 sm:p-2 rounded-full border transition-all hover:scale-105 relative ${
+            className={`p-1.5 sm:p-2 rounded-full border transition-all hover:scale-105 relative shadow-sm ${
               sleepTimerRemaining !== null || sleepTimerStopAfterTrack
-                ? 'bg-primary/20 text-primary border-primary/40'
-                : 'bg-surface-elevated/70 text-foreground-muted border-border hover:text-foreground'
+                ? 'bg-primary text-white border-primary shadow-md shadow-primary/30'
+                : 'bg-surface-elevated hover:bg-surface text-foreground border-border hover:text-primary hover:border-primary/50'
             }`}
           >
             <Timer className="w-4 h-4" />
@@ -423,10 +512,10 @@ export const ExpandedPlayer: React.FC = () => {
             <button
               onClick={toggleStatsForNerds}
               title="Stats for Nerds"
-              className={`p-1.5 sm:p-2 rounded-full border transition-all ${
+              className={`p-1.5 sm:p-2 rounded-full border transition-all shadow-sm ${
                 showStatsForNerds
-                  ? 'bg-primary/20 text-primary border-primary/40'
-                  : 'bg-surface-elevated/70 text-foreground-muted border-border hover:text-foreground'
+                  ? 'bg-primary text-white border-primary shadow-md shadow-primary/30'
+                  : 'bg-surface-elevated hover:bg-surface text-foreground border-border hover:text-primary hover:border-primary/50'
               }`}
             >
               <Info className="w-4 h-4" />
@@ -437,17 +526,116 @@ export const ExpandedPlayer: React.FC = () => {
           <button
             onClick={toggleEqualizer}
             title="Studio Equalizer"
-            className="p-1.5 sm:p-2 rounded-full bg-surface-elevated/70 border border-border text-foreground-muted hover:text-foreground transition-all hover:scale-105"
+            className={`p-1.5 sm:p-2 rounded-full border transition-all hover:scale-105 shadow-sm ${
+              isEqualizerOpen
+                ? 'bg-primary text-white border-primary shadow-md shadow-primary/30'
+                : 'bg-surface-elevated hover:bg-surface border border-border text-foreground hover:text-primary hover:border-primary/50'
+            }`}
           >
             <Sliders className="w-4 h-4" />
           </button>
+
+          {/* Audio Quality & Data Saver Dropdown */}
+          <div className="relative z-50" ref={qualityMenuRef}>
+            <button
+              onClick={() => setQualityMenuOpen(!qualityMenuOpen)}
+              title={`Streaming Quality: ${audioQuality.replace('_', ' ').toUpperCase()}`}
+              className={`flex items-center gap-1.5 px-2.5 py-1 sm:py-1.5 rounded-full border transition-all hover:scale-105 shadow-sm backdrop-blur-md ${
+                qualityMenuOpen
+                  ? 'bg-primary/20 text-primary border-primary shadow-sm shadow-primary/20'
+                  : audioQuality === 'lossless'
+                  ? 'bg-amber-500/20 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/50 dark:border-amber-500/40 font-bold shadow-[0_0_10px_rgba(245,158,11,0.2)]'
+                  : audioQuality === 'data_saver'
+                  ? 'bg-emerald-500/20 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/50 dark:border-emerald-500/40 font-bold shadow-[0_0_10px_rgba(16,185,129,0.2)]'
+                  : audioQuality === 'high'
+                  ? 'bg-primary/15 text-primary border-primary/40 font-bold'
+                  : 'bg-surface-elevated hover:bg-surface text-foreground border-border hover:text-primary hover:border-primary/50'
+              }`}
+            >
+              {audioQuality === 'lossless' ? (
+                <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+              ) : audioQuality === 'data_saver' ? (
+                <Leaf className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              ) : audioQuality === 'high' ? (
+                <Zap className="w-3.5 h-3.5 text-primary" />
+              ) : (
+                <Gauge className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
+              )}
+              <span className="text-[11px] font-bold tracking-wider uppercase">
+                {audioQuality === 'lossless'
+                  ? 'Hi-Res'
+                  : audioQuality === 'data_saver'
+                  ? 'Data Saver'
+                  : audioQuality === 'high'
+                  ? 'High'
+                  : audioQuality === 'standard'
+                  ? 'Standard'
+                  : 'Auto'}
+              </span>
+              <ChevronDown className={`w-3 h-3 opacity-70 transition-transform ${qualityMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {qualityMenuOpen && (
+              <div 
+                style={{ backgroundColor: 'var(--bg-surface)' }}
+                className="absolute right-0 top-full mt-2 w-80 bg-surface border-2 border-border/90 rounded-2xl p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.65)] z-50 animate-fadeIn space-y-1.5"
+              >
+                <div className="px-3 py-2 border-b border-border/60 mb-1">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-bold text-foreground">Audio Quality</p>
+                    <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-surface-elevated text-foreground border border-border">
+                      {audioQuality.replace('_', ' ')}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-foreground-muted">Select audio fidelity or conserve data</p>
+                </div>
+
+                <div className="space-y-1">
+                  {qualityOptions.map((opt) => {
+                    const isSelected = audioQuality === opt.id;
+                    const OptIcon = opt.icon;
+                    return (
+                      <button
+                        key={opt.id}
+                        onClick={() => {
+                          setAudioQuality(opt.id);
+                          setQualityMenuOpen(false);
+                        }}
+                        className={`w-full flex items-start gap-2.5 p-2 rounded-xl text-left transition-all ${
+                          isSelected
+                            ? 'bg-primary/20 border border-primary/40 text-foreground'
+                            : 'hover:bg-surface-elevated text-foreground-muted hover:text-foreground border border-transparent'
+                        }`}
+                      >
+                        <div className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${opt.color}`}>
+                          <OptIcon className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className={`text-xs font-bold ${isSelected ? 'text-primary' : 'text-foreground'}`}>
+                              {opt.label}
+                            </span>
+                            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-surface-elevated text-foreground border border-border/60">
+                              {opt.badge}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-foreground-muted leading-tight mt-0.5">{opt.desc}</p>
+                        </div>
+                        {isSelected && <Check className="w-4 h-4 text-primary shrink-0 self-center" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
       {/* Main Center Area: Split vs Fullscreen Lyrics vs Centered Artwork */}
       <div className="relative z-10 flex-1 min-h-0 flex items-center justify-center px-6 py-2 md:px-10 gap-4 md:gap-8 overflow-hidden">
         {lyricsEnabled && lyricsLayoutMode === 'fullscreen' && activeTab === 'lyrics' ? (
-          <div className="w-full max-w-4xl h-full min-h-0 flex flex-col bg-surface/40 border border-border/40 rounded-3xl backdrop-blur-xl overflow-hidden relative shadow-2xl mx-auto animate-fadeIn">
+          <div className="w-full max-w-4xl h-full min-h-0 flex flex-col bg-surface-glass border border-border-glass rounded-3xl backdrop-blur-xl overflow-hidden relative shadow-2xl mx-auto animate-fadeIn">
             <LyricsView
               isFullScreen={true}
               onToggleFullscreen={() => setLyricsLayoutMode('split')}
@@ -539,7 +727,7 @@ export const ExpandedPlayer: React.FC = () => {
                       <iframe
                         ref={iframeRef}
                         key={currentVideoId}
-                        src={`https://www.youtube.com/embed/${currentVideoId}?autoplay=1&enablejsapi=1&rel=0&iv_load_policy=3&origin=${window.location.origin}`}
+                        src={`https://www.youtube.com/embed/${currentVideoId}?autoplay=1&enablejsapi=1&rel=0&iv_load_policy=3&vq=hd1080&origin=${window.location.origin}`}
                         title={currentTrack.title}
                         className="w-full h-full border-0"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
@@ -639,24 +827,24 @@ export const ExpandedPlayer: React.FC = () => {
                   {isVideoMode ? (
                     <button
                       onClick={toggleStatsForNerds}
-                      className="inline-flex items-center gap-1.5 text-[11px] font-mono text-amber-400/90 hover:text-amber-300 transition-colors tracking-wide cursor-pointer"
+                      className="inline-flex items-center gap-1.5 text-[11px] font-mono text-amber-700 dark:text-amber-400 hover:underline transition-colors tracking-wide cursor-pointer"
                       title="Click to view Audio Pipeline info"
                     >
-                      <Video className="w-3 h-3 text-amber-400" />
+                      <Video className="w-3 h-3 text-amber-600 dark:text-amber-400" />
                       <span>YouTube Video Sync</span>
                       <span>·</span>
                       <span>AAC 160k</span>
                       <span>·</span>
                       <span>44.1 kHz</span>
                       <span>·</span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-sans font-semibold">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-800 dark:text-amber-300 font-sans font-semibold">
                         Audio Reduced for Video
                       </span>
                     </button>
                   ) : (
                     <button
                       onClick={toggleStatsForNerds}
-                      className="inline-flex items-center gap-1.5 text-[11px] font-mono text-foreground-muted/70 hover:text-white transition-colors tracking-wide cursor-pointer"
+                      className="inline-flex items-center gap-1.5 text-[11px] font-mono text-foreground-muted hover:text-foreground transition-colors tracking-wide cursor-pointer"
                       title="Click to view Audio Pipeline & Hardware Signal Path"
                     >
                       <span>{audioStats?.format || (audioStats?.isLossless ? 'FLAC' : 'OPUS')}</span>
@@ -716,7 +904,7 @@ export const ExpandedPlayer: React.FC = () => {
 
             {/* Right: Synced Lyrics View or Up Next Queue */}
             {(lyricsLayoutMode !== 'off' || activeTab !== 'lyrics') && (
-              <div className="w-full md:w-1/2 h-full min-h-0 flex flex-col bg-surface/40 border border-border/40 rounded-3xl backdrop-blur-xl overflow-hidden relative shadow-2xl animate-fadeIn">
+              <div className="w-full md:w-1/2 h-full min-h-0 flex flex-col bg-surface-glass border border-border-glass rounded-3xl backdrop-blur-xl overflow-hidden relative shadow-2xl animate-fadeIn">
                 {activeTab === 'lyrics' ? (
                   <LyricsView
                     isFullScreen={false}
@@ -768,7 +956,10 @@ export const ExpandedPlayer: React.FC = () => {
       </div>
 
       {/* Bottom Expanded Controls Bar */}
-      <footer className="relative z-10 px-6 py-2.5 sm:py-3 bg-surface/85 border-t border-border/40 backdrop-blur-2xl flex flex-col items-center gap-2 shrink-0">
+      <footer 
+        style={{ backgroundColor: 'var(--bg-surface)' }}
+        className="relative z-10 px-6 py-2.5 sm:py-3 bg-surface border-t border-border flex flex-col items-center gap-2 shrink-0"
+      >
         {/* Progress Bar with Timers */}
         <div className="w-full max-w-2xl flex items-center gap-3">
           <span className="text-xs font-mono text-foreground-subtle w-10 text-right">
@@ -798,23 +989,23 @@ export const ExpandedPlayer: React.FC = () => {
             {isVideoMode ? (
               <button
                 onClick={toggleStatsForNerds}
-                className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-bold transition-all hover:scale-105 active:scale-95 cursor-pointer bg-amber-500/15 text-amber-300 border border-amber-500/30"
+                className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-bold transition-all hover:scale-105 active:scale-95 cursor-pointer bg-amber-500/20 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/50 dark:border-amber-500/30 shadow-sm"
                 title="Video Mode: Audio reduced to YouTube stream (~160 kbps)"
               >
-                <Video className="w-3 h-3 text-amber-400" />
+                <Video className="w-3 h-3 text-amber-600 dark:text-amber-400" />
                 <span>YouTube Audio (Reduced · 160k)</span>
               </button>
             ) : (
               <button
                 onClick={toggleStatsForNerds}
-                className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-bold transition-all hover:scale-105 active:scale-95 cursor-pointer ${
+                className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-bold transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm ${
                   audioStats?.isLossless
-                    ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30 shadow-[0_0_8px_rgba(245,158,11,0.2)]'
-                    : 'bg-white/[0.04] text-foreground-muted border border-white/10 hover:text-white'
+                    ? 'bg-amber-500/20 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/50 dark:border-amber-500/30'
+                    : 'bg-surface-elevated hover:bg-border/60 text-foreground border border-border'
                 }`}
                 title="Click to inspect live Audio Pipeline signal path"
               >
-                <Activity className="w-3 h-3" />
+                <Activity className="w-3 h-3 text-primary" />
                 <span>
                   {audioStats?.isLossless
                     ? (audioStats?.qualityTier === 'hi-res' ? 'Hi-Res Lossless' : 'Lossless')
@@ -822,6 +1013,37 @@ export const ExpandedPlayer: React.FC = () => {
                 </span>
               </button>
             )}
+          </div>
+        )}
+
+        {/* Quick Audio Pipeline Diagnostics Card */}
+        {showAudioPipelineCard && (
+          <div className="w-full max-w-sm mx-auto px-2 mt-1 mb-1">
+            <button
+              onClick={toggleStatsForNerds}
+              style={{ backgroundColor: 'var(--bg-surface)' }}
+              className="w-full flex items-center justify-between px-3.5 py-2 rounded-2xl bg-surface hover:bg-surface-elevated border border-border text-foreground transition-all hover:scale-[1.01] shadow-sm cursor-pointer group"
+              title="Inspect live signal path, decoder and output"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-7 h-7 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0">
+                  <Activity className="w-3.5 h-3.5" />
+                </div>
+                <div className="text-left truncate">
+                  <div className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">
+                    Audio Pipeline
+                  </div>
+                  <div className="text-[10px] text-foreground-muted font-mono truncate">
+                    {isVideoMode
+                      ? '16-bit AAC Sync • 44.1 kHz'
+                      : audioStats?.isLossless
+                      ? `Bit-Perfect Lossless • ${((audioStats.sampleRate || 44100) / 1000).toFixed(1)} kHz ${audioStats.bitDepth || 24}-bit`
+                      : `Hardware WebAudio • 48.0 kHz 160 kbps`}
+                  </div>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-foreground-muted group-hover:text-foreground transition-colors shrink-0" />
+            </button>
           </div>
         )}
 
@@ -887,45 +1109,27 @@ export const ExpandedPlayer: React.FC = () => {
             </button>
           </div>
 
-          {/* 1-Click Download in Expanded Player */}
+          {/* 1-Click Download in Expanded Player at playing audio quality */}
           <button
             onClick={handleDownloadCurrent}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border transition-all ${
+            className={`flex items-center gap-1.5 px-3.5 py-1 rounded-full text-[11px] font-bold border transition-all ${
               downloadQueued
                 ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                : audioStats?.isLossless
+                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:scale-105 shadow-sm'
                 : 'bg-surface-elevated text-foreground-muted border-border hover:text-foreground hover:scale-105'
             }`}
           >
             <Download className="w-3.5 h-3.5" />
-            <span>{downloadQueued ? 'Queued!' : 'Download 320k'}</span>
+            <span>
+              {downloadQueued
+                ? 'Queued!'
+                : audioStats?.isLossless
+                ? 'Download Original FLAC'
+                : 'Download Original Audio'}
+            </span>
           </button>
         </div>
-
-        {/* Audio Pipeline Card */}
-        {showAudioPipelineCard && (
-          <div 
-            onClick={toggleStatsForNerds}
-            className="w-full max-w-sm mx-auto flex items-center justify-between px-3.5 py-1.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/10 cursor-pointer transition-all hover:scale-[1.01] active:scale-[0.99] shadow-sm"
-            title="Open Audio Pipeline Signal Path (Live Architecture)"
-          >
-            <div className="flex items-center gap-2.5">
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center ${isVideoMode ? 'bg-amber-500/20 text-amber-400' : audioStats?.isLossless ? 'bg-amber-500/20 text-amber-300' : 'bg-primary/20 text-primary'}`}>
-                {isVideoMode ? <Video className="w-3.5 h-3.5" /> : <Activity className="w-3.5 h-3.5" />}
-              </div>
-              <div className="text-left">
-                <div className="text-[11px] font-bold text-white leading-tight">Audio Pipeline</div>
-                <div className="text-[10px] text-foreground-muted leading-tight mt-0.5 font-mono">
-                  {isVideoMode
-                    ? '16-bit video stream (audio reduced) · 44.1 kHz'
-                    : audioStats?.isLossless
-                    ? `${audioStats.bitDepth || 24}-bit bit-perfect · ${((audioStats.sampleRate || 48000)/1000).toFixed(1)} kHz`
-                    : `16-bit fallback · ${((audioStats?.sampleRate || 48000)/1000).toFixed(1)} kHz`}
-                </div>
-              </div>
-            </div>
-            <ChevronRight className="w-3.5 h-3.5 text-foreground-muted" />
-          </div>
-        )}
       </footer>
 
       {/* Live Signal Path, Decoder to Output Modal */}

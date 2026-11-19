@@ -49,9 +49,9 @@ interface PlayerState {
   lyrics: LyricsResponse | null;
   isLyricsLoading: boolean;
 
-  // Hi-Res Lossless Audio
-  audioQuality: 'lossless' | 'high' | 'auto';
-  setAudioQuality: (quality: 'lossless' | 'high' | 'auto') => void;
+  // Hi-Res Lossless & Data Saver Audio
+  audioQuality: 'lossless' | 'high' | 'standard' | 'data_saver' | 'auto';
+  setAudioQuality: (quality: 'lossless' | 'high' | 'standard' | 'data_saver' | 'auto') => void;
 
   // Equalizer
   eqEnabled: boolean;
@@ -80,6 +80,7 @@ interface PlayerState {
   setActiveVideoSource: (source: string | null) => void;
   pause: () => void;
   pauseAudio: () => void;
+  stopAudio: () => void;
   play: () => void;
 
   // Lyrics Preferences
@@ -101,7 +102,7 @@ interface PlayerState {
   setShowMiniPlayerCodecBadge: (enabled: boolean) => void;
 
   // Actions
-  playTrack: (track: Track, newQueue?: Track[]) => Promise<void>;
+  playTrack: (track: Track, newQueue?: Track[], seekTime?: number) => Promise<void>;
   togglePlay: () => void;
   next: () => Promise<void>;
   previous: () => Promise<void>;
@@ -138,6 +139,16 @@ let audioContext: AudioContext | null = null;
 let sourceNode: MediaElementAudioSourceNode | null = null;
 let eqFilterNodes: BiquadFilterNode[] = [];
 let gainNode: GainNode | null = null;
+let currentTrackResolutionId = 0;
+let registeredVideoStopper: (() => void) | null = null;
+let registeredVideoNext: (() => void) | null = null;
+let registeredVideoPrevious: (() => void) | null = null;
+
+export const registerVideoControls = (handlers: { stop: () => void; next: () => void; previous: () => void }) => {
+  registeredVideoStopper = handlers.stop;
+  registeredVideoNext = handlers.next;
+  registeredVideoPrevious = handlers.previous;
+};
 
 function initAudioEngine(state: PlayerState) {
   if (audioElement) return;
@@ -185,6 +196,8 @@ function initAudioEngine(state: PlayerState) {
   // Audio Event Listeners
   audioElement.addEventListener('timeupdate', () => {
     if (!audioElement) return;
+    const { isVideoMode, activeVideoSource } = usePlayerStore.getState();
+    if (isVideoMode || activeVideoSource === 'youtube_video') return;
     const time = audioElement.currentTime;
     usePlayerStore.setState({ currentTime: time });
 
@@ -271,10 +284,22 @@ function initAudioEngine(state: PlayerState) {
   });
 
   audioElement.addEventListener('playing', () => {
+    const { isVideoMode, activeVideoSource } = usePlayerStore.getState();
+    if (isVideoMode || activeVideoSource === 'youtube_video') {
+      if (audioElement) {
+        try {
+          audioElement.pause();
+          audioElement.currentTime = 0;
+        } catch {}
+      }
+      return;
+    }
     usePlayerStore.setState({ isPlaying: true, isLoading: false });
   });
 
   audioElement.addEventListener('pause', () => {
+    const { isVideoMode, activeVideoSource } = usePlayerStore.getState();
+    if (isVideoMode || activeVideoSource === 'youtube_video') return;
     usePlayerStore.setState({ isPlaying: false });
   });
 }
@@ -334,13 +359,15 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   lyrics: null,
   isLyricsLoading: false,
 
-  // Hi-Res Lossless Audio
-  audioQuality: 'lossless',
-  setAudioQuality: (quality: 'lossless' | 'high' | 'auto') => {
+  // Hi-Res Lossless & Data Saver Audio
+  audioQuality: ((localStorage.getItem('ytz_audio_quality') as any) || 'lossless') as 'lossless' | 'high' | 'standard' | 'data_saver' | 'auto',
+  setAudioQuality: (quality: 'lossless' | 'high' | 'standard' | 'data_saver' | 'auto') => {
+    localStorage.setItem('ytz_audio_quality', quality);
     set({ audioQuality: quality });
-    const { currentTrack, playTrack } = get();
+    const { currentTrack, playTrack, currentTime } = get();
     if (currentTrack) {
-      playTrack(currentTrack);
+      const currentPos = audioElement && !isNaN(audioElement.currentTime) ? audioElement.currentTime : currentTime;
+      playTrack(currentTrack, undefined, currentPos);
     }
   },
 
@@ -379,7 +406,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   enableStatsForNerds: localStorage.getItem('ytz_enable_stats_for_nerds') !== 'false',
   showAudiophileSpecs: localStorage.getItem('ytz_show_audiophile_specs') !== 'false',
   showAudioQualityBadge: localStorage.getItem('ytz_show_audio_quality_badge') !== 'false',
-  showAudioPipelineCard: localStorage.getItem('ytz_show_audio_pipeline_card') !== 'false',
+  showAudioPipelineCard: localStorage.getItem('ytz_show_audio_pipeline_card') === 'true',
   showMiniPlayerCodecBadge: localStorage.getItem('ytz_show_miniplayer_codec_badge') !== 'false',
 
   setEnableStatsForNerds: (enabled: boolean) => {
@@ -444,6 +471,19 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     }
   },
 
+  stopAudio: () => {
+    currentTrackResolutionId++;
+    if (audioElement) {
+      try {
+        audioElement.pause();
+        audioElement.currentTime = 0;
+        audioElement.removeAttribute('src');
+        audioElement.load();
+      } catch {}
+    }
+    set({ isPlaying: false });
+  },
+
   play: () => {
     initAudioEngine(get());
     if (get().isVideoMode) {
@@ -469,12 +509,32 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     set({ isPlaying: true });
   },
 
-  playTrack: async (track: Track, newQueue?: Track[]) => {
+  playTrack: async (track: Track, newQueue?: Track[], seekTime?: number) => {
     initAudioEngine(get());
+    const resolutionId = ++currentTrackResolutionId;
 
-    if (!get().isVideoMode) {
-      set({ activeVideoSource: null });
+    // Immediately stop and close any active video so audio and video never overlap
+    if (registeredVideoStopper) {
+      try { registeredVideoStopper(); } catch {}
     }
+    if (typeof document !== 'undefined') {
+      document.querySelectorAll('video').forEach((v) => {
+        try {
+          v.pause();
+          v.currentTime = 0;
+          v.removeAttribute('src');
+          v.load();
+        } catch {}
+      });
+      document.querySelectorAll('iframe').forEach((iframe) => {
+        try {
+          iframe.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'stopVideo' }), '*');
+          iframe.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'pauseVideo' }), '*');
+        } catch {}
+      });
+    }
+
+    set({ isVideoMode: false, activeVideoSource: null });
 
     let queue = get().queue;
     let queueIndex = get().queueIndex;
@@ -501,7 +561,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       queue,
       queueIndex,
       isLoading: true,
-      currentTime: 0,
+      currentTime: seekTime !== undefined ? seekTime : 0,
       skipSegments: [],
       lyrics: null,
     });
@@ -583,10 +643,19 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         }).catch(() => {});
       }
 
+      // If user opened a video or switched tracks while resolving, strictly abort audio
+      if (resolutionId !== currentTrackResolutionId || get().isVideoMode || get().activeVideoSource === 'youtube_video') {
+        console.log('Discarding stale audio stream resolution');
+        return;
+      }
+
       if (audioElement) {
         audioElement.src = streamUrl;
         audioElement.playbackRate = get().playbackSpeed;
         audioElement.volume = get().isMuted ? 0 : get().volume;
+        if (seekTime !== undefined && seekTime > 0) {
+          audioElement.currentTime = seekTime;
+        }
         if (get().isVideoMode || get().activeVideoSource === 'youtube_video') {
           audioElement.pause();
           set({ isLoading: false });
@@ -699,12 +768,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   next: async () => {
     const { activeVideoSource } = get();
     // If a persistent YouTube video is actively playing, advance the video queue
-    if (activeVideoSource === 'youtube_video') {
-      const { useVideoStore } = await import('./useVideoStore');
-      if (useVideoStore.getState().activeVideo) {
-        useVideoStore.getState().nextVideo();
-        return;
-      }
+    if (activeVideoSource === 'youtube_video' && registeredVideoNext) {
+      registeredVideoNext();
+      return;
     }
 
     const { queue, queueIndex, shuffle, repeatMode } = get();
@@ -730,12 +796,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   previous: async () => {
     const { activeVideoSource } = get();
     // If a persistent YouTube video is actively playing, rewind to previous video
-    if (activeVideoSource === 'youtube_video') {
-      const { useVideoStore } = await import('./useVideoStore');
-      if (useVideoStore.getState().activeVideo) {
-        useVideoStore.getState().previousVideo();
-        return;
-      }
+    if (activeVideoSource === 'youtube_video' && registeredVideoPrevious) {
+      registeredVideoPrevious();
+      return;
     }
 
     const { queue, queueIndex, currentTime, isVideoMode } = get();

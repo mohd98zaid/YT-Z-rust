@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { Maximize2, X, Expand, RefreshCw, PictureInPicture2, ShieldCheck } from 'lucide-react';
+import { Maximize2, X, Expand, RefreshCw, PictureInPicture2, ShieldCheck, Play } from 'lucide-react';
 import { useVideoStore } from '../../stores/useVideoStore';
+import { usePlayerStore } from '../../stores/usePlayerStore';
 import { useNavigationStore } from '../../stores/useNavigationStore';
 
 export const PersistentVideoPlayer: React.FC = () => {
@@ -9,6 +10,10 @@ export const PersistentVideoPlayer: React.FC = () => {
     isPiP,
     isFullscreen,
     reloadKey,
+    videoQuality,
+    useDirectVideo,
+    setUseDirectVideo,
+    toggleDirectVideo,
     closeVideo,
     togglePiP,
     setIsFullscreen,
@@ -20,25 +25,60 @@ export const PersistentVideoPlayer: React.FC = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [useDirectVideo, setUseDirectVideo] = useState(false);
+  const [hasPlaybackStarted, setHasPlaybackStarted] = useState(false);
+  const [showDirectPrompt, setShowDirectPrompt] = useState(false);
 
   useEffect(() => {
-    setUseDirectVideo(false);
-  }, [activeVideo?.id]);
+    setHasPlaybackStarted(false);
+    setShowDirectPrompt(false);
+
+    // If iframe fails to start playback within 2.5s (e.g. YouTube Error 150/152 blocked embed),
+    // automatically switch to Direct Video player so the video ALWAYS plays
+    const timer = setTimeout(() => {
+      if (!useDirectVideo) {
+        console.warn('YouTube embed did not start playback within 2.5s (likely Error 152 restriction). Auto-activating Direct Video...');
+        setUseDirectVideo(true);
+      }
+    }, 2500);
+
+    return () => clearTimeout(timer);
+  }, [activeVideo?.id, reloadKey, useDirectVideo, setUseDirectVideo]);
 
   useEffect(() => {
     const handleMsg = (e: MessageEvent) => {
       try {
         const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
-        if (data?.event === 'onError' || typeof data?.info?.errorCode === 'number') {
-          console.warn('Persistent video player embed restriction, enabling direct video stream:', data);
+        // Strictly trigger direct video on verified YouTube embed restrictions (codes 150, 152, 153, 101 or onError event)
+        const code = typeof data?.info?.errorCode === 'number' ? data.info.errorCode : (typeof data?.data === 'number' ? data.data : 0);
+        if (code === 150 || code === 152 || code === 153 || code === 101 || (data?.event === 'onError' && code > 0)) {
+          console.warn('Persistent video player embed restriction (code ' + code + '), enabling direct video fallback:', data);
           setUseDirectVideo(true);
+        }
+        // YouTube embed playback confirmation (infoDelivery with playing state or time progress)
+        if (data?.event === 'infoDelivery' && data?.info) {
+          if (data.info.playerState === 1 || data.info.currentTime > 0) {
+            setHasPlaybackStarted(true);
+            setShowDirectPrompt(false);
+            usePlayerStore.setState({ isPlaying: true, isVideoMode: true, activeVideoSource: 'youtube_video' });
+          } else if (data.info.playerState === 2) {
+            usePlayerStore.setState({ isPlaying: false });
+          }
+          if (typeof data.info.currentTime === 'number') {
+            usePlayerStore.setState({
+              currentTime: data.info.currentTime,
+              ...(typeof data.info.duration === 'number' && data.info.duration > 0 ? { duration: data.info.duration } : {}),
+            });
+          }
+        }
+        // Auto-advance to next video when current video ends
+        if (data?.info?.playerState === 0) {
+          useVideoStore.getState().nextVideo();
         }
       } catch {}
     };
     window.addEventListener('message', handleMsg);
     return () => window.removeEventListener('message', handleMsg);
-  }, []);
+  }, [setUseDirectVideo]);
 
   const [coords, setCoords] = useState<{
     top: number;
@@ -129,8 +169,9 @@ export const PersistentVideoPlayer: React.FC = () => {
 
   if (!activeVideo) return null;
 
-  // Build embed URL with origin to enable YouTube IFrame API communication
-  const embedUrl = `https://www.youtube.com/embed/${activeVideo.id}?autoplay=1&enablejsapi=1&rel=0&iv_load_policy=3&origin=${window.location.origin}`;
+  // Build embed URL with origin and target quality (defaulting to 1080p Full HD)
+  const qTarget = videoQuality || 'hd1080';
+  const embedUrl = `https://www.youtube.com/embed/${activeVideo.id}?autoplay=1&enablejsapi=1&rel=0&iv_load_policy=3&vq=${qTarget}&origin=${window.location.origin}`;
 
   // Compute container inline styles
   let containerStyle: React.CSSProperties;
@@ -195,6 +236,23 @@ export const PersistentVideoPlayer: React.FC = () => {
           autoPlay
           playsInline
           className="w-full h-full object-contain rounded-2xl bg-black pointer-events-auto"
+          onPlaying={() => {
+            setHasPlaybackStarted(true);
+            setShowDirectPrompt(false);
+            usePlayerStore.setState({ isPlaying: true, isVideoMode: true, activeVideoSource: 'youtube_video' });
+          }}
+          onPause={() => {
+            usePlayerStore.setState({ isPlaying: false });
+          }}
+          onTimeUpdate={(e) => {
+            const v = e.currentTarget;
+            if (v && v.duration) {
+              usePlayerStore.setState({ currentTime: v.currentTime, duration: v.duration });
+            }
+          }}
+          onEnded={() => {
+            useVideoStore.getState().nextVideo();
+          }}
         />
       ) : (
         <iframe
@@ -206,7 +264,100 @@ export const PersistentVideoPlayer: React.FC = () => {
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
           allowFullScreen
           className="w-full h-full border-0 rounded-2xl pointer-events-auto"
+          onLoad={() => {
+            try {
+              iframeRef.current?.contentWindow?.postMessage(
+                JSON.stringify({ event: 'listening' }),
+                '*'
+              );
+              // Enforce default 1080p playback quality via YouTube IFrame API
+              const q = videoQuality || 'hd1080';
+              iframeRef.current?.contentWindow?.postMessage(
+                JSON.stringify({ event: 'command', func: 'setPlaybackQuality', args: [q] }),
+                '*'
+              );
+              iframeRef.current?.contentWindow?.postMessage(
+                JSON.stringify({ event: 'command', func: 'setPlaybackQualityRange', args: [q, q] }),
+                '*'
+              );
+            } catch {}
+          }}
         />
+      )}
+
+      {/* Direct Video Active Badge */}
+      {useDirectVideo && (
+        <div className="absolute top-3 left-3 z-30 flex items-center gap-1.5 animate-fadeIn pointer-events-auto">
+          <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-600/90 text-white text-[10px] font-bold shadow-md shadow-emerald-600/30 backdrop-blur-md">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>Direct Video Active</span>
+          </span>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setUseDirectVideo(false);
+            }}
+            className="px-2 py-0.5 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white text-[10px] border border-white/20 transition-all"
+            title="Switch back to standard YouTube Embed Player"
+          >
+            Try Embed
+          </button>
+        </div>
+      )}
+
+      {/* Floating Direct Video Bypass Button (when in iframe mode) */}
+      {!useDirectVideo && !isDockedInSidebar && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setUseDirectVideo(true);
+          }}
+          className="absolute bottom-3 right-3 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/75 hover:bg-emerald-600 text-white text-xs font-bold border border-white/20 backdrop-blur-md shadow-lg transition-all hover:scale-105 active:scale-95 pointer-events-auto"
+          title="Switch to Direct Video Player to bypass YouTube embed restrictions (Error 150/152)"
+        >
+          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+          <span>Direct Player (Bypass Blocks)</span>
+        </button>
+      )}
+
+      {/* Direct Video Bypass Overlay Prompt (triggered when iframe fails to play within 3.5s) */}
+      {showDirectPrompt && !useDirectVideo && !hasPlaybackStarted && (
+        <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center animate-fadeIn z-30 pointer-events-auto">
+          <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center mb-3 shadow-lg shadow-amber-500/10">
+            <ShieldCheck className="w-6 h-6" />
+          </div>
+          <p className="text-sm font-bold text-white mb-1">
+            YouTube Embed Unavailable or Restricted?
+          </p>
+          <p className="text-xs text-white/70 max-w-md mb-4 leading-relaxed">
+            Content owners (like T-Series) block external embeds (Error 150/152). Play directly via our HTML5 stream without restrictions.
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setUseDirectVideo(true);
+              }}
+              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 transition-all hover:scale-105 active:scale-95 flex items-center gap-1.5"
+            >
+              <Play className="w-3.5 h-3.5 fill-current" />
+              <span>Play Video Directly (Bypass Block)</span>
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowDirectPrompt(false);
+              }}
+              className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white/80 text-xs font-semibold transition-colors"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Docked Sidebar PiP Overlay Controls (visible on hover when in sidebar) */}

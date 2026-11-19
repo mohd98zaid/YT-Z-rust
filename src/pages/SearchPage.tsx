@@ -4,6 +4,7 @@ import { api } from '../services/api';
 import { Track } from '../types';
 import { usePlayerStore } from '../stores/usePlayerStore';
 import { useDownloadStore } from '../stores/useDownloadStore';
+import { useNavigationStore } from '../stores/useNavigationStore';
 
 interface SearchPageProps {
   initialQuery?: string;
@@ -388,11 +389,13 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '' }) => 
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          playTrack(item, results.filter((x) => x.videoId || x.duration));
-                          setVideoMode(true);
-                          setExpanded(true);
+                          useNavigationStore.getState().navigateToYouTube({
+                            id: item.videoId || item.id,
+                            title: item.title,
+                            artist: item.artist || 'YouTube',
+                          });
                         }}
-                        title="Watch YouTube Video"
+                        title="Watch in YouTube Cinema"
                         className="p-2 rounded-xl hover:bg-surface text-foreground-muted hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         <Video className="w-4 h-4" />

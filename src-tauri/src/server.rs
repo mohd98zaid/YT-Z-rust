@@ -2,7 +2,7 @@ use axum::{
     extract::{ws::WebSocketUpgrade, Path, Query, State},
     http::{Method, StatusCode},
     response::{IntoResponse, Json},
-    routing::{delete, get, post},
+    routing::{delete, get, post, put},
     Router,
 };
 use serde::Deserialize;
@@ -82,6 +82,14 @@ pub struct EnqueueRequest {
 pub struct CreatePlaylistRequest {
     pub name: String,
     pub description: Option<String>,
+    pub thumbnail: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct UpdatePlaylistRequest {
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub thumbnail: Option<String>,
 }
 
 pub fn create_router(state: AppState) -> Router {
@@ -128,13 +136,26 @@ pub fn create_router(state: AppState) -> Router {
             "/api/library/playlists",
             get(handle_get_playlists).post(handle_create_playlist),
         )
-        .route("/api/library/playlists/:id", delete(handle_delete_playlist))
+        .route("/api/library/playlists/:id", put(handle_update_playlist).delete(handle_delete_playlist))
         .route(
             "/api/library/playlists/:id/tracks",
             get(handle_get_playlist_tracks).post(handle_add_playlist_track),
         )
         .route(
             "/api/library/playlists/:id/tracks/:track_id",
+            delete(handle_remove_playlist_track),
+        )
+        .route(
+            "/api/playlists/custom",
+            get(handle_get_playlists).post(handle_create_playlist),
+        )
+        .route("/api/playlists/custom/:id", put(handle_update_playlist).delete(handle_delete_playlist))
+        .route(
+            "/api/playlists/custom/:id/tracks",
+            get(handle_get_playlist_tracks).post(handle_add_playlist_track),
+        )
+        .route(
+            "/api/playlists/custom/:id/tracks/:track_id",
             delete(handle_remove_playlist_track),
         )
         // System / Storage / Cache
@@ -360,8 +381,24 @@ async fn handle_create_playlist(
     State(state): State<AppState>,
     Json(body): Json<CreatePlaylistRequest>,
 ) -> impl IntoResponse {
-    match state.db.create_playlist(&body.name, body.description.as_deref()) {
+    match state.db.create_playlist(&body.name, body.description.as_deref(), body.thumbnail.as_deref()) {
         Ok(pl) => Json(pl).into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+    }
+}
+
+async fn handle_update_playlist(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    Json(body): Json<UpdatePlaylistRequest>,
+) -> impl IntoResponse {
+    match state.db.update_playlist(
+        &id,
+        body.name.as_deref(),
+        body.description.as_deref(),
+        body.thumbnail.as_deref(),
+    ) {
+        Ok(_) => Json(json!({ "status": "ok" })).into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
     }
 }

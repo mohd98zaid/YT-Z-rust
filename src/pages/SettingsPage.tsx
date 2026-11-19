@@ -381,11 +381,13 @@ export const SettingsPage: React.FC = () => {
             <p className="text-xs text-foreground-muted mb-3">
               Preferred streaming format. Lossless queries enabled add-ons (Lossless Bridge) and falls back to YouTube Music Opus.
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 max-w-xl">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-w-2xl">
               {[
                 { id: 'lossless', label: 'Lossless FLAC', desc: 'Bit-perfect 1411k+ / 24-bit 96kHz' },
-                { id: 'high', label: 'High (320k)', desc: 'Enhanced bitrate stream' },
-                { id: 'auto', label: 'Standard', desc: 'YouTube Music Opus 256k' },
+                { id: 'high', label: 'High Quality', desc: 'Opus 256k–320k enhanced stream' },
+                { id: 'standard', label: 'Standard', desc: 'Opus 128k–160k balanced stream' },
+                { id: 'data_saver', label: 'Data Saver', desc: 'Opus 48k–70k (uses 70%+ less data)' },
+                { id: 'auto', label: 'Auto (Adaptive)', desc: 'Optimized network stream' },
               ].map((mode) => (
                 <button
                   key={mode.id}

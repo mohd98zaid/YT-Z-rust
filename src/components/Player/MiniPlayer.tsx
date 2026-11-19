@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Play,
   Pause,
@@ -19,6 +19,12 @@ import {
   Video,
   Timer,
   Radio,
+  Sparkles,
+  Zap,
+  Leaf,
+  Gauge,
+  Check,
+  RefreshCw,
 } from 'lucide-react';
 import { usePlayerStore } from '../../stores/usePlayerStore';
 import { useDownloadStore } from '../../stores/useDownloadStore';
@@ -36,6 +42,7 @@ export const MiniPlayer: React.FC = () => {
     shuffle,
     repeatMode,
     isExpanded,
+    isVideoMode,
     isLyricsOpen,
     isEqualizerOpen,
     isQueueOpen,
@@ -61,11 +68,29 @@ export const MiniPlayer: React.FC = () => {
     toggleStatsForNerds,
     toggleSleepTimer,
     startRadio,
+    audioQuality,
+    setAudioQuality,
   } = usePlayerStore();
 
   const { queueDownload } = useDownloadStore();
   const [isLiked, setIsLiked] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
+  const [qualityMenuOpen, setQualityMenuOpen] = useState(false);
+  const qualityMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (qualityMenuRef.current && !qualityMenuRef.current.contains(e.target as Node)) {
+        setQualityMenuOpen(false);
+      }
+    };
+    if (qualityMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [qualityMenuOpen]);
 
   if (!currentTrack) return null;
 
@@ -81,14 +106,18 @@ export const MiniPlayer: React.FC = () => {
   const handleDownloadCurrent = async () => {
     if (!currentTrack) return;
     try {
+      const isLossless = Boolean(audioStats?.isLossless || audioQuality === 'lossless');
+      const playingFormat = isLossless ? 'flac' : 'mp3';
+      const playingQuality = isLossless ? 'lossless' : (audioStats?.bitrate ? String(audioStats.bitrate) : '320');
+
       const url = currentTrack.isLocal
         ? currentTrack.filePath || ''
         : `https://www.youtube.com/watch?v=${currentTrack.videoId || currentTrack.id}`;
       await queueDownload({
         url,
         download_type: 'audio',
-        format: 'mp3',
-        quality: '320',
+        format: playingFormat,
+        quality: playingQuality,
         title: currentTrack.title,
         artist: currentTrack.artist,
         thumbnail: currentTrack.thumbnail,
@@ -116,7 +145,10 @@ export const MiniPlayer: React.FC = () => {
   };
 
   return (
-    <div className="h-20 bg-surface/95 border-t border-border backdrop-blur-2xl px-4 flex items-center justify-between shrink-0 select-none z-30 relative shadow-2xl">
+    <div 
+      style={{ backgroundColor: 'var(--bg-surface)' }}
+      className="h-20 bg-surface border-t border-border px-4 flex items-center justify-between shrink-0 select-none z-30 relative shadow-2xl"
+    >
       {/* Top Thin Progress Bar (Clickable) */}
       <div
         className="absolute top-0 left-0 right-0 h-1 bg-border/60 cursor-pointer group hover:h-1.5 transition-all"
@@ -166,16 +198,34 @@ export const MiniPlayer: React.FC = () => {
           </h4>
           <div className="flex items-center gap-1.5 truncate">
             <p className="text-xs text-foreground-muted truncate">{currentTrack.artist}</p>
-            {showMiniPlayerCodecBadge && (
-              audioStats?.isLossless ? (
+            {activeVideoSource || isVideoMode ? (
+              <span
+                className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-red-600/20 text-red-400 border border-red-500/30"
+                title="Watching YouTube Cinema Video"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                VIDEO • 1080p
+              </span>
+            ) : showMiniPlayerCodecBadge && (
+              audioQuality === 'data_saver' ? (
                 <span
                   onClick={(e) => {
                     e.stopPropagation();
-                    setExpanded(true);
-                    toggleStatsForNerds();
+                    setQualityMenuOpen(true);
+                  }}
+                  className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-black tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-[0_0_8px_rgba(16,185,129,0.25)] cursor-pointer hover:scale-105 transition-transform"
+                  title="Data Saver Active (~48k-70k Opus) - Click to change quality"
+                >
+                  SAVER
+                </span>
+              ) : audioStats?.isLossless ? (
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setQualityMenuOpen(true);
                   }}
                   className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-black tracking-wider bg-gradient-to-r from-amber-500/20 to-yellow-500/20 text-amber-300 border border-amber-500/40 shadow-[0_0_8px_rgba(245,158,11,0.25)] cursor-pointer hover:scale-105 transition-transform"
-                  title={`Bit-Perfect Lossless FLAC (${audioStats.bitDepth || 16}-bit/${Math.round((audioStats.sampleRate || 44100)/1000)}kHz)`}
+                  title={`Bit-Perfect Lossless FLAC (${audioStats.bitDepth || 16}-bit/${Math.round((audioStats.sampleRate || 44100)/1000)}kHz) - Click to change quality`}
                 >
                   LOSSLESS
                 </span>
@@ -183,23 +233,14 @@ export const MiniPlayer: React.FC = () => {
                 <span
                   onClick={(e) => {
                     e.stopPropagation();
-                    setExpanded(true);
-                    toggleStatsForNerds();
+                    setQualityMenuOpen(true);
                   }}
-                  className="shrink-0 inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-medium bg-surface-elevated text-foreground-subtle border border-border/50 cursor-pointer hover:text-foreground"
-                  title="Standard YouTube Music Opus stream (160-256kbps)"
+                  className="shrink-0 inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-medium bg-surface-elevated text-foreground-subtle border border-border cursor-pointer hover:text-foreground"
+                  title="Click to change streaming quality"
                 >
                   {audioStats?.codec?.toUpperCase() || 'OPUS'}
                 </span>
               )
-            )}
-            {activeVideoSource && (
-              <span
-                className="shrink-0 inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-bold bg-red-600/20 text-red-400 border border-red-500/30 animate-pulse"
-                title="Audio playback is paused while video is active"
-              >
-                Video Active
-              </span>
             )}
           </div>
         </div>
@@ -286,13 +327,21 @@ export const MiniPlayer: React.FC = () => {
 
       {/* Right: Quick Features & Volume */}
       <div className="flex items-center justify-end gap-2 w-1/4 min-w-[220px]">
-        {/* 1-Click Download Current Song */}
+        {/* 1-Click Download Current Song at Playing Quality */}
         <button
           onClick={handleDownloadCurrent}
-          title={downloadSuccess ? 'Queued for Download!' : 'Download this song (320k MP3)'}
+          title={
+            downloadSuccess
+              ? 'Queued for Download!'
+              : audioStats?.isLossless
+              ? `Download Original Lossless FLAC (${audioStats.bitDepth || 24}-bit/${Math.round((audioStats.sampleRate || 44100)/1000)}kHz)`
+              : 'Download Original Audio'
+          }
           className={`p-2 rounded-xl transition-all ${
             downloadSuccess
               ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+              : audioStats?.isLossless
+              ? 'text-amber-400 hover:text-amber-300 hover:bg-amber-500/10'
               : 'text-foreground-muted hover:text-foreground hover:bg-surface-elevated'
           }`}
         >
@@ -378,6 +427,128 @@ export const MiniPlayer: React.FC = () => {
             <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-primary animate-ping" />
           )}
         </button>
+
+        {/* Streaming Audio Quality & Data Saver */}
+        <div className="relative" ref={qualityMenuRef}>
+          <button
+            onClick={() => setQualityMenuOpen(!qualityMenuOpen)}
+            title={`Streaming Quality: ${audioQuality.replace('_', ' ').toUpperCase()} (Click to change)`}
+            className={`p-2 rounded-xl border flex items-center gap-1 transition-all ${
+              qualityMenuOpen
+                ? 'bg-primary/20 text-primary border-primary shadow-sm shadow-primary/20'
+                : audioQuality === 'lossless'
+                ? 'bg-amber-500/15 text-amber-300 border-amber-500/40'
+                : audioQuality === 'data_saver'
+                ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'
+                : 'text-foreground-muted hover:text-foreground hover:bg-surface-elevated border-transparent'
+            }`}
+          >
+            {audioQuality === 'lossless' ? (
+              <Sparkles className="w-4 h-4 text-amber-400" />
+            ) : audioQuality === 'data_saver' ? (
+              <Leaf className="w-4 h-4 text-emerald-400" />
+            ) : audioQuality === 'high' ? (
+              <Zap className="w-4 h-4 text-primary" />
+            ) : (
+              <Gauge className="w-4 h-4" />
+            )}
+          </button>
+
+          {qualityMenuOpen && (
+            <div 
+              style={{ backgroundColor: 'var(--bg-surface)' }}
+              className="absolute right-0 bottom-full mb-3 w-80 bg-surface border-2 border-border/90 rounded-2xl p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.65)] z-50 animate-fadeIn space-y-1.5"
+            >
+              <div className="px-3 py-2 border-b border-border/40 mb-1">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-bold text-foreground">Streaming Quality</p>
+                  <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-surface-elevated text-foreground-muted border border-border">
+                    {audioQuality.replace('_', ' ')}
+                  </span>
+                </div>
+                <p className="text-[11px] text-foreground-muted">Select audio fidelity or data saver</p>
+              </div>
+
+              <div className="space-y-1">
+                {[
+                  {
+                    id: 'lossless',
+                    label: 'Lossless / Hi-Res',
+                    badge: 'FLAC 24-bit',
+                    desc: 'Bit-perfect audiophile stream up to 96kHz / 1411k+',
+                    icon: Sparkles,
+                    color: 'text-amber-400 bg-amber-500/10 border-amber-500/30',
+                  },
+                  {
+                    id: 'high',
+                    label: 'High Quality',
+                    badge: '256k–320k',
+                    desc: 'Maximum YouTube Music Opus fidelity & clarity',
+                    icon: Zap,
+                    color: 'text-primary bg-primary/10 border-primary/30',
+                  },
+                  {
+                    id: 'standard',
+                    label: 'Standard',
+                    badge: '128k–160k',
+                    desc: 'Balanced audio fidelity with smooth buffering',
+                    icon: Gauge,
+                    color: 'text-blue-400 bg-blue-500/10 border-blue-500/30',
+                  },
+                  {
+                    id: 'data_saver',
+                    label: 'Data Saver',
+                    badge: '48k–70k',
+                    desc: 'Uses 70%+ less data — ideal for mobile & metered data',
+                    icon: Leaf,
+                    color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
+                  },
+                  {
+                    id: 'auto',
+                    label: 'Auto (Adaptive)',
+                    badge: 'Auto',
+                    desc: 'Optimized dynamically based on track and connection',
+                    icon: RefreshCw,
+                    color: 'text-purple-400 bg-purple-500/10 border-purple-500/30',
+                  },
+                ].map((opt) => {
+                  const isSelected = audioQuality === opt.id;
+                  const OptIcon = opt.icon;
+                  return (
+                    <button
+                      key={opt.id}
+                      onClick={() => {
+                        setAudioQuality(opt.id as any);
+                        setQualityMenuOpen(false);
+                      }}
+                      className={`w-full flex items-start gap-2.5 p-2 rounded-xl text-left transition-all ${
+                        isSelected
+                          ? 'bg-primary/20 border border-primary/40 text-foreground'
+                          : 'hover:bg-surface-elevated text-foreground-muted hover:text-foreground border border-transparent'
+                      }`}
+                    >
+                      <div className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${opt.color}`}>
+                        <OptIcon className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className={`text-xs font-bold ${isSelected ? 'text-primary' : 'text-foreground'}`}>
+                            {opt.label}
+                          </span>
+                          <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-surface-elevated text-foreground-subtle border border-border/40">
+                            {opt.badge}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-foreground-muted leading-tight mt-0.5">{opt.desc}</p>
+                      </div>
+                      {isSelected && <Check className="w-4 h-4 text-primary shrink-0 self-center" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Volume Slider */}
         <div className="flex items-center gap-1.5 ml-1">

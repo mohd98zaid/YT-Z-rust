@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { usePlayerStore } from './usePlayerStore';
+import { usePlayerStore, registerVideoControls } from './usePlayerStore';
 import { useNavigationStore } from './useNavigationStore';
 import { Track } from '../types';
 
@@ -17,6 +17,8 @@ interface VideoState {
   isPiP: boolean;
   isFullscreen: boolean;
   reloadKey: number;
+  videoQuality: string; // 'hd1080', 'hd720', 'hd1440', 'hd2160', 'large', 'medium', 'auto'
+  useDirectVideo: boolean;
 
   playVideo: (video: ActiveVideo, queue?: ActiveVideo[]) => void;
   nextVideo: () => void;
@@ -25,6 +27,9 @@ interface VideoState {
   togglePiP: () => void;
   setPiP: (pip: boolean) => void;
   setIsFullscreen: (fs: boolean) => void;
+  setVideoQuality: (q: string) => void;
+  setUseDirectVideo: (direct: boolean) => void;
+  toggleDirectVideo: () => void;
   reloadVideo: () => void;
   restoreCinema: () => void;
 }
@@ -36,16 +41,57 @@ export const useVideoStore = create<VideoState>((set, get) => ({
   isPiP: false,
   isFullscreen: false,
   reloadKey: 0,
+  videoQuality: localStorage.getItem('ytz_video_quality') || 'hd1080',
+  useDirectVideo: false,
+
+  setUseDirectVideo: (direct: boolean) => set({ useDirectVideo: direct }),
+  toggleDirectVideo: () => set((state) => ({ useDirectVideo: !state.useDirectVideo })),
 
   playVideo: (video, queue) => {
-    // 1. Pause global music playback to prevent conflicting audio
-    usePlayerStore.getState().pause();
+    // 1. Strictly stop all audio playback
+    usePlayerStore.getState().stopAudio();
     usePlayerStore.getState().setActiveVideoSource('youtube_video');
+
+    if (typeof document !== 'undefined') {
+      const audios = document.querySelectorAll('audio');
+      audios.forEach((a) => {
+        try {
+          a.pause();
+          a.currentTime = 0;
+          a.removeAttribute('src');
+          a.load();
+        } catch {}
+      });
+      // Stop and clear any existing HTML5 video element before switching
+      const videos = document.querySelectorAll('video');
+      videos.forEach((v) => {
+        try {
+          v.pause();
+          v.currentTime = 0;
+          v.removeAttribute('src');
+          v.load();
+        } catch {}
+      });
+      // Stop any existing iframe video
+      const iframes = document.querySelectorAll('iframe');
+      iframes.forEach((iframe) => {
+        try {
+          iframe.contentWindow?.postMessage(
+            JSON.stringify({ event: 'command', func: 'stopVideo' }),
+            '*'
+          );
+          iframe.contentWindow?.postMessage(
+            JSON.stringify({ event: 'command', func: 'pauseVideo' }),
+            '*'
+          );
+        } catch {}
+      });
+    }
 
     const vQueue = queue && queue.length > 0 ? queue : [video];
     const qIdx = vQueue.findIndex((v) => v.id === video.id);
 
-    // 2. Sync to PlayerStore so MiniPlayer metadata, timeline, and next/prev work seamlessly
+    // 2. Sync to PlayerStore so MiniPlayer metadata displays the video track
     const trackItem: Track = {
       id: video.id,
       videoId: video.id,
@@ -58,8 +104,9 @@ export const useVideoStore = create<VideoState>((set, get) => ({
 
     usePlayerStore.setState({
       currentTrack: trackItem,
-      isPlaying: true,
+      isPlaying: false,
       isVideoMode: true,
+      activeVideoSource: 'youtube_video',
     });
 
     set({
@@ -68,6 +115,7 @@ export const useVideoStore = create<VideoState>((set, get) => ({
       videoQueueIndex: qIdx >= 0 ? qIdx : 0,
       isPiP: false,
       reloadKey: Date.now(),
+      useDirectVideo: false,
     });
   },
 
@@ -77,6 +125,16 @@ export const useVideoStore = create<VideoState>((set, get) => ({
     const nextIdx = (videoQueueIndex + 1) % videoQueue.length;
     const nextVid = videoQueue[nextIdx];
     if (nextVid) {
+      if (typeof document !== 'undefined') {
+        const videos = document.querySelectorAll('video');
+        videos.forEach((v) => {
+          try { v.pause(); v.currentTime = 0; v.removeAttribute('src'); v.load(); } catch {}
+        });
+        const iframes = document.querySelectorAll('iframe');
+        iframes.forEach((iframe) => {
+          try { iframe.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'stopVideo' }), '*'); } catch {}
+        });
+      }
       const trackItem: Track = {
         id: nextVid.id,
         videoId: nextVid.id,
@@ -88,7 +146,9 @@ export const useVideoStore = create<VideoState>((set, get) => ({
       };
       usePlayerStore.setState({
         currentTrack: trackItem,
-        isPlaying: true,
+        isPlaying: false,
+        isVideoMode: true,
+        activeVideoSource: 'youtube_video',
       });
       set({
         activeVideo: nextVid,
@@ -104,6 +164,16 @@ export const useVideoStore = create<VideoState>((set, get) => ({
     const prevIdx = (videoQueueIndex - 1 + videoQueue.length) % videoQueue.length;
     const prevVid = videoQueue[prevIdx];
     if (prevVid) {
+      if (typeof document !== 'undefined') {
+        const videos = document.querySelectorAll('video');
+        videos.forEach((v) => {
+          try { v.pause(); v.currentTime = 0; v.removeAttribute('src'); v.load(); } catch {}
+        });
+        const iframes = document.querySelectorAll('iframe');
+        iframes.forEach((iframe) => {
+          try { iframe.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'stopVideo' }), '*'); } catch {}
+        });
+      }
       const trackItem: Track = {
         id: prevVid.id,
         videoId: prevVid.id,
@@ -115,7 +185,9 @@ export const useVideoStore = create<VideoState>((set, get) => ({
       };
       usePlayerStore.setState({
         currentTrack: trackItem,
-        isPlaying: true,
+        isPlaying: false,
+        isVideoMode: true,
+        activeVideoSource: 'youtube_video',
       });
       set({
         activeVideo: prevVid,
@@ -126,9 +198,31 @@ export const useVideoStore = create<VideoState>((set, get) => ({
   },
 
   closeVideo: () => {
+    if (typeof document !== 'undefined') {
+      const iframes = document.querySelectorAll('iframe');
+      iframes.forEach((iframe) => {
+        try {
+          iframe.contentWindow?.postMessage(
+            JSON.stringify({ event: 'command', func: 'stopVideo' }),
+            '*'
+          );
+        } catch {}
+      });
+      const videos = document.querySelectorAll('video');
+      videos.forEach((video) => {
+        try {
+          video.pause();
+          video.currentTime = 0;
+          video.src = '';
+        } catch {}
+      });
+    }
+
     if (usePlayerStore.getState().activeVideoSource === 'youtube_video') {
       usePlayerStore.getState().setActiveVideoSource(null);
     }
+    usePlayerStore.setState({ isVideoMode: false, isPlaying: false });
+
     set({
       activeVideo: null,
       videoQueue: [],
@@ -136,6 +230,26 @@ export const useVideoStore = create<VideoState>((set, get) => ({
       isPiP: false,
       isFullscreen: false,
     });
+  },
+
+  setVideoQuality: (q: string) => {
+    localStorage.setItem('ytz_video_quality', q);
+    set({ videoQuality: q });
+    if (typeof document !== 'undefined') {
+      const iframes = document.querySelectorAll('iframe');
+      iframes.forEach((iframe) => {
+        try {
+          iframe.contentWindow?.postMessage(
+            JSON.stringify({ event: 'command', func: 'setPlaybackQuality', args: [q] }),
+            '*'
+          );
+          iframe.contentWindow?.postMessage(
+            JSON.stringify({ event: 'command', func: 'setPlaybackQualityRange', args: [q, q] }),
+            '*'
+          );
+        } catch {}
+      });
+    }
   },
 
   togglePiP: () => {
@@ -163,3 +277,9 @@ export const useVideoStore = create<VideoState>((set, get) => ({
     }, 60);
   },
 }));
+
+registerVideoControls({
+  stop: () => useVideoStore.getState().closeVideo(),
+  next: () => useVideoStore.getState().nextVideo(),
+  previous: () => useVideoStore.getState().previousVideo(),
+});

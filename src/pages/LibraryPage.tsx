@@ -11,14 +11,45 @@ import {
   Trash2,
   X,
   ListPlus,
+  ListMusic,
   Plus,
   Edit3,
   Check,
   Disc,
+  Camera,
+  Image,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { Track } from '../types';
 import { usePlayerStore } from '../stores/usePlayerStore';
+
+const PlaylistCoverImage: React.FC<{
+  src?: string;
+  alt: string;
+  iconSize?: 'sm' | 'md' | 'lg';
+  className?: string;
+}> = ({ src, alt, iconSize = 'md', className = '' }) => {
+  const [error, setError] = useState(false);
+  const cleanSrc = src && src.trim() && !src.includes('googleusercontent.com/test') ? src.trim() : null;
+
+  if (!cleanSrc || error) {
+    return (
+      <div className={`w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-primary/25 via-surface-elevated to-surface text-primary/70 ${className}`}>
+        <ListMusic className={iconSize === 'lg' ? 'w-16 h-16 text-primary/70' : 'w-12 h-12 text-primary/60'} />
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={cleanSrc}
+      alt={alt}
+      referrerPolicy="no-referrer"
+      onError={() => setError(true)}
+      className={`w-full h-full object-cover group-hover:scale-105 transition-transform ${className}`}
+    />
+  );
+};
 
 export const LibraryPage: React.FC = () => {
   const [activeSubTab, setActiveSubTab] = useState<'favorites' | 'playlists' | 'local' | 'history'>('favorites');
@@ -29,10 +60,17 @@ export const LibraryPage: React.FC = () => {
   const [selectedPlaylist, setSelectedPlaylist] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Modal states
+  // Create Playlist modal state
   const [isCreatePlaylistOpen, setIsCreatePlaylistOpen] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
   const [newPlaylistDesc, setNewPlaylistDesc] = useState('');
+  const [newPlaylistThumbnail, setNewPlaylistThumbnail] = useState('');
+
+  // Edit Playlist modal state
+  const [editingPlaylist, setEditingPlaylist] = useState<any | null>(null);
+  const [editPlaylistName, setEditPlaylistName] = useState('');
+  const [editPlaylistDesc, setEditPlaylistDesc] = useState('');
+  const [editPlaylistThumbnail, setEditPlaylistThumbnail] = useState('');
 
   // ID3 Tag Editor modal
   const [editingFile, setEditingFile] = useState<any | null>(null);
@@ -72,14 +110,42 @@ export const LibraryPage: React.FC = () => {
     const name = newPlaylistName.trim();
     if (!name) return;
     try {
-      await api.createCustomPlaylist(name, newPlaylistDesc.trim());
+      await api.createCustomPlaylist(name, newPlaylistDesc.trim(), newPlaylistThumbnail.trim());
       setNewPlaylistName('');
       setNewPlaylistDesc('');
+      setNewPlaylistThumbnail('');
       setIsCreatePlaylistOpen(false);
       const pls = await api.getCustomPlaylists();
       setCustomPlaylists(pls || []);
     } catch (err) {
       console.error('Failed to create playlist', err);
+    }
+  };
+
+  const handleStartEditPlaylist = (pl: any) => {
+    setEditingPlaylist(pl);
+    setEditPlaylistName(pl.name || '');
+    setEditPlaylistDesc(pl.description || '');
+    setEditPlaylistThumbnail(pl.is_custom_thumbnail ? (pl.thumbnail || '') : '');
+  };
+
+  const handleSavePlaylistEdit = async () => {
+    if (!editingPlaylist) return;
+    const name = editPlaylistName.trim();
+    if (!name) return;
+    try {
+      await api.updateCustomPlaylist(editingPlaylist.id, {
+        name,
+        description: editPlaylistDesc.trim(),
+        thumbnail: editPlaylistThumbnail.trim(),
+      });
+      const updated = await api.getCustomPlaylist(editingPlaylist.id);
+      setSelectedPlaylist(updated);
+      setEditingPlaylist(null);
+      const pls = await api.getCustomPlaylists();
+      setCustomPlaylists(pls || []);
+    } catch (err) {
+      console.error('Failed to update playlist', err);
     }
   };
 
@@ -325,31 +391,73 @@ export const LibraryPage: React.FC = () => {
         selectedPlaylist ? (
           /* Single Playlist View */
           <div className="space-y-6">
-            <div className="flex items-center justify-between pb-4 border-b border-border/40">
-              <div className="flex items-center gap-4">
+            {/* Playlist Hero Banner */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 p-6 rounded-3xl bg-surface border border-border/80 relative overflow-hidden shadow-xl">
+              {/* Playlist Cover Art with Change Cover Overlay */}
+              <div
+                onClick={() => handleStartEditPlaylist(selectedPlaylist)}
+                className="relative w-36 h-36 sm:w-44 sm:h-44 rounded-2xl bg-surface-elevated overflow-hidden border border-white/10 shrink-0 shadow-2xl cursor-pointer group"
+                title="Click to change playlist cover art"
+              >
+                <PlaylistCoverImage
+                  src={selectedPlaylist.thumbnail}
+                  alt={selectedPlaylist.name}
+                  iconSize="lg"
+                />
+
+                {/* Hover Change Cover Overlay */}
+                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-1.5 transition-opacity duration-200">
+                  <Camera className="w-6 h-6 text-white" />
+                  <span className="text-[11px] font-bold text-white tracking-wide uppercase">Change Cover</span>
+                </div>
+              </div>
+
+              {/* Playlist Metadata & Actions */}
+              <div className="flex-1 space-y-3 min-w-0">
                 <button
                   onClick={() => setSelectedPlaylist(null)}
-                  className="px-3 py-1.5 rounded-xl bg-surface border border-border text-xs text-foreground-muted hover:text-foreground transition-all"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-foreground-muted hover:text-primary transition-colors cursor-pointer"
                 >
                   ← Back to Playlists
                 </button>
                 <div>
-                  <h2 className="text-xl font-bold text-foreground">{selectedPlaylist.name}</h2>
-                  <p className="text-xs text-foreground-muted">
-                    {selectedPlaylist.trackCount} tracks • {selectedPlaylist.description || 'Custom Playlist'}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/20">
+                      PLAYLIST
+                    </span>
+                    {selectedPlaylist.is_custom_thumbnail ? (
+                      <span className="text-[10px] font-bold text-foreground-subtle">Custom Cover</span>
+                    ) : (
+                      <span className="text-[10px] font-bold text-foreground-subtle">1st Song Artwork</span>
+                    )}
+                  </div>
+                  <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight truncate mt-1">
+                    {selectedPlaylist.name}
+                  </h1>
+                  <p className="text-xs text-foreground-muted line-clamp-2 mt-1">
+                    {selectedPlaylist.description || 'Custom user collection'} • {selectedPlaylist.trackCount} {selectedPlaylist.trackCount === 1 ? 'track' : 'tracks'}
                   </p>
                 </div>
-              </div>
 
-              {selectedPlaylist.tracks && selectedPlaylist.tracks.length > 0 && (
-                <button
-                  onClick={() => playTrack(selectedPlaylist.tracks[0], selectedPlaylist.tracks)}
-                  className="flex items-center gap-2 px-5 py-2 rounded-xl bg-primary text-white font-bold text-xs shadow-md shadow-primary/25 hover:bg-primary-hover transition-all"
-                >
-                  <Play className="w-4 h-4 fill-current" />
-                  <span>Play All</span>
-                </button>
-              )}
+                <div className="flex items-center gap-2.5 pt-1">
+                  {selectedPlaylist.tracks && selectedPlaylist.tracks.length > 0 && (
+                    <button
+                      onClick={() => playTrack(selectedPlaylist.tracks[0], selectedPlaylist.tracks)}
+                      className="flex items-center gap-2 px-6 py-2.5 rounded-2xl bg-primary text-white font-bold text-xs shadow-lg shadow-primary/30 hover:bg-primary-hover hover:scale-105 active:scale-95 transition-all"
+                    >
+                      <Play className="w-4 h-4 fill-current" />
+                      <span>Play All</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleStartEditPlaylist(selectedPlaylist)}
+                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-surface-elevated border border-border text-foreground hover:border-primary/50 text-xs font-semibold hover:scale-105 active:scale-95 transition-all"
+                  >
+                    <Edit3 className="w-3.5 h-3.5 text-foreground-muted" />
+                    <span>Edit Cover / Info</span>
+                  </button>
+                </div>
+              </div>
             </div>
 
             {selectedPlaylist.tracks && selectedPlaylist.tracks.length > 0 ? (
@@ -428,13 +536,11 @@ export const LibraryPage: React.FC = () => {
                 className="p-4 rounded-3xl bg-surface border border-border hover:border-primary/50 hover:bg-surface-elevated cursor-pointer group transition-all relative overflow-hidden"
               >
                 <div className="w-full aspect-square rounded-2xl bg-surface-elevated border border-white/5 overflow-hidden relative shadow-md">
-                  {pl.thumbnail ? (
-                    <img src={pl.thumbnail} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-primary/40">
-                      <ListPlus className="w-12 h-12" />
-                    </div>
-                  )}
+                  <PlaylistCoverImage
+                    src={pl.thumbnail}
+                    alt={pl.name}
+                    iconSize="md"
+                  />
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                     <Play className="w-10 h-10 text-white fill-current drop-shadow-lg" />
                   </div>
@@ -596,7 +702,7 @@ export const LibraryPage: React.FC = () => {
 
       {/* New Playlist Modal */}
       {isCreatePlaylistOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fadeIn">
+        <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fadeIn">
           <div className="bg-surface border border-white/10 rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-border/40">
               <h3 className="text-base font-bold text-foreground">Create New Playlist</h3>
@@ -629,6 +735,19 @@ export const LibraryPage: React.FC = () => {
                   className="w-full bg-surface-elevated border border-border rounded-xl px-3.5 py-2 text-sm text-foreground focus:border-primary outline-none"
                 />
               </div>
+              <div>
+                <label className="text-xs font-semibold text-foreground-muted block mb-1">Custom Cover Image URL (Optional)</label>
+                <input
+                  type="text"
+                  value={newPlaylistThumbnail}
+                  onChange={(e) => setNewPlaylistThumbnail(e.target.value)}
+                  placeholder="Leave empty to use 1st song's artwork automatically"
+                  className="w-full bg-surface-elevated border border-border rounded-xl px-3.5 py-2 text-xs text-foreground placeholder:text-foreground-subtle focus:border-primary outline-none"
+                />
+                <p className="text-[11px] text-foreground-subtle mt-1">
+                  💡 If left blank, the playlist cover will automatically be the album art of the first song you add.
+                </p>
+              </div>
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <button
@@ -643,6 +762,112 @@ export const LibraryPage: React.FC = () => {
                 className="px-5 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-hover shadow-md disabled:opacity-50"
               >
                 Create
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Playlist Details & Custom Cover Modal */}
+      {editingPlaylist && (
+        <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fadeIn">
+          <div className="bg-surface border border-white/10 rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-border/40">
+              <div className="flex items-center gap-2">
+                <Edit3 className="w-4 h-4 text-primary" />
+                <h3 className="text-base font-bold text-foreground">Edit Playlist &amp; Cover</h3>
+              </div>
+              <button
+                onClick={() => setEditingPlaylist(null)}
+                className="p-1 rounded-full text-foreground-muted hover:text-foreground"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Cover Preview & Custom URL */}
+              <div className="flex items-center gap-4">
+                <div className="w-20 h-20 rounded-2xl bg-surface-elevated border border-border overflow-hidden relative shrink-0 shadow-inner">
+                  {editPlaylistThumbnail ? (
+                    <img
+                      src={editPlaylistThumbnail}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.display = 'none';
+                        const parent = (e.target as HTMLElement).parentElement;
+                        if (parent) {
+                          const fallback = parent.querySelector('.edit-preview-fallback');
+                          if (fallback) (fallback as HTMLElement).style.display = 'flex';
+                        }
+                      }}
+                    />
+                  ) : null}
+                  <div
+                    className={`edit-preview-fallback w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-surface-elevated text-primary/50 ${
+                      editPlaylistThumbnail ? 'hidden' : 'flex'
+                    }`}
+                  >
+                    <ListMusic className="w-8 h-8" />
+                  </div>
+                </div>
+
+                <div className="flex-1 space-y-1">
+                  <label className="text-xs font-semibold text-foreground-muted block">Custom Cover Image URL</label>
+                  <input
+                    type="text"
+                    value={editPlaylistThumbnail}
+                    onChange={(e) => setEditPlaylistThumbnail(e.target.value)}
+                    placeholder="Paste image link (https://...)"
+                    className="w-full bg-surface-elevated border border-border rounded-xl px-3 py-2 text-xs text-foreground focus:border-primary outline-none"
+                  />
+                  {editPlaylistThumbnail && (
+                    <button
+                      type="button"
+                      onClick={() => setEditPlaylistThumbnail('')}
+                      className="text-[11px] text-primary hover:underline font-semibold cursor-pointer"
+                    >
+                      Reset to 1st Song Artwork
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-foreground-muted block mb-1">Playlist Name</label>
+                <input
+                  type="text"
+                  value={editPlaylistName}
+                  onChange={(e) => setEditPlaylistName(e.target.value)}
+                  className="w-full bg-surface-elevated border border-border rounded-xl px-3.5 py-2 text-sm text-foreground focus:border-primary outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-foreground-muted block mb-1">Description (Optional)</label>
+                <input
+                  type="text"
+                  value={editPlaylistDesc}
+                  onChange={(e) => setEditPlaylistDesc(e.target.value)}
+                  className="w-full bg-surface-elevated border border-border rounded-xl px-3.5 py-2 text-sm text-foreground focus:border-primary outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-border/40">
+              <button
+                onClick={() => setEditingPlaylist(null)}
+                className="px-4 py-2 rounded-xl bg-surface-elevated text-xs font-semibold text-foreground-muted hover:text-foreground"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSavePlaylistEdit}
+                disabled={!editPlaylistName.trim()}
+                className="px-5 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-hover shadow-md disabled:opacity-50"
+              >
+                Save Changes
               </button>
             </div>
           </div>

@@ -78,7 +78,7 @@ export const LyricsView: React.FC<LyricsViewProps> = ({
                 className="w-8 h-8 rounded-lg object-cover shadow-md"
               />
               <div className="text-left hidden sm:block">
-                <div className="text-xs font-bold text-white truncate max-w-[200px] md:max-w-xs">
+                <div className="text-xs font-bold text-foreground truncate max-w-[200px] md:max-w-xs">
                   {currentTrack.title}
                 </div>
                 <div className="text-[10px] text-foreground-muted truncate">
@@ -144,18 +144,18 @@ export const LyricsView: React.FC<LyricsViewProps> = ({
               className={`cursor-pointer transition-all duration-300 py-1.5 px-4 rounded-2xl ${
                 isActive
                   ? isFullScreen
-                    ? 'text-white text-3xl sm:text-4xl md:text-5xl font-black scale-105 tracking-tight'
-                    : 'text-white text-xl md:text-2xl font-extrabold scale-105 tracking-tight'
+                    ? 'text-foreground dark:text-white text-3xl sm:text-4xl md:text-5xl font-black scale-105 tracking-tight'
+                    : 'text-foreground dark:text-white text-xl md:text-2xl font-black scale-105 tracking-tight'
                   : isPassed
                   ? isFullScreen
-                    ? 'text-foreground-muted/40 text-xl sm:text-2xl font-medium hover:text-foreground-muted'
-                    : 'text-foreground-muted/50 text-base md:text-lg font-medium hover:text-foreground-muted'
+                    ? 'text-foreground-muted/50 text-xl sm:text-2xl font-medium hover:text-foreground'
+                    : 'text-foreground-muted/60 text-base md:text-lg font-medium hover:text-foreground'
                   : isFullScreen
                   ? 'text-foreground-subtle text-xl sm:text-2xl font-medium hover:text-foreground'
                   : 'text-foreground-subtle text-base md:text-lg font-medium hover:text-foreground'
               }`}
               style={{
-                textShadow: isActive ? '0 0 30px rgba(250, 45, 72, 0.5)' : 'none',
+                textShadow: isActive ? '0 0 25px rgba(250, 45, 72, 0.45)' : 'none',
               }}
             >
               {/* Syllable / word-level timings if available */}
@@ -168,8 +168,8 @@ export const LyricsView: React.FC<LyricsViewProps> = ({
                         key={wIdx}
                         className={`transition-all duration-150 ${
                           isWordActive
-                            ? 'text-white font-extrabold'
-                            : 'text-foreground-muted/40 font-semibold'
+                            ? 'text-foreground dark:text-white font-extrabold'
+                            : 'text-foreground-muted/50 font-semibold'
                         }`}
                       >
                         {word.text}

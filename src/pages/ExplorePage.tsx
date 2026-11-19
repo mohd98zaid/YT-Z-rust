@@ -4,6 +4,7 @@ import { api } from '../services/api';
 import { Track } from '../types';
 import { usePlayerStore } from '../stores/usePlayerStore';
 import { useDownloadStore } from '../stores/useDownloadStore';
+import { useNavigationStore } from '../stores/useNavigationStore';
 
 export const ExplorePage: React.FC = () => {
   const [charts, setCharts] = useState<{ songs: Track[]; videos: Track[]; artists: any[] }>({
@@ -127,9 +128,11 @@ export const ExplorePage: React.FC = () => {
                 <div
                   key={video.id || idx}
                   onClick={() => {
-                    playTrack(video, charts.videos);
-                    setVideoMode(true);
-                    setExpanded(true);
+                    useNavigationStore.getState().navigateToYouTube({
+                      id: video.videoId || video.id,
+                      title: video.title,
+                      artist: video.artist || 'YouTube',
+                    });
                   }}
                   className="flex items-center justify-between p-2.5 rounded-2xl hover:bg-surface-elevated cursor-pointer group transition-all"
                 >
@@ -158,9 +161,11 @@ export const ExplorePage: React.FC = () => {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        playTrack(video, charts.videos);
-                        setVideoMode(true);
-                        setExpanded(true);
+                        useNavigationStore.getState().navigateToYouTube({
+                          id: video.videoId || video.id,
+                          title: video.title,
+                          artist: video.artist || 'YouTube',
+                        });
                       }}
                       className="p-1.5 rounded-full hover:bg-surface text-foreground-muted hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
                       title="Watch Video"

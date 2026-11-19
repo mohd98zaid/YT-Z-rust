@@ -30,6 +30,10 @@ pub struct PlaylistItem {
     pub id: String,
     pub name: String,
     pub description: Option<String>,
+    #[serde(default)]
+    pub thumbnail: Option<String>,
+    #[serde(rename = "isCustomThumbnail", default)]
+    pub is_custom_thumbnail: Option<bool>,
     #[serde(rename = "createdAt")]
     pub created_at: f64,
     #[serde(rename = "updatedAt")]
@@ -135,11 +139,15 @@ impl DatabaseManager {
                 id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
                 description TEXT,
+                thumbnail TEXT,
+                is_custom_thumbnail INTEGER DEFAULT 0,
                 created_at REAL NOT NULL,
                 updated_at REAL NOT NULL
             )",
             [],
         )?;
+        let _ = conn.execute("ALTER TABLE custom_playlists ADD COLUMN thumbnail TEXT", []);
+        let _ = conn.execute("ALTER TABLE custom_playlists ADD COLUMN is_custom_thumbnail INTEGER DEFAULT 0", []);
 
         // 6. Custom Playlist Tracks Table
         conn.execute(
@@ -314,13 +322,20 @@ impl DatabaseManager {
     pub fn get_playlists(&self) -> Result<Vec<PlaylistItem>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT p.id, p.name, p.description, p.created_at, p.updated_at, COUNT(t.id) as track_count
+            "SELECT p.id, p.name, p.description, p.created_at, p.updated_at, COUNT(t.id) as track_count,
+                    COALESCE(NULLIF(p.thumbnail, ''), (
+                        SELECT t2.thumbnail FROM custom_playlist_tracks t2 
+                        WHERE t2.playlist_id = p.id AND t2.thumbnail IS NOT NULL AND t2.thumbnail != '' 
+                        ORDER BY t2.position ASC, t2.added_at ASC LIMIT 1
+                    )) as resolved_thumb,
+                    p.is_custom_thumbnail
              FROM custom_playlists p
              LEFT JOIN custom_playlist_tracks t ON p.id = t.playlist_id
              GROUP BY p.id
              ORDER BY p.updated_at DESC",
         )?;
         let rows = stmt.query_map([], |row| {
+            let is_custom_val: Option<i64> = row.get(7).ok();
             Ok(PlaylistItem {
                 id: row.get(0)?,
                 name: row.get(1)?,
@@ -328,6 +343,8 @@ impl DatabaseManager {
                 created_at: row.get(3)?,
                 updated_at: row.get(4)?,
                 track_count: row.get(5)?,
+                thumbnail: row.get(6).ok(),
+                is_custom_thumbnail: Some(is_custom_val.unwrap_or(0) == 1),
             })
         })?;
         let mut res = Vec::new();
@@ -337,23 +354,47 @@ impl DatabaseManager {
         Ok(res)
     }
 
-    pub fn create_playlist(&self, name: &str, description: Option<&str>) -> Result<PlaylistItem> {
+    pub fn create_playlist(&self, name: &str, description: Option<&str>, thumbnail: Option<&str>) -> Result<PlaylistItem> {
         let id = format!("pl_{}", chrono::Utc::now().timestamp_millis());
         let now = chrono::Utc::now().timestamp_millis() as f64 / 1000.0;
+        let is_custom = if thumbnail.map(|t| !t.trim().is_empty()).unwrap_or(false) { 1 } else { 0 };
+        let thumb_val = thumbnail.map(|t| t.trim().to_string()).unwrap_or_default();
         let conn = self.conn.lock().unwrap();
         conn.execute(
-            "INSERT INTO custom_playlists (id, name, description, created_at, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5)",
-            params![id, name, description, now, now],
+            "INSERT INTO custom_playlists (id, name, description, thumbnail, is_custom_thumbnail, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            params![id, name, description, thumb_val, is_custom, now, now],
         )?;
         Ok(PlaylistItem {
             id,
             name: name.to_string(),
             description: description.map(|s| s.to_string()),
+            thumbnail: if thumb_val.is_empty() { None } else { Some(thumb_val) },
+            is_custom_thumbnail: Some(is_custom == 1),
             created_at: now,
             updated_at: now,
             track_count: 0,
         })
+    }
+
+    pub fn update_playlist(&self, playlist_id: &str, name: Option<&str>, description: Option<&str>, thumbnail: Option<&str>) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        let now = chrono::Utc::now().timestamp_millis() as f64 / 1000.0;
+        if let Some(n) = name {
+            conn.execute("UPDATE custom_playlists SET name = ?1, updated_at = ?2 WHERE id = ?3", params![n, now, playlist_id])?;
+        }
+        if let Some(d) = description {
+            conn.execute("UPDATE custom_playlists SET description = ?1, updated_at = ?2 WHERE id = ?3", params![d, now, playlist_id])?;
+        }
+        if let Some(t) = thumbnail {
+            let trimmed = t.trim();
+            if trimmed.is_empty() {
+                conn.execute("UPDATE custom_playlists SET thumbnail = '', is_custom_thumbnail = 0, updated_at = ?1 WHERE id = ?2", params![now, playlist_id])?;
+            } else {
+                conn.execute("UPDATE custom_playlists SET thumbnail = ?1, is_custom_thumbnail = 1, updated_at = ?2 WHERE id = ?3", params![trimmed, now, playlist_id])?;
+            }
+        }
+        Ok(())
     }
 
     pub fn delete_playlist(&self, playlist_id: &str) -> Result<()> {
