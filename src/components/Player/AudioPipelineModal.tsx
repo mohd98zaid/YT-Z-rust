@@ -39,7 +39,7 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm animate-fadeIn"
+      className="fixed inset-0 z-[600] flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm animate-fadeIn"
       onClick={onClose}
     >
       <div 

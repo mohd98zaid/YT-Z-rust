@@ -16,6 +16,7 @@ import { YouTubePage } from './pages/YouTubePage';
 import { SleepTimerModal } from './components/Player/SleepTimerModal';
 import { PersistentVideoPlayer } from './components/Player/PersistentVideoPlayer';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { useThemeStore } from './stores/useThemeStore';
 import { useDownloadStore } from './stores/useDownloadStore';
 import { usePlayerStore } from './stores/usePlayerStore';
@@ -72,15 +73,17 @@ export const App: React.FC = () => {
 
         {/* Scrollable Page Body */}
         <main className="flex-1 overflow-y-auto">
-          {activeTab === 'home' && <HomePage />}
-          {activeTab === 'explore' && <ExplorePage />}
-          {activeTab === 'search' && <SearchPage initialQuery={searchQuery} />}
-          {activeTab === 'youtube' && <YouTubePage />}
-          {activeTab === 'downloader' && <DownloaderPage />}
-          {activeTab === 'spotify' && <SpotifyImporterPage />}
-          {activeTab === 'library' && <LibraryPage />}
-          {activeTab === 'plugins' && <PluginsPage />}
-          {activeTab === 'settings' && <SettingsPage />}
+          <ErrorBoundary fallbackTitle="Something went wrong while rendering this section">
+            {activeTab === 'home' && <HomePage />}
+            {activeTab === 'explore' && <ExplorePage />}
+            {activeTab === 'search' && <SearchPage initialQuery={searchQuery} />}
+            {activeTab === 'youtube' && <YouTubePage />}
+            {activeTab === 'downloader' && <DownloaderPage />}
+            {activeTab === 'spotify' && <SpotifyImporterPage />}
+            {activeTab === 'library' && <LibraryPage />}
+            {activeTab === 'plugins' && <PluginsPage />}
+            {activeTab === 'settings' && <SettingsPage />}
+          </ErrorBoundary>
         </main>
 
         {/* Docked Mini Player */}

@@ -587,7 +587,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         audioElement.src = streamUrl;
         audioElement.playbackRate = get().playbackSpeed;
         audioElement.volume = get().isMuted ? 0 : get().volume;
-        if (get().isVideoMode) {
+        if (get().isVideoMode || get().activeVideoSource === 'youtube_video') {
           audioElement.pause();
           set({ isLoading: false });
         } else {
@@ -697,6 +697,16 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   next: async () => {
+    const { activeVideoSource } = get();
+    // If a persistent YouTube video is actively playing, advance the video queue
+    if (activeVideoSource === 'youtube_video') {
+      const { useVideoStore } = await import('./useVideoStore');
+      if (useVideoStore.getState().activeVideo) {
+        useVideoStore.getState().nextVideo();
+        return;
+      }
+    }
+
     const { queue, queueIndex, shuffle, repeatMode } = get();
     if (queue.length === 0) return;
 
@@ -718,6 +728,16 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   previous: async () => {
+    const { activeVideoSource } = get();
+    // If a persistent YouTube video is actively playing, rewind to previous video
+    if (activeVideoSource === 'youtube_video') {
+      const { useVideoStore } = await import('./useVideoStore');
+      if (useVideoStore.getState().activeVideo) {
+        useVideoStore.getState().previousVideo();
+        return;
+      }
+    }
+
     const { queue, queueIndex, currentTime, isVideoMode } = get();
     if (currentTime > 3) {
       get().seek(0);

@@ -36,7 +36,7 @@ export const SleepTimerModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fadeIn">
+    <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fadeIn">
       <div className="relative w-full max-w-sm bg-surface border border-border rounded-3xl p-6 shadow-2xl space-y-6">
         <div className="flex items-center justify-between pb-3 border-b border-border/50">
           <div className="flex items-center gap-2.5">

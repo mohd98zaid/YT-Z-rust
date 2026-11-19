@@ -52,7 +52,7 @@ export const EqualizerModal: React.FC = () => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md select-none animate-fadeIn"
+      className="fixed inset-0 z-[600] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md select-none animate-fadeIn"
       onClick={toggleEqualizer}
     >
       <div

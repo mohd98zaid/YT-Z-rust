@@ -107,18 +107,22 @@ export const ExpandedPlayer: React.FC = () => {
   const matchedVideosRef = useRef<string[]>([]);
   matchedVideosRef.current = matchedVideos;
 
-  // Reset direct video fallback when track changes
-  React.useEffect(() => {
-    setUseDirectVideo(false);
-  }, [currentTrack?.id]);
-
   // Automatically resolve official embeddable public video when entering Watch Video mode
+  // and switch video immediately when track changes without waiting for search
   React.useEffect(() => {
+    let isCancelled = false;
+
     if (isVideoMode && currentTrack && !currentTrack.isLocal) {
       const rawId = currentTrack.videoId || currentTrack.id;
+      // Immediately reset and switch to the new track's video ID
+      setMatchedVideos(rawId ? [rawId] : []);
+      setMatchedIndex(0);
+      setUseDirectVideo(false);
       setResolvingVideo(true);
+
       api.searchYouTubeVideos(`${currentTrack.title} ${currentTrack.artist} official video`, 6)
         .then((vids) => {
+          if (isCancelled) return;
           if (vids && vids.length > 0) {
             // Filter out non-music tutorial, lesson, karaoke, or app promo videos
             const filtered = vids.filter((v) => {
@@ -129,21 +133,29 @@ export const ExpandedPlayer: React.FC = () => {
             const officialMatch = validVids[0].videoId || validVids[0].id;
             const rest = validVids.slice(1).map((v) => v.videoId || v.id).filter(Boolean);
             // Place top official public music video first (embed-permissible), then rawId, then alternates
-            const combined = Array.from(new Set([officialMatch, rawId, ...rest]));
+            const combined = Array.from(new Set([officialMatch, rawId, ...rest].filter(Boolean)));
             setMatchedVideos(combined);
-            setMatchedIndex(0);
-          } else {
-            setMatchedVideos([rawId]);
             setMatchedIndex(0);
           }
         })
         .catch(() => {
-          setMatchedVideos([rawId]);
+          if (isCancelled) return;
+          setMatchedVideos(rawId ? [rawId] : []);
           setMatchedIndex(0);
         })
-        .finally(() => setResolvingVideo(false));
+        .finally(() => {
+          if (!isCancelled) setResolvingVideo(false);
+        });
+    } else {
+      setMatchedVideos([]);
+      setMatchedIndex(0);
+      setUseDirectVideo(false);
     }
-  }, [isVideoMode, currentTrack?.id]);
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isVideoMode, currentTrack?.id, currentTrack?.videoId]);
 
   // Listen for YouTube embed events to sync currentTime, duration, play/pause, and track completion
   React.useEffect(() => {
@@ -265,7 +277,7 @@ export const ExpandedPlayer: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background select-none overflow-hidden animate-fadeIn">
+    <div className="fixed inset-0 z-[500] flex flex-col bg-background select-none overflow-hidden animate-fadeIn">
       {/* Apple Music Fluid Ambient Mesh Visualizer */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none select-none">
         {/* Layer 1: Blurred Album Cover Base */}

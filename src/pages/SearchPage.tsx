@@ -9,6 +9,22 @@ interface SearchPageProps {
   initialQuery?: string;
 }
 
+const safeText = (val: any): string => {
+  if (val === null || val === undefined) return '';
+  if (typeof val === 'string') return val;
+  if (typeof val === 'number') return String(val);
+  if (typeof val === 'object') {
+    if (typeof val.text === 'string') return val.text;
+    if (typeof val.name === 'string') return val.name;
+    if (typeof val.title === 'string') return val.title;
+    if (Array.isArray(val)) {
+      return val.map((x) => safeText(x)).filter(Boolean).join(', ');
+    }
+    return '';
+  }
+  return String(val);
+};
+
 export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '' }) => {
   const [query, setQuery] = useState(initialQuery);
   const [filter, setFilter] = useState<string>('');
@@ -200,9 +216,26 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '' }) => 
 
       {/* Results Section */}
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3 text-foreground-muted">
-          <div className="w-10 h-10 border-3 border-primary border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm font-semibold">Searching YouTube Music...</span>
+        <div className="space-y-3 pt-2">
+          <div className="flex items-center gap-2.5 text-foreground-muted text-xs font-semibold py-1">
+            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <span>Searching YouTube Music...</span>
+          </div>
+          {Array.from({ length: 7 }).map((_, i) => (
+            <div
+              key={i}
+              className="flex items-center justify-between p-3.5 rounded-2xl bg-surface border border-border animate-pulse"
+            >
+              <div className="flex items-center gap-4 min-w-0 flex-1">
+                <div className="w-12 h-12 rounded-xl bg-surface-elevated shrink-0" />
+                <div className="space-y-2 flex-1 max-w-md">
+                  <div className="h-4 bg-surface-elevated rounded-md w-3/4" />
+                  <div className="h-3 bg-surface-elevated rounded-md w-1/2" />
+                </div>
+              </div>
+              <div className="w-16 h-3 bg-surface-elevated rounded-md" />
+            </div>
+          ))}
         </div>
       ) : !searched ? (
         <div className="space-y-8 pt-2">
@@ -308,9 +341,16 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '' }) => 
         <div className="space-y-2">
           {results.map((item, idx) => {
             const isSong = Boolean(item.videoId || item.duration);
+            const titleStr = safeText(item.title) || safeText(item.name) || 'Untitled';
+            const artistStr = safeText(item.artist) || safeText(item.uploader) || safeText(item.author) || 'YouTube Music';
+            const durationStr = safeText(item.duration);
+            const subscribersStr = safeText(item.subscribers);
+            const itemCountStr = safeText(item.itemCount);
+            const resultTypeStr = safeText(item.resultType);
+
             return (
               <div
-                key={item.id || idx}
+                key={item.id || item.videoId || item.browseId || idx}
                 onClick={() => handleItemClick(item)}
                 className="flex items-center justify-between p-3.5 rounded-2xl bg-surface border border-border hover:border-primary/40 hover:bg-surface-elevated cursor-pointer group transition-all"
               >
@@ -327,15 +367,15 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '' }) => 
                   </div>
                   <div className="min-w-0">
                     <h4 className="font-semibold text-sm text-foreground truncate group-hover:text-primary transition-colors">
-                      {item.title}
+                      {titleStr}
                     </h4>
                     <div className="flex items-center gap-2 mt-0.5">
                       <p className="text-xs text-foreground-muted truncate">
-                        {item.artist || item.uploader || 'Track'}
+                        {artistStr}
                       </p>
-                      {item.resultType && item.resultType !== 'song' && (
+                      {resultTypeStr && resultTypeStr !== 'song' && (
                         <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-surface-elevated text-primary border border-primary/20 shrink-0">
-                          {item.resultType}
+                          {resultTypeStr}
                         </span>
                       )}
                     </div>
@@ -376,17 +416,17 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '' }) => 
                       </button>
                     </>
                   )}
-                  {item.duration ? (
+                  {durationStr ? (
                     <span className="text-xs font-mono text-foreground-subtle min-w-[45px] text-right">
-                      {item.duration}
+                      {durationStr}
                     </span>
-                  ) : item.subscribers ? (
+                  ) : subscribersStr ? (
                     <span className="text-xs font-mono text-foreground-subtle text-right">
-                      {item.subscribers}
+                      {subscribersStr}
                     </span>
-                  ) : item.itemCount ? (
+                  ) : itemCountStr ? (
                     <span className="text-xs font-mono text-foreground-subtle text-right">
-                      {item.itemCount}
+                      {itemCountStr}
                     </span>
                   ) : null}
                 </div>
@@ -399,7 +439,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '' }) => 
       {/* Add to Playlist Modal */}
       {playlistModalTrack && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fadeIn"
+          className="fixed inset-0 z-[600] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fadeIn"
           onClick={() => setPlaylistModalTrack(null)}
         >
           <div

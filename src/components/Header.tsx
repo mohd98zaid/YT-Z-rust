@@ -93,9 +93,9 @@ export const Header: React.FC<HeaderProps> = ({
   const showSuggestions = showDropdown && searchQuery.trim().length > 0 && suggestions.length > 0;
 
   return (
-    <header className="h-16 border-b border-border bg-surface/90 backdrop-blur-md px-6 flex items-center justify-between relative z-[200] shrink-0">
+    <header className="h-16 border-b border-border bg-surface/90 backdrop-blur-md px-6 flex items-center justify-between relative z-30 shrink-0">
       {/* Search Input Bar with Autocomplete & Search History */}
-      <div className="relative w-full max-w-xl z-[300]" ref={dropdownRef}>
+      <div className="relative w-full max-w-xl z-40" ref={dropdownRef}>
         <div className="relative flex items-center">
           <Search className="w-4 h-4 absolute left-3.5 text-foreground-muted pointer-events-none" />
           <input
@@ -111,7 +111,7 @@ export const Header: React.FC<HeaderProps> = ({
             }}
             onKeyDown={handleKeyDown}
             placeholder="Search songs, artists, albums, or paste YouTube/Spotify link..."
-            className="w-full bg-surface-elevated/70 border border-border focus:border-primary/50 text-foreground placeholder:text-foreground-subtle text-sm rounded-full pl-10 pr-9 py-2 outline-none transition-all duration-200 focus:bg-surface-elevated focus:ring-2 focus:ring-primary/20"
+            className="w-full bg-surface-elevated border border-border focus:border-primary/50 text-foreground placeholder:text-foreground-subtle text-sm rounded-full pl-10 pr-9 py-2 outline-none transition-all duration-200 focus:ring-2 focus:ring-primary/20"
           />
           {searchQuery && (
             <button
@@ -129,8 +129,7 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Dropdown Menu (Recent Searches & Autocomplete) */}
         {(showRecentSearches || showSuggestions) && (
           <div
-            className="absolute top-full left-0 right-0 mt-2 border border-border/80 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.7)] py-2 z-[400] backdrop-blur-2xl max-h-72 overflow-y-auto"
-            style={{ backgroundColor: 'var(--bg-elevated, #1e1e24)' }}
+            className="absolute top-full left-0 right-0 mt-2 bg-surface-elevated border border-border/80 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.45)] py-2 z-50 backdrop-blur-2xl max-h-72 overflow-y-auto"
           >
             {/* Recent Searches */}
             {showRecentSearches && (
