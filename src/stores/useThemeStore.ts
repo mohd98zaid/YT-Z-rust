@@ -10,14 +10,24 @@ interface ThemeState {
   initTheme: () => void;
 }
 
+const savedThemeId = (typeof window !== 'undefined' && localStorage.getItem('ytz_theme')) || 'apple-music';
+const initialTheme = THEME_PRESETS.find((t) => t.id === savedThemeId) || THEME_PRESETS[0];
+
+// Immediately apply saved theme on boot before React renders to prevent flash
+if (typeof document !== 'undefined') {
+  applyThemeToDOM(initialTheme);
+}
+
 export const useThemeStore = create<ThemeState>((set, get) => ({
-  currentThemeId: 'apple-music',
-  currentTheme: THEME_PRESETS[0],
+  currentThemeId: initialTheme.id,
+  currentTheme: initialTheme,
 
   setTheme: (themeId: string) => {
     const found = THEME_PRESETS.find((t) => t.id === themeId) || THEME_PRESETS[0];
     set({ currentThemeId: found.id, currentTheme: found });
-    localStorage.setItem('ytz_theme', found.id);
+    try {
+      localStorage.setItem('ytz_theme', found.id);
+    } catch {}
     applyThemeToDOM(found);
     api.updateConfig({ theme: found.id }).catch(() => {});
   },
