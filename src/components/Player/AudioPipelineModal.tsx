@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   FileText,
   Cpu,
@@ -27,6 +27,47 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
 
   const [deviceLabel, setDeviceLabel] = useState<string>('');
   const [deviceKind, setDeviceKind] = useState<'headphones' | 'bluetooth' | 'speaker' | 'default'>('default');
+
+  // Dynamic geometry to anchor the vertical line strictly from Icon 1 center to Icon 5 center
+  const timelineRef = useRef<HTMLDivElement>(null);
+  const firstIconRef = useRef<HTMLDivElement>(null);
+  const lastIconRef = useRef<HTMLDivElement>(null);
+  const [lineGeometry, setLineGeometry] = useState<{ top: number; height: number }>({ top: 13, height: 0 });
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const measure = () => {
+      if (timelineRef.current && firstIconRef.current && lastIconRef.current) {
+        const containerRect = timelineRef.current.getBoundingClientRect();
+        const firstRect = firstIconRef.current.getBoundingClientRect();
+        const lastRect = lastIconRef.current.getBoundingClientRect();
+
+        const top = firstRect.top - containerRect.top + firstRect.height / 2;
+        const bottom = lastRect.top - containerRect.top + lastRect.height / 2;
+        const height = Math.max(0, bottom - top);
+        setLineGeometry({ top, height });
+      }
+    };
+
+    measure();
+    const t1 = setTimeout(measure, 50);
+    const t2 = setTimeout(measure, 180);
+
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined' && timelineRef.current) {
+      ro = new ResizeObserver(() => measure());
+      ro.observe(timelineRef.current);
+    }
+
+    window.addEventListener('resize', measure);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      if (ro) ro.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [isOpen, audioStats, isVideoMode]);
 
   // Enumerate actual output devices from the browser/OS audio subsystem
   useEffect(() => {
@@ -213,6 +254,40 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
       className="fixed inset-0 z-[700] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fadeIn"
       onClick={onClose}
     >
+      {/* Dynamic Keyframe Animation for Traveling Signal Pulse Dot */}
+      <style>{`
+        @keyframes audioSignalTravel {
+          0% {
+            top: 0px;
+            opacity: 0;
+            transform: scale(0.6);
+          }
+          5% {
+            opacity: 1;
+            transform: scale(1.1);
+          }
+          10% {
+            transform: scale(1);
+          }
+          90% {
+            opacity: 1;
+            transform: scale(1);
+          }
+          95% {
+            opacity: 1;
+            transform: scale(1.1);
+          }
+          100% {
+            top: ${lineGeometry.height}px;
+            opacity: 0;
+            transform: scale(0.6);
+          }
+        }
+        .audio-signal-dot {
+          animation: audioSignalTravel 2.6s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+        }
+      `}</style>
+
       <div 
         className="relative w-full max-w-[390px] max-h-[88vh] bg-[#1c1c1e] border border-white/[0.08] rounded-[32px] p-6 shadow-2xl text-white flex flex-col font-sans animate-scaleUp"
         onClick={(e) => e.stopPropagation()}
@@ -239,14 +314,27 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
 
         {/* Scrollable Pipeline Content */}
         <div className="flex-1 overflow-y-auto pr-1 -mr-1 space-y-6 custom-scrollbar">
-          {/* Connected Vertical Timeline */}
-          <div className="relative pl-8 space-y-6">
-            {/* Continuous vertical line connecting all 5 node badges */}
-            <div className="absolute left-[11px] top-3 bottom-4 w-[1.5px] bg-white/15" />
+          {/* Connected Vertical Timeline Container */}
+          <div ref={timelineRef} className="relative pl-8 space-y-6">
+            {/* Continuous vertical line STRICTLY from Icon 1 center to Icon 5 center (stops exactly at Output Device) */}
+            {lineGeometry.height > 0 && (
+              <div 
+                className="absolute left-[11.25px] w-[1.5px] bg-white/20 pointer-events-none z-0"
+                style={{ top: `${lineGeometry.top}px`, height: `${lineGeometry.height}px` }}
+              >
+                {/* Little glowing audio packet dot traveling from start to end */}
+                <div 
+                  className="audio-signal-dot absolute -left-[3.25px] w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_#fa2d48,0_0_3px_#ffffff] pointer-events-none z-10"
+                />
+              </div>
+            )}
 
             {/* 1. TRACK INFO */}
             <div className="relative">
-              <div className="absolute -left-8 top-0.5 w-6 h-6 rounded-full bg-[#2c2c2e] border border-white/20 flex items-center justify-center text-zinc-300 shrink-0">
+              <div 
+                ref={firstIconRef}
+                className="absolute -left-8 top-0.5 w-6 h-6 rounded-full bg-[#2c2c2e] border border-white/20 flex items-center justify-center text-zinc-300 shrink-0 z-10 shadow-sm"
+              >
                 <FileText className="w-3.5 h-3.5" />
               </div>
               <div>
@@ -288,7 +376,7 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
 
             {/* 2. DECODER */}
             <div className="relative">
-              <div className="absolute -left-8 top-0.5 w-6 h-6 rounded-full bg-[#2c2c2e] border border-white/20 flex items-center justify-center text-zinc-300 shrink-0">
+              <div className="absolute -left-8 top-0.5 w-6 h-6 rounded-full bg-[#2c2c2e] border border-white/20 flex items-center justify-center text-zinc-300 shrink-0 z-10 shadow-sm">
                 <Cpu className="w-3.5 h-3.5" />
               </div>
               <div>
@@ -310,7 +398,7 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
 
             {/* 3. RESAMPLER */}
             <div className="relative">
-              <div className="absolute -left-8 top-0.5 w-6 h-6 rounded-full bg-[#2c2c2e] border border-white/20 flex items-center justify-center text-zinc-300 shrink-0">
+              <div className="absolute -left-8 top-0.5 w-6 h-6 rounded-full bg-[#2c2c2e] border border-white/20 flex items-center justify-center text-zinc-300 shrink-0 z-10 shadow-sm">
                 <Sliders className="w-3.5 h-3.5" />
               </div>
               <div>
@@ -340,7 +428,7 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
 
             {/* 4. DSP */}
             <div className="relative">
-              <div className="absolute -left-8 top-0.5 w-6 h-6 rounded-full bg-[#2c2c2e] border border-white/20 flex items-center justify-center text-zinc-300 shrink-0">
+              <div className="absolute -left-8 top-0.5 w-6 h-6 rounded-full bg-[#2c2c2e] border border-white/20 flex items-center justify-center text-zinc-300 shrink-0 z-10 shadow-sm">
                 <Activity className="w-3.5 h-3.5" />
               </div>
               <div>
@@ -384,9 +472,12 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
               </div>
             </div>
 
-            {/* 5. OUTPUT DEVICE */}
+            {/* 5. OUTPUT DEVICE (Strict End of Timeline) */}
             <div className="relative">
-              <div className="absolute -left-8 top-0.5 w-6 h-6 rounded-full bg-[#2c2c2e] border border-white/20 flex items-center justify-center text-zinc-300 shrink-0">
+              <div 
+                ref={lastIconRef}
+                className="absolute -left-8 top-0.5 w-6 h-6 rounded-full bg-[#2c2c2e] border border-white/20 flex items-center justify-center text-zinc-300 shrink-0 z-10 shadow-sm"
+              >
                 <Volume2 className="w-3.5 h-3.5" />
               </div>
               <div>
