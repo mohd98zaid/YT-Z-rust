@@ -30,3 +30,4 @@ futures-util = "0.3"
 rand = "0.8"
 urlencoding = "2.1"
 tracing = "0.1"
+openssl = { version = "0.10", features = ["vendored"] }
