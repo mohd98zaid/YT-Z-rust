@@ -28,10 +28,10 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # Yahan fix kiya gaya hai: sirf platform-tools install karega
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
+          # Sirf platform-tools install karega, deprecated 'tools' ko skip karega
           packages: 'platform-tools'
 
       - name: Install Frontend Dependencies
