@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { Track, SponsorBlockSegment, LyricsResponse } from '../types';
-import { api } from '../services/api';
+import { api, API_BASE } from '../services/api';
 
 export const EQ_FREQUENCIES = [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
 
@@ -245,8 +245,8 @@ function initAudioEngine(state: PlayerState) {
           }
           const nextUrl =
             nextTrack.isLocal && nextTrack.filePath
-              ? `http://127.0.0.1:47892/api/library/stream?path=${encodeURIComponent(nextTrack.filePath)}`
-              : `http://127.0.0.1:47892/api/stream/${encodeURIComponent(nextTrack.videoId || nextTrack.id)}/audio?title=${encodeURIComponent(nextTrack.title || '')}&artist=${encodeURIComponent(nextTrack.artist || '')}&duration=${nextTrack.durationSeconds || 0}&quality=lossless`;
+              ? `${API_BASE}/api/library/stream?path=${encodeURIComponent(nextTrack.filePath)}`
+              : `${API_BASE}/api/stream/${encodeURIComponent(nextTrack.videoId || nextTrack.id)}/audio?title=${encodeURIComponent(nextTrack.title || '')}&artist=${encodeURIComponent(nextTrack.artist || '')}&duration=${nextTrack.durationSeconds || 0}&quality=lossless`;
           preloadAudioElement.src = nextUrl;
           preloadAudioElement.load();
         }
@@ -673,7 +673,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       let bitrate = 160;
 
       if (track.isLocal && track.filePath) {
-        streamUrl = `http://127.0.0.1:47892/api/library/stream?path=${encodeURIComponent(track.filePath)}`;
+        streamUrl = `${API_BASE}/api/library/stream?path=${encodeURIComponent(track.filePath)}`;
         codec = track.filePath.split('.').pop() || 'mp3';
         set({
           audioStats: {
@@ -690,8 +690,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         const artistParam = encodeURIComponent(track.artist || '');
         const durParam = track.durationSeconds || 0;
 
-        // Use local range-aware audio streaming proxy with lossless resolution
-        streamUrl = `http://127.0.0.1:47892/api/stream/${encodeURIComponent(videoId)}/audio?title=${titleParam}&artist=${artistParam}&duration=${durParam}&quality=${quality}`;
+        // Use range-aware audio streaming proxy with lossless resolution
+        streamUrl = `${API_BASE}/api/stream/${encodeURIComponent(videoId)}/audio?title=${titleParam}&artist=${artistParam}&duration=${durParam}&quality=${quality}`;
 
         // Fetch stream metadata with Lossless Addon details in background
         api.getAudioStream(videoId, track.title, track.artist, durParam, quality).then((streamInfo) => {

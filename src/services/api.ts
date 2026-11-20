@@ -1,7 +1,35 @@
 import { Track, DownloadItem, LyricsResponse, SponsorBlockSegment } from '../types';
 
-const API_BASE = 'http://127.0.0.1:47892';
-const WS_BASE = 'ws://127.0.0.1:47892/ws';
+const getHost = () => {
+  if (typeof window !== 'undefined' && window.location.hostname) {
+    return window.location.hostname;
+  }
+  return '127.0.0.1';
+};
+
+const getPort = () => {
+  if (typeof window !== 'undefined' && window.location.port) {
+    return window.location.port;
+  }
+  return '47892';
+};
+
+const getProtocol = () => {
+  if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
+    return 'https:';
+  }
+  return 'http:';
+};
+
+const getWsProtocol = () => {
+  if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
+    return 'wss:';
+  }
+  return 'ws:';
+};
+
+export const API_BASE = `${getProtocol()}//${getHost()}:${getPort()}`;
+export const WS_BASE = `${getWsProtocol()}//${getHost()}:${getPort()}/ws`;
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const resp = await fetch(url, options);
@@ -172,6 +200,12 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates),
     }),
+
+  // LAN & Remote Streaming
+  getNetworkInfo: () =>
+    fetchJson<{ local_ip: string; port: number; local_url: string; lan_url: string }>(
+      `${API_BASE}/api/network-info`
+    ),
 
   // Pluggable Sources & Extensions
   getPlugins: () => fetchJson<any[]>(`${API_BASE}/api/plugins`),

@@ -20,6 +20,9 @@ import {
   HardDrive,
   Trash2,
   RefreshCw,
+  Wifi,
+  Smartphone,
+  Copy,
 } from 'lucide-react';
 import { THEME_PRESETS } from '../themes/presets';
 import { useThemeStore } from '../stores/useThemeStore';
@@ -69,12 +72,15 @@ export const SettingsPage: React.FC = () => {
   const [isClearingCache, setIsClearingCache] = useState(false);
   const [cacheToast, setCacheToast] = useState('');
   const [cacheClearedSuccess, setCacheClearedSuccess] = useState(false);
+  const [networkInfo, setNetworkInfo] = useState<{ local_ip: string; port: number; local_url: string; lan_url: string } | null>(null);
+  const [copiedLanUrl, setCopiedLanUrl] = useState(false);
 
   const loadStorage = () => {
     api.getStorageInfo().then(setStorageInfo).catch(() => {});
   };
 
   useEffect(() => {
+    api.getNetworkInfo().then(setNetworkInfo).catch(() => {});
     loadStorage();
     api.getConfig().then((cfg) => {
       if (cfg) {
@@ -731,6 +737,65 @@ export const SettingsPage: React.FC = () => {
                 Active in Sidebar
               </span>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Local Network & Multi-Device Streaming (LAN) Section */}
+      <section className="p-6 rounded-3xl bg-surface border border-border/80 shadow-sm space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-2xl bg-primary/10 text-primary">
+            <Wifi className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="font-bold text-base text-foreground">Local Network & Multi-Device Streaming (LAN)</h3>
+            <p className="text-xs text-foreground-muted">
+              Stream lossless music, search, and control playback from any phone, tablet, laptop, or smart TV on your local Wi-Fi.
+            </p>
+          </div>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-surface-elevated/70 border border-border/60 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <Smartphone className="w-4 h-4 text-emerald-400" />
+                <span className="text-xs font-bold text-foreground">Local Network Address</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-semibold border border-emerald-500/20">
+                  Ready to Stream
+                </span>
+              </div>
+              <p className="text-xs text-foreground-muted mt-1 font-mono text-primary font-bold">
+                {networkInfo?.lan_url || `http://${typeof window !== 'undefined' ? window.location.hostname : '192.168.1.X'}:47892`}
+              </p>
+            </div>
+
+            <button
+              onClick={() => {
+                const targetUrl = networkInfo?.lan_url || `http://${window.location.hostname}:47892`;
+                navigator.clipboard?.writeText(targetUrl);
+                setCopiedLanUrl(true);
+                setTimeout(() => setCopiedLanUrl(false), 2000);
+              }}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-surface hover:bg-border/60 border border-border text-foreground transition-all self-start sm:self-auto"
+            >
+              {copiedLanUrl ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="text-emerald-400">Copied Address!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3.5 h-3.5 text-foreground-muted" />
+                  <span>Copy Address</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          <div className="text-[11px] text-foreground-subtle border-t border-border/40 pt-2.5 flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+            <span>Connect your phone or other device to the <strong>same Wi-Fi network</strong> and open the address above in your browser.</span>
           </div>
         </div>
       </section>

@@ -130,8 +130,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
             <span className="text-foreground-muted font-medium">Core Engine</span>
           </div>
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface-elevated text-foreground-muted">
-            127.0.0.1:47892
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface-elevated text-foreground-muted font-mono">
+            {typeof window !== 'undefined' && window.location.hostname ? `${window.location.hostname}:${window.location.port || '47892'}` : '127.0.0.1:47892'}
           </span>
         </div>
         <div className="flex items-center gap-1 text-[10px] text-foreground-muted">
