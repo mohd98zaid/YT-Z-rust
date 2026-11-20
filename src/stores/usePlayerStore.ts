@@ -138,6 +138,8 @@ interface PlayerState {
 // Global Audio Element and Web Audio Context
 let audioElement: HTMLAudioElement | null = null;
 let audioContext: AudioContext | null = null;
+export const getAudioContext = (): AudioContext | null => audioContext;
+export const getAudioElement = (): HTMLAudioElement | null => audioElement;
 let sourceNode: MediaElementAudioSourceNode | null = null;
 let eqFilterNodes: BiquadFilterNode[] = [];
 let gainNode: GainNode | null = null;

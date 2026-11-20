@@ -1650,10 +1650,10 @@ export const ExpandedPlayer: React.FC = () => {
                   </div>
                   <div className="text-[11px] text-foreground-muted truncate">
                     {isVideoMode
-                      ? '16-bit fallback · 44.1 kHz'
+                      ? '16-bit AAC Sync · 44.1 kHz'
                       : audioStats?.isLossless
                       ? `${(audioStats?.codec || 'ALAC').toUpperCase()} ${audioStats?.bitDepth || 24}-bit · ${((audioStats?.sampleRate || 48000) / 1000).toFixed(0)} kHz`
-                      : '16-bit fallback · 48 kHz'}
+                      : `${(audioStats?.codec || 'OPUS').toUpperCase()} ${audioStats?.bitDepth || 16}-bit · ${((audioStats?.sampleRate || 48000) / 1000).toFixed(0)} kHz`}
                   </div>
                 </div>
               </div>
