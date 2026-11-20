@@ -2,11 +2,6 @@
 title YT-Z (Rust) - Music Player & 4K Downloader
 cd /d "%~dp0"
 
-echo ========================================================
-echo        YT-Z (Rust / Tauri Engine)
-echo   High-Performance Music Player & Studio Downloader
-echo ========================================================
-
 :: Check Rust / Cargo
 where cargo >nul 2>nul
 if errorlevel 1 (
@@ -32,34 +27,68 @@ if not exist "node_modules\" (
 )
 
 :: Direct argument dispatch
-if /i "%1"=="dev" goto launch_dev
+if /i "%1"=="dev" goto launch_app
 if /i "%1"=="build" goto build_release
 if /i "%1"=="apk" goto build_apk
 if /i "%1"=="server" goto launch_server_only
 
-:menu
+:launch_app
+cls
+echo ========================================================
+echo        YT-Z (Rust / Tauri Engine)
+echo   High-Performance Music Player & Studio Downloader
+echo ========================================================
 echo.
-echo   [1] Launch Native Desktop App (Tauri + React + Rust) [Default]
-echo   [2] Build Release Native Installer (.msi / .exe)
-echo   [3] Build Standalone Android APK
-echo   [4] Run Rust Backend Server Only (Axum on Port 47892)
-echo   [5] Exit
+echo [*] Launching dedicated native desktop app...
+echo.
+
+:: Launch the dedicated app
+start "YT-Z Tauri App" npm.cmd run tauri dev
+
+:: Short pause for engine initialization
+timeout /t 3 /nobreak >nul
+
+:action_loop
+cls
+echo ========================================================
+echo        YT-Z (Rust / Tauri Engine)
+echo ========================================================
+echo.
+echo   [✓] Dedicated Native Desktop App is running!
+echo   [✓] Local Stream URL:   http://127.0.0.1:47892
+echo.
+echo --------------------------------------------------------
+echo   Actions:
+echo.
+echo   [O] Open in Web Browser (Chrome / Edge / Firefox)
+echo   [R] Restart Dedicated App
+echo   [B] Build Optimized Release Package (.msi / .exe)
+echo   [Q] Quit ^& Stop YT-Z
+echo --------------------------------------------------------
 echo.
 set "choice="
-set /p choice="Select an option [1-5] (Default: 1): "
+set /p choice="Enter an action [O / R / B / Q] (Default: Q): "
 
-if "%choice%"=="" set choice=1
-if "%choice%"=="1" goto launch_dev
-if "%choice%"=="2" goto build_release
-if "%choice%"=="3" goto build_apk
-if "%choice%"=="4" goto launch_server_only
-if "%choice%"=="5" exit /b 0
+if /i "%choice%"=="o" (
+    echo [*] Opening in default web browser...
+    start http://127.0.0.1:47892
+    goto action_loop
+)
 
-:launch_dev
-echo.
-echo [*] Launching YT-Z Desktop App (Rust Core + React 19 Frontend)...
-call npm.cmd run tauri dev
-goto end
+if /i "%choice%"=="r" (
+    echo.
+    echo [*] Restarting dedicated app...
+    taskkill /f /fi "WINDOWTITLE eq YT-Z Tauri App*" >nul 2>nul
+    timeout /t 1 /nobreak >nul
+    goto launch_app
+)
+
+if /i "%choice%"=="b" goto build_release
+
+if /i "%choice%"=="q" goto do_quit
+if "%choice%"=="" goto do_quit
+
+goto action_loop
 
 :build_release
 echo.
@@ -80,6 +109,17 @@ cd /d "%~dp0src-tauri"
 cargo run
 cd /d "%~dp0"
 goto end
+
+:do_quit
+echo.
+echo [*] Shutting down YT-Z...
+taskkill /f /fi "WINDOWTITLE eq YT-Z Tauri App*" >nul 2>nul
+taskkill /f /im yt-z-rust.exe >nul 2>nul
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":47892" ^| findstr "LISTENING"') do (
+    taskkill /f /pid %%a >nul 2>nul
+)
+echo [✓] YT-Z stopped cleanly.
+exit /b 0
 
 :end
 if %errorlevel% neq 0 (
