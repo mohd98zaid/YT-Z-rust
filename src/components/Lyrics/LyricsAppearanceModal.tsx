@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   Type,
@@ -8,7 +9,6 @@ import {
   AlignLeft,
   AlignCenter,
   AlignRight,
-  Maximize2,
   Sliders,
   Check,
   RotateCcw,
@@ -18,17 +18,15 @@ import {
   FONT_OPTIONS,
   COLOR_PALETTE,
   BACKGROUND_PRESETS,
-  LyricsFontFamily,
-  LyricsBackgroundStyle,
-  LyricsAlignment,
-  LyricsFontSize,
-  LyricsAnimationStyle,
 } from '../../stores/useLyricsSettingsStore';
 
 interface LyricsAppearanceModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
+
+const SYSTEM_FONT =
+  "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Plus Jakarta Sans', 'Inter', sans-serif";
 
 export const LyricsAppearanceModal: React.FC<LyricsAppearanceModalProps> = ({
   isOpen,
@@ -39,6 +37,7 @@ export const LyricsAppearanceModal: React.FC<LyricsAppearanceModalProps> = ({
     setFontFamily,
     activeTextColor,
     setActiveTextColor,
+    glowColor,
     glowIntensity,
     setGlowIntensity,
     backgroundStyle,
@@ -56,48 +55,105 @@ export const LyricsAppearanceModal: React.FC<LyricsAppearanceModalProps> = ({
 
   const [activeTab, setActiveTab] = useState<'font' | 'color' | 'background' | 'layout'>('font');
 
+  // Close on Escape key press
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-[800] flex items-center justify-center p-3 sm:p-6 select-none animate-fadeIn">
-      {/* Backdrop */}
+  const currentFontCss =
+    FONT_OPTIONS.find((f) => f.id === fontFamily)?.cssFamily || FONT_OPTIONS[0].cssFamily;
+
+  const modalContent = (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 select-none animate-fadeIn"
+      style={{ fontFamily: SYSTEM_FONT }}
+    >
+      {/* Dimmed Backdrop - Click to Close */}
       <div
-        className="absolute inset-0 bg-black/75 backdrop-blur-md"
+        className="absolute inset-0 bg-black/80 backdrop-blur-md cursor-pointer transition-opacity"
         onClick={onClose}
+        title="Click outside to close"
       />
 
-      {/* Modal Dialog */}
-      <div className="relative w-full max-w-xl max-h-[88vh] bg-[#14151c]/95 dark:bg-[#0c0d14]/95 border border-white/15 rounded-3xl shadow-[0_24px_60px_rgba(0,0,0,0.7)] flex flex-col overflow-hidden z-10 animate-slideUp">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 shrink-0">
+      {/* Centered Modal Card */}
+      <div
+        className="relative w-full max-w-xl max-h-[90vh] bg-[#12131a] border border-white/15 rounded-3xl shadow-[0_25px_70px_rgba(0,0,0,0.85)] flex flex-col overflow-hidden z-10 animate-slideUp text-white"
+        style={{ fontFamily: SYSTEM_FONT }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Top Header Bar */}
+        <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-white/10 shrink-0 bg-white/[0.02]">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-primary/20 text-primary border border-primary/30">
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-extrabold text-white tracking-tight">Lyrics Appearance & Style</h3>
-              <p className="text-[11px] text-white/50">Fancy fonts, custom colors, backgrounds & animations</p>
+              <h3 className="text-sm sm:text-base font-extrabold text-white tracking-tight">
+                Lyrics Appearance & Style
+              </h3>
+              <p className="text-[11px] text-white/50">
+                Choose fancy fonts, vibrant colors, backdrops & dynamics
+              </p>
             </div>
           </div>
+
           <div className="flex items-center gap-2">
             <button
               onClick={resetDefaults}
               title="Reset to default Apple Music styling"
-              className="p-2 rounded-full hover:bg-white/10 text-white/60 hover:text-white transition-colors"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs font-semibold border border-white/10 transition-all active:scale-95"
             >
-              <RotateCcw className="w-4 h-4" />
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline text-[11px]">Reset</span>
             </button>
             <button
               onClick={onClose}
-              className="p-2 rounded-full hover:bg-white/10 text-white/60 hover:text-white transition-colors"
+              aria-label="Close"
+              title="Close (Esc)"
+              className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 active:scale-90 flex items-center justify-center text-white/80 hover:text-white transition-all border border-white/10"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Tab Switcher */}
-        <div className="flex items-center gap-1 px-6 pt-3 pb-2 border-b border-white/5 shrink-0 overflow-x-auto">
+        {/* Live Preview Bar */}
+        <div className="px-5 py-2.5 bg-black/40 border-b border-white/5 flex items-center justify-between shrink-0">
+          <span className="text-[10px] uppercase font-bold tracking-wider text-white/40">
+            Live Preview
+          </span>
+          <div
+            className="text-sm sm:text-base font-bold truncate max-w-[280px] sm:max-w-xs transition-all duration-300"
+            style={{
+              fontFamily: currentFontCss,
+              color: activeTextColor,
+              textShadow:
+                glowIntensity !== 'none'
+                  ? `0 0 ${
+                      glowIntensity === 'subtle'
+                        ? '10px'
+                        : glowIntensity === 'radiant'
+                        ? '22px'
+                        : '36px'
+                    } ${glowColor || activeTextColor}`
+                  : 'none',
+            }}
+          >
+            तू मिल जाए तो... Are you real?
+          </div>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="flex items-center gap-1.5 px-5 pt-3 pb-2 border-b border-white/5 shrink-0 overflow-x-auto bg-white/[0.01]">
           {[
             { id: 'font', label: 'Fancy Fonts', icon: Type },
             { id: 'color', label: 'Colors & Glow', icon: Palette },
@@ -124,12 +180,15 @@ export const LyricsAppearanceModal: React.FC<LyricsAppearanceModalProps> = ({
         </div>
 
         {/* Modal Body / Tab Content */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-5">
           {/* TAB 1: FONT OPTIONS */}
           {activeTab === 'font' && (
             <div className="space-y-3">
-              <div className="text-xs font-bold text-white/70 uppercase tracking-wider">
-                Select Lyrics Typography
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-white/70 uppercase tracking-wider">
+                  Select Lyrics Typography
+                </span>
+                <span className="text-[11px] text-white/40">10 Curated Fonts</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {FONT_OPTIONS.map((f) => {
@@ -138,18 +197,25 @@ export const LyricsAppearanceModal: React.FC<LyricsAppearanceModalProps> = ({
                     <button
                       key={f.id}
                       onClick={() => setFontFamily(f.id)}
-                      className={`p-3.5 rounded-2xl border text-left transition-all active:scale-[0.98] relative overflow-hidden ${
+                      className={`p-3.5 rounded-2xl border text-left transition-all active:scale-[0.98] relative overflow-hidden flex flex-col justify-between ${
                         isSelected
-                          ? 'bg-primary/20 border-primary shadow-lg shadow-primary/20'
+                          ? 'bg-primary/20 border-primary shadow-lg shadow-primary/25'
                           : 'bg-white/5 hover:bg-white/10 border-white/10 text-white'
                       }`}
                     >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-bold text-white/90">{f.name}</span>
+                      <div className="flex items-center justify-between mb-1.5 w-full">
+                        <span
+                          className="text-xs font-bold text-white/90"
+                          style={{ fontFamily: SYSTEM_FONT }}
+                        >
+                          {f.name}
+                        </span>
                         {isSelected && <Check className="w-4 h-4 text-primary shrink-0" />}
                       </div>
+
+                      {/* Explicitly styled with its OWN font family so it never changes */}
                       <div
-                        className="text-lg text-white font-bold tracking-tight truncate pt-1"
+                        className="text-lg text-white font-bold tracking-tight truncate py-0.5"
                         style={{ fontFamily: f.cssFamily }}
                       >
                         {f.preview}
@@ -177,7 +243,9 @@ export const LyricsAppearanceModal: React.FC<LyricsAppearanceModalProps> = ({
                         key={c.hex}
                         onClick={() => setActiveTextColor(c.hex, c.glow)}
                         className={`h-11 rounded-2xl flex items-center justify-center transition-all active:scale-95 border relative ${
-                          isSelected ? 'border-white scale-105 shadow-lg' : 'border-white/15 hover:scale-105'
+                          isSelected
+                            ? 'border-white scale-105 shadow-lg'
+                            : 'border-white/15 hover:scale-105'
                         }`}
                         style={{ backgroundColor: c.hex }}
                         title={c.name}
@@ -200,7 +268,7 @@ export const LyricsAppearanceModal: React.FC<LyricsAppearanceModalProps> = ({
                     type="color"
                     value={activeTextColor}
                     onChange={(e) => setActiveTextColor(e.target.value)}
-                    className="w-9 h-9 rounded-xl border border-white/20 bg-transparent cursor-pointer"
+                    className="w-10 h-10 rounded-xl border border-white/20 bg-transparent cursor-pointer p-0.5"
                   />
                   <div className="flex-1">
                     <span className="text-xs font-bold text-white block">Custom Hex Color</span>
@@ -360,9 +428,21 @@ export const LyricsAppearanceModal: React.FC<LyricsAppearanceModalProps> = ({
                 </div>
                 <div className="grid grid-cols-1 gap-2">
                   {[
-                    { id: 'kinetic', title: 'Apple Music Kinetic', desc: 'Dynamic scale, word glow & spring fluid scrolling' },
-                    { id: 'karaoke', title: 'Karaoke Progressive Sweep', desc: 'Smooth letter-by-letter vocal fill with active bounce' },
-                    { id: 'smooth', title: 'Minimalist Smooth Fade', desc: 'Clean opacity transitions without text resizing' },
+                    {
+                      id: 'kinetic',
+                      title: 'Apple Music Kinetic',
+                      desc: 'Dynamic scale, word glow & spring fluid scrolling',
+                    },
+                    {
+                      id: 'karaoke',
+                      title: 'Karaoke Progressive Sweep',
+                      desc: 'Smooth letter-by-letter vocal fill with active bounce',
+                    },
+                    {
+                      id: 'smooth',
+                      title: 'Minimalist Smooth Fade',
+                      desc: 'Clean opacity transitions without text resizing',
+                    },
                   ].map((anim) => {
                     const isSelected = animationStyle === anim.id;
                     return (
@@ -390,7 +470,7 @@ export const LyricsAppearanceModal: React.FC<LyricsAppearanceModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-white/10 bg-white/5 flex items-center justify-between shrink-0">
+        <div className="p-4 border-t border-white/10 bg-white/[0.03] flex items-center justify-between shrink-0">
           <span className="text-[11px] text-white/50">Changes apply instantly to live lyrics</span>
           <button
             onClick={onClose}
@@ -402,4 +482,6 @@ export const LyricsAppearanceModal: React.FC<LyricsAppearanceModalProps> = ({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
