@@ -1506,37 +1506,6 @@ export const ExpandedPlayer: React.FC = () => {
           </div>
         )}
 
-        {/* Quick Audio Pipeline Diagnostics Card (Tablet & Desktop) */}
-        {showAudioPipelineCard && (
-          <div className="hidden sm:block w-full max-w-sm mx-auto px-2 mt-1 mb-1">
-            <button
-              onClick={toggleStatsForNerds}
-              style={{ backgroundColor: 'var(--bg-surface)' }}
-              className="w-full flex items-center justify-between px-3.5 py-2 rounded-2xl bg-surface hover:bg-surface-elevated border border-border text-foreground transition-all hover:scale-[1.01] shadow-sm cursor-pointer group"
-              title="Inspect live signal path, decoder and output"
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-7 h-7 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0">
-                  <Activity className="w-3.5 h-3.5" />
-                </div>
-                <div className="text-left truncate">
-                  <div className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">
-                    Audio Pipeline
-                  </div>
-                  <div className="text-[10px] text-foreground-muted font-mono truncate">
-                    {isVideoMode
-                      ? '16-bit AAC Sync • 44.1 kHz'
-                      : audioStats?.isLossless
-                      ? `Bit-Perfect Lossless • ${((audioStats.sampleRate || 44100) / 1000).toFixed(1)} kHz ${audioStats.bitDepth || 24}-bit`
-                      : `Hardware WebAudio • 48.0 kHz 160 kbps`}
-                  </div>
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-foreground-muted group-hover:text-foreground transition-colors shrink-0" />
-            </button>
-          </div>
-        )}
-
         {/* Action Controls */}
         <div className="flex items-center justify-between w-full max-w-2xl px-1 sm:px-2">
           {/* Playback speed selector (hidden on small mobile to give primary buttons room) */}
@@ -1634,6 +1603,63 @@ export const ExpandedPlayer: React.FC = () => {
           >
             <Download className="w-4 h-4" />
           </button>
+        </div>
+
+        {/* BitChord Signature: Volume Slider & Audio Pipeline Card */}
+        <div className="w-full max-w-sm sm:max-w-md mx-auto px-2 sm:px-4 mt-2 sm:mt-3 space-y-2.5">
+          {/* Volume Control */}
+          <div className="flex items-center gap-3 w-full px-1">
+            <button
+              onClick={toggleMute}
+              className="p-1 text-foreground-muted hover:text-foreground transition-colors shrink-0"
+              title={isMuted ? "Unmute" : "Mute"}
+            >
+              {isMuted || volume === 0 ? (
+                <VolumeX className="w-4 h-4 text-foreground-muted" />
+              ) : (
+                <Volume2 className="w-4 h-4 text-foreground-muted hover:text-foreground" />
+              )}
+            </button>
+            <div className="relative flex-1 flex items-center h-4">
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={isMuted ? 0 : volume}
+                onChange={(e) => setVolume(parseFloat(e.target.value))}
+                className="w-full h-1 bg-foreground/15 hover:bg-foreground/25 rounded-lg appearance-none cursor-pointer accent-primary focus:outline-none transition-colors"
+              />
+            </div>
+          </div>
+
+          {/* Audio Pipeline Card */}
+          {showAudioPipelineCard && (
+            <button
+              onClick={toggleStatsForNerds}
+              className="w-full flex items-center justify-between p-3 rounded-2xl bg-surface/90 hover:bg-surface-elevated border border-border text-foreground transition-all active:scale-[0.99] group shadow-sm cursor-pointer"
+              title="Inspect live signal path, decoder and output"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-8 h-8 rounded-full bg-primary/15 text-primary flex items-center justify-center shrink-0">
+                  <Activity className="w-4 h-4" />
+                </div>
+                <div className="text-left truncate">
+                  <div className="text-[13px] font-semibold text-foreground group-hover:text-primary transition-colors">
+                    Audio Pipeline
+                  </div>
+                  <div className="text-[11px] text-foreground-muted truncate">
+                    {isVideoMode
+                      ? '16-bit fallback · 44.1 kHz'
+                      : audioStats?.isLossless
+                      ? `${(audioStats?.codec || 'ALAC').toUpperCase()} ${audioStats?.bitDepth || 24}-bit · ${((audioStats?.sampleRate || 48000) / 1000).toFixed(0)} kHz`
+                      : '16-bit fallback · 48 kHz'}
+                  </div>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-foreground-muted group-hover:text-foreground transition-colors shrink-0" />
+            </button>
+          )}
         </div>
       </footer>
 

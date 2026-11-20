@@ -500,7 +500,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   enableStatsForNerds: localStorage.getItem('ytz_enable_stats_for_nerds') !== 'false',
   showAudiophileSpecs: localStorage.getItem('ytz_show_audiophile_specs') !== 'false',
   showAudioQualityBadge: localStorage.getItem('ytz_show_audio_quality_badge') !== 'false',
-  showAudioPipelineCard: localStorage.getItem('ytz_show_audio_pipeline_card') === 'true',
+  showAudioPipelineCard: localStorage.getItem('ytz_show_audio_pipeline_card') !== 'false',
   showMiniPlayerCodecBadge: localStorage.getItem('ytz_show_miniplayer_codec_badge') !== 'false',
 
   setEnableStatsForNerds: (enabled: boolean) => {
