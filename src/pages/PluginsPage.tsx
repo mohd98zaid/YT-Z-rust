@@ -142,7 +142,7 @@ export const PluginsPage: React.FC = () => {
   });
 
   return (
-    <div className="p-8 space-y-8 max-w-7xl mx-auto pb-28">
+    <div className="p-4 sm:p-6 md:p-8 space-y-6 md:space-y-8 max-w-7xl mx-auto pb-32 md:pb-28">
       {/* Header Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-border">
         <div>

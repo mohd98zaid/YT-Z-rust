@@ -57,7 +57,7 @@ export const EqualizerModal: React.FC = () => {
     >
       <div
         style={{ backgroundColor: 'var(--bg-surface)' }}
-        className="bg-surface border-2 border-border/80 rounded-3xl p-6 w-full max-w-3xl shadow-[0_20px_50px_rgba(0,0,0,0.65)] relative overflow-hidden"
+        className="bg-surface border-2 border-border/80 rounded-3xl p-4 sm:p-6 w-full max-w-3xl max-h-[92vh] overflow-y-auto shadow-[0_20px_50px_rgba(0,0,0,0.65)] relative overflow-x-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Subtle background glow */}
@@ -186,20 +186,22 @@ export const EqualizerModal: React.FC = () => {
         </div>
 
         {/* 10 Precision Studio Faders */}
-        <div className="mt-5 grid grid-cols-10 gap-1 sm:gap-2 px-3 py-4 bg-surface-elevated/40 border border-white/5 rounded-2xl">
-          {EQ_FREQUENCIES.map((freq, idx) => {
-            const gain = eqBands[idx] || 0;
-            return (
-              <FaderBand
-                key={freq}
-                freq={freq}
-                gain={gain}
-                disabled={!eqEnabled}
-                formatFreq={formatFreq}
-                onChange={(newGain) => setEqBand(idx, newGain)}
-              />
-            );
-          })}
+        <div className="mt-5 overflow-x-auto pb-1">
+          <div className="min-w-[420px] grid grid-cols-10 gap-1 sm:gap-2 px-3 py-4 bg-surface-elevated/40 border border-white/5 rounded-2xl">
+            {EQ_FREQUENCIES.map((freq, idx) => {
+              const gain = eqBands[idx] || 0;
+              return (
+                <FaderBand
+                  key={freq}
+                  freq={freq}
+                  gain={gain}
+                  disabled={!eqEnabled}
+                  formatFreq={formatFreq}
+                  onChange={(newGain) => setEqBand(idx, newGain)}
+                />
+              );
+            })}
+          </div>
         </div>
 
         {/* Footer info & controls */}

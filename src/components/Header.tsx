@@ -93,7 +93,19 @@ export const Header: React.FC<HeaderProps> = ({
   const showSuggestions = showDropdown && searchQuery.trim().length > 0 && suggestions.length > 0;
 
   return (
-    <header className="h-16 border-b border-border bg-surface/90 backdrop-blur-md px-6 flex items-center justify-between relative z-30 shrink-0">
+    <header className="h-16 border-b border-border bg-surface/90 backdrop-blur-md px-3 sm:px-6 flex items-center justify-between relative z-30 shrink-0">
+      {/* Mobile Branding (md:hidden) */}
+      <div className="flex md:hidden items-center gap-2 mr-2 shrink-0">
+        <img
+          src="/app-icon.webp"
+          alt="YT-Z"
+          className="w-8 h-8 rounded-lg object-cover shadow-sm border border-white/10"
+        />
+        <span className="font-extrabold text-base tracking-tight text-foreground font-sans">
+          YT<span className="text-primary">-Z</span>
+        </span>
+      </div>
+
       {/* Search Input Bar with Autocomplete & Search History */}
       <div className="relative w-full max-w-xl z-40" ref={dropdownRef}>
         <div className="relative flex items-center">
@@ -110,8 +122,8 @@ export const Header: React.FC<HeaderProps> = ({
               loadSearchHistory();
             }}
             onKeyDown={handleKeyDown}
-            placeholder="Search songs, artists, albums, or paste YouTube/Spotify link..."
-            className="w-full bg-surface-elevated border border-border focus:border-primary/50 text-foreground placeholder:text-foreground-subtle text-sm rounded-full pl-10 pr-9 py-2 outline-none transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+            placeholder="Search songs, artists, albums, or paste link..."
+            className="w-full bg-surface-elevated border border-border focus:border-primary/50 text-foreground placeholder:text-foreground-subtle text-xs sm:text-sm rounded-full pl-9 sm:pl-10 pr-9 py-2 outline-none transition-all duration-200 focus:ring-2 focus:ring-primary/20 placeholder:truncate"
           />
           {searchQuery && (
             <button

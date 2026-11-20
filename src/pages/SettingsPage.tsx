@@ -108,7 +108,7 @@ export const SettingsPage: React.FC = () => {
   };
 
   return (
-    <div className="p-8 space-y-10 max-w-7xl mx-auto pb-28">
+    <div className="p-4 sm:p-6 md:p-8 space-y-8 md:space-y-10 max-w-7xl mx-auto pb-32 md:pb-28">
       {/* Header */}
       <div className="flex items-center justify-between pb-6 border-b border-border">
         <div>

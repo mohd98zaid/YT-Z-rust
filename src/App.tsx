@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Sidebar, TabType } from './components/Sidebar';
+import { BottomNav } from './components/BottomNav';
 import { Header } from './components/Header';
 import { MiniPlayer } from './components/Player/MiniPlayer';
 import { ExpandedPlayer } from './components/Player/ExpandedPlayer';
@@ -97,6 +98,9 @@ export const App: React.FC = () => {
 
         {/* Docked Mini Player */}
         {!isExpanded && <MiniPlayer />}
+
+        {/* Mobile Bottom Navigation Bar (md:hidden) */}
+        <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
       </div>
 
       {/* Expanded Fullscreen Player Overlay */}
