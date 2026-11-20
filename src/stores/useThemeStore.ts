@@ -7,7 +7,7 @@ interface ThemeState {
   currentThemeId: string;
   currentTheme: ThemePreset;
   setTheme: (themeId: string) => void;
-  initTheme: () => void;
+  initTheme: () => Promise<void>;
 }
 
 const savedThemeId = (typeof window !== 'undefined' && localStorage.getItem('ytz_theme')) || 'apple-music';
@@ -32,9 +32,21 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
     api.updateConfig({ theme: found.id }).catch(() => {});
   },
 
-  initTheme: () => {
-    const saved = localStorage.getItem('ytz_theme') || 'apple-music';
-    const found = THEME_PRESETS.find((t) => t.id === saved) || THEME_PRESETS[0];
+  initTheme: async () => {
+    let themeId: string = (typeof window !== 'undefined' && localStorage.getItem('ytz_theme')) || 'apple-music';
+    try {
+      const config = await api.getConfig();
+      if (config && config.theme) {
+        if (!themeId || themeId !== config.theme) {
+          themeId = config.theme;
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('ytz_theme', themeId);
+          }
+        }
+      }
+    } catch {}
+
+    const found = THEME_PRESETS.find((t) => t.id === themeId) || THEME_PRESETS[0];
     set({ currentThemeId: found.id, currentTheme: found });
     applyThemeToDOM(found);
   },

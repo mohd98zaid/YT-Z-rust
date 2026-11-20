@@ -157,10 +157,17 @@ export const api = {
       method: 'DELETE',
     }),
 
-  // Config
+  // Config & Session Persistence
   getConfig: () => fetchJson<any>(`${API_BASE}/api/config`),
   updateConfig: (updates: any) =>
     fetchJson<any>(`${API_BASE}/api/config`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    }),
+  getSession: () => fetchJson<any>(`${API_BASE}/api/session`),
+  updateSession: (updates: any) =>
+    fetchJson<any>(`${API_BASE}/api/session`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates),

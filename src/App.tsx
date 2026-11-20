@@ -21,16 +21,25 @@ import { useThemeStore } from './stores/useThemeStore';
 import { useDownloadStore } from './stores/useDownloadStore';
 import { usePlayerStore } from './stores/usePlayerStore';
 import { useNavigationStore } from './stores/useNavigationStore';
+import { api } from './services/api';
 
 export const App: React.FC = () => {
-  const { activeTab, setActiveTab } = useNavigationStore();
+  const { activeTab, setActiveTab, initNavigation } = useNavigationStore();
   const [searchQuery, setSearchQuery] = useState('');
   const { initTheme } = useThemeStore();
+  const { restoreSessionFromConfig } = usePlayerStore();
   const { initWebSocket } = useDownloadStore();
   const isExpanded = usePlayerStore((s) => s.isExpanded);
 
   useEffect(() => {
     initTheme();
+    initNavigation();
+    api.getConfig().then((cfg) => {
+      if (cfg) {
+        restoreSessionFromConfig(cfg);
+      }
+    }).catch(() => {});
+
     const cleanupWs = initWebSocket();
 
     // Global F11 key shortcut for full-screen toggle

@@ -131,6 +131,7 @@ interface PlayerState {
   removeFromQueue: (index: number) => void;
   clearQueue: () => void;
   loadLyrics: (track: Track) => Promise<void>;
+  restoreSessionFromConfig: (cfg: any) => void;
 }
 
 // Global Audio Element and Web Audio Context
@@ -380,6 +381,40 @@ const loadPersistedSession = () => {
   }
 };
 
+let sessionSyncTimer: any = null;
+export const syncSessionToBackend = (partial?: Record<string, any>) => {
+  if (sessionSyncTimer) clearTimeout(sessionSyncTimer);
+  sessionSyncTimer = setTimeout(() => {
+    try {
+      const state = usePlayerStore.getState();
+      const curTime = audioElement && !isNaN(audioElement.currentTime) && audioElement.currentTime > 0
+        ? Math.floor(audioElement.currentTime)
+        : state.currentTime;
+
+      const payload = {
+        current_track: state.currentTrack,
+        queue: state.queue,
+        queue_index: state.queueIndex,
+        current_time: curTime,
+        volume: state.volume,
+        is_muted: state.isMuted,
+        repeat_mode: state.repeatMode,
+        shuffle: state.shuffle,
+        playback_speed: state.playbackSpeed,
+        audio_quality: state.audioQuality,
+        eq_enabled: state.eqEnabled,
+        eq_preset: state.eqPreset,
+        eq_bands: state.eqBands,
+        skip_silence: state.skipSilence,
+        volume_normalization: state.volumeNormalization,
+        audio_stats: state.audioStats,
+        ...partial,
+      };
+      api.updateConfig(payload).catch(() => {});
+    } catch {}
+  }, 1000);
+};
+
 const initialSession = loadPersistedSession();
 
 export const usePlayerStore = create<PlayerState>((set, get) => ({
@@ -407,6 +442,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   setAudioQuality: (quality: 'lossless' | 'high' | 'standard' | 'data_saver' | 'auto') => {
     localStorage.setItem('ytz_audio_quality', quality);
     set({ audioQuality: quality });
+    syncSessionToBackend({ audio_quality: quality });
     const { currentTrack, playTrack, currentTime } = get();
     if (currentTrack) {
       const currentPos = audioElement && !isNaN(audioElement.currentTime) ? audioElement.currentTime : currentTime;
@@ -1126,6 +1162,54 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       set({ lyrics: null, isLyricsLoading: false });
     }
   },
+
+  restoreSessionFromConfig: (cfg: any) => {
+    if (!cfg) return;
+    const current = get().currentTrack;
+    if (!current && cfg.current_track) {
+      const restored = {
+        currentTrack: cfg.current_track,
+        queue: cfg.queue && cfg.queue.length > 0 ? cfg.queue : [cfg.current_track],
+        queueIndex: typeof cfg.queue_index === 'number' ? cfg.queue_index : 0,
+        currentTime: typeof cfg.current_time === 'number' ? cfg.current_time : 0,
+        volume: typeof cfg.volume === 'number' ? cfg.volume : 0.85,
+        isMuted: Boolean(cfg.is_muted),
+        repeatMode: (cfg.repeat_mode as any) || 'off',
+        shuffle: Boolean(cfg.shuffle),
+        playbackSpeed: typeof cfg.playback_speed === 'number' ? cfg.playback_speed : 1.0,
+        audioQuality: cfg.audio_quality || 'lossless',
+        eqEnabled: cfg.eq_enabled !== undefined ? cfg.eq_enabled : true,
+        eqPreset: cfg.eq_preset || 'Flat',
+        eqBands: cfg.eq_bands || [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        skipSilence: Boolean(cfg.skip_silence),
+        volumeNormalization: Boolean(cfg.volume_normalization),
+        audioStats: cfg.audio_stats || null,
+        duration: cfg.current_track?.durationSeconds || 0,
+      };
+      set(restored);
+
+      try {
+        localStorage.setItem('ytz_persisted_current_track', JSON.stringify(restored.currentTrack));
+        localStorage.setItem('ytz_persisted_queue', JSON.stringify(restored.queue));
+        localStorage.setItem('ytz_persisted_queue_index', String(restored.queueIndex));
+        localStorage.setItem('ytz_persisted_current_time', String(restored.currentTime));
+        localStorage.setItem('ytz_persisted_volume', String(restored.volume));
+        localStorage.setItem('ytz_is_muted', String(restored.isMuted));
+        localStorage.setItem('ytz_persisted_repeat_mode', restored.repeatMode);
+        localStorage.setItem('ytz_persisted_shuffle', String(restored.shuffle));
+        localStorage.setItem('ytz_playback_speed', String(restored.playbackSpeed));
+        localStorage.setItem('ytz_audio_quality', restored.audioQuality);
+        localStorage.setItem('ytz_eq_enabled', String(restored.eqEnabled));
+        localStorage.setItem('ytz_eq_preset', restored.eqPreset);
+        localStorage.setItem('ytz_eq_bands', JSON.stringify(restored.eqBands));
+        localStorage.setItem('ytz_skip_silence', String(restored.skipSilence));
+        localStorage.setItem('ytz_volume_normalization', String(restored.volumeNormalization));
+        if (restored.audioStats) {
+          localStorage.setItem('ytz_persisted_audio_stats', JSON.stringify(restored.audioStats));
+        }
+      } catch {}
+    }
+  },
 }));
 
 // Global window unload handler to flush the latest playback state immediately
@@ -1133,8 +1217,12 @@ if (typeof window !== 'undefined') {
   window.addEventListener('beforeunload', () => {
     try {
       const state = usePlayerStore.getState();
+      const curTime = audioElement && !isNaN(audioElement.currentTime) && audioElement.currentTime > 0
+        ? Math.floor(audioElement.currentTime)
+        : state.currentTime;
+
       if (audioElement && !isNaN(audioElement.currentTime) && audioElement.currentTime > 0) {
-        localStorage.setItem('ytz_persisted_current_time', String(Math.floor(audioElement.currentTime)));
+        localStorage.setItem('ytz_persisted_current_time', String(curTime));
       }
       if (state.currentTrack) {
         localStorage.setItem('ytz_persisted_current_track', JSON.stringify(state.currentTrack));
@@ -1145,6 +1233,32 @@ if (typeof window !== 'undefined') {
       }
       if (state.audioStats) {
         localStorage.setItem('ytz_persisted_audio_stats', JSON.stringify(state.audioStats));
+      }
+
+      // Synchronous beacon to persist session in backend config.json
+      const payload = {
+        theme: localStorage.getItem('ytz_theme') || 'apple-music',
+        active_tab: localStorage.getItem('ytz_active_tab') || 'home',
+        current_track: state.currentTrack,
+        queue: state.queue,
+        queue_index: state.queueIndex,
+        current_time: curTime,
+        volume: state.volume,
+        is_muted: state.isMuted,
+        repeat_mode: state.repeatMode,
+        shuffle: state.shuffle,
+        playback_speed: state.playbackSpeed,
+        audio_quality: state.audioQuality,
+        eq_enabled: state.eqEnabled,
+        eq_preset: state.eqPreset,
+        eq_bands: state.eqBands,
+        skip_silence: state.skipSilence,
+        volume_normalization: state.volumeNormalization,
+        audio_stats: state.audioStats,
+      };
+      if (navigator.sendBeacon) {
+        const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+        navigator.sendBeacon('/api/config', blob);
       }
     } catch {}
   });
