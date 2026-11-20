@@ -1,12 +1,12 @@
 name: Build Android APK
 
 on:
-  workflow_dispatch: # Isse aap manually Actions tab se isko chala sakte hain
+  workflow_dispatch:
 
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-
+    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -23,16 +23,25 @@ jobs:
           targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
 
       - name: Setup Java (JDK 17)
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '17'
 
+      # Yahan fix kiya gaya hai: sirf platform-tools install karega
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
 
       - name: Install Frontend Dependencies
         run: npm install
+
+      - name: Install Tauri CLI
+        run: npm install -g @tauri-apps/cli@latest
+
+      - name: Initialize Android Project
+        run: npx tauri android init
 
       - name: Build Android Debug APK
         run: npx tauri android build --debug
@@ -43,5 +52,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: YT-Z-Android-Debug-APK
-          # Ye Tauri v2 ka default output path hai
-          path: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          path: |
+            src-tauri/gen/android/app/build/outputs/apk/**/*.apk
