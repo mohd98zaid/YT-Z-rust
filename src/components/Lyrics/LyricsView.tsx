@@ -50,15 +50,20 @@ export const LyricsView: React.FC<LyricsViewProps> = ({
 
   if (!lines || lines.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-foreground-muted gap-3 py-16 relative">
-        <Mic2 className="w-10 h-10 opacity-40 text-primary" />
-        <p className="text-sm font-medium">No synchronized lyrics found for this track.</p>
+      <div className="flex flex-col items-center justify-center h-full text-center px-6 py-12 relative animate-fadeIn">
+        <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary/25 flex items-center justify-center text-primary mb-4 shadow-lg shadow-primary/20">
+          <Mic2 className="w-8 h-8 opacity-80" />
+        </div>
+        <h3 className="text-lg font-black text-foreground dark:text-white tracking-tight">No Synchronized Lyrics</h3>
+        <p className="text-xs text-foreground-muted dark:text-white/60 max-w-xs mt-1 mb-6">
+          Synchronized lyrics aren't available for this track yet.
+        </p>
         {onClose && (
           <button
             onClick={onClose}
-            className="text-xs px-3 py-1 rounded-full bg-surface-elevated hover:bg-border text-foreground-muted hover:text-foreground transition-all"
+            className="px-5 py-2 rounded-full bg-primary hover:bg-primary-hover text-white text-xs font-bold shadow-lg shadow-primary/30 active:scale-95 transition-all"
           >
-            Close Lyrics
+            Back to Album Cover
           </button>
         )}
       </div>

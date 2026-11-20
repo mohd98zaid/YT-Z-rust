@@ -33,6 +33,9 @@ import {
   Zap,
   Leaf,
   Check,
+  MoreHorizontal,
+  Heart,
+  Share2,
 } from 'lucide-react';
 import { usePlayerStore } from '../../stores/usePlayerStore';
 import { useDownloadStore } from '../../stores/useDownloadStore';
@@ -101,6 +104,46 @@ export const ExpandedPlayer: React.FC = () => {
   const { queueDownload } = useDownloadStore();
   const { navigateToYouTube } = useNavigationStore();
   const [activeTab, setActiveTab] = useState<'lyrics' | 'queue'>('lyrics');
+  const [mobileView, setMobileView] = useState<'artwork' | 'lyrics' | 'queue'>('artwork');
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
+
+  React.useEffect(() => {
+    if (!currentTrack) return;
+    api.getFavorites()
+      .then((favs) => {
+        if (Array.isArray(favs)) {
+          setIsLiked(favs.some((f) => f.id === currentTrack.id || (f.videoId && f.videoId === currentTrack.videoId)));
+        }
+      })
+      .catch(() => {});
+  }, [currentTrack?.id]);
+
+  const handleToggleFavorite = async () => {
+    if (!currentTrack) return;
+    try {
+      if (isLiked) {
+        await api.removeFavorite(currentTrack.id);
+        setIsLiked(false);
+      } else {
+        await api.addFavorite(currentTrack);
+        setIsLiked(true);
+      }
+    } catch (err) {
+      console.error('Failed to toggle favorite', err);
+    }
+  };
+
+  const handleShare = () => {
+    if (!currentTrack) return;
+    const url = currentTrack.isLocal
+      ? window.location.href
+      : `https://www.youtube.com/watch?v=${currentTrack.videoId || currentTrack.id}`;
+    navigator.clipboard?.writeText?.(url);
+    setShareCopied(true);
+    setTimeout(() => setShareCopied(false), 2000);
+  };
   const [downloadQueued, setDownloadQueued] = useState(false);
   const [matchedVideos, setMatchedVideos] = useState<string[]>([]);
   const [matchedIndex, setMatchedIndex] = useState(0);
@@ -384,8 +427,135 @@ export const ExpandedPlayer: React.FC = () => {
         <div className="absolute inset-0 bg-background/80 backdrop-blur-2xl" />
       </div>
 
-      {/* Top Header Bar */}
-      <header className="relative z-50 flex items-center justify-between px-3 sm:px-6 py-2.5 sm:py-3 border-b border-border/40 shrink-0">
+      {/* BitChord / Apple Music Mobile Top Bar (flex md:hidden) */}
+      <header className="flex md:hidden relative z-50 items-center justify-between px-4 py-2.5 border-b border-white/10 shrink-0 select-none">
+        {/* Left: Minimize Button */}
+        <button
+          onClick={() => {
+            setExpanded(false);
+            if (isVideoMode) {
+              setVideoMode(false);
+              setActiveVideoSource(null);
+            }
+          }}
+          className="w-9 h-9 rounded-full bg-white/10 backdrop-blur-xl border border-white/10 flex items-center justify-center text-foreground active:scale-90 transition-transform"
+          title="Minimize player"
+        >
+          <ChevronDown className="w-5 h-5" />
+        </button>
+
+        {/* Center: Dynamic Mode Header Pill */}
+        <div className="flex items-center justify-center min-w-0 px-2 flex-1">
+          {mobileView === 'lyrics' ? (
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-white/15 animate-fadeIn">
+              <Mic2 className="w-3.5 h-3.5 text-primary" />
+              <span className="text-xs font-bold text-foreground dark:text-white tracking-wide">Synced Lyrics</span>
+            </div>
+          ) : mobileView === 'queue' ? (
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-white/15 animate-fadeIn">
+              <ListMusic className="w-3.5 h-3.5 text-primary" />
+              <span className="text-xs font-bold text-foreground dark:text-white tracking-wide">Up Next ({queue.length})</span>
+            </div>
+          ) : isVideoMode && !currentTrack.isLocal ? (
+            <div className="flex items-center gap-1 p-0.5 rounded-full bg-white/10 border border-white/15">
+              <button
+                onClick={() => {
+                  setVideoMode(false);
+                  setActiveVideoSource(null);
+                  pause();
+                  play();
+                }}
+                className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold text-foreground-muted"
+              >
+                <Disc className="w-3 h-3" />
+                <span>Song</span>
+              </button>
+              <button
+                className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-primary text-white shadow-sm"
+              >
+                <Video className="w-3 h-3" />
+                <span>Video</span>
+              </button>
+            </div>
+          ) : !currentTrack.isLocal ? (
+            <div className="flex items-center gap-1 p-0.5 rounded-full bg-white/10 border border-white/15">
+              <button
+                className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-primary text-white shadow-sm"
+              >
+                <Disc className="w-3 h-3" />
+                <span>Song</span>
+              </button>
+              <button
+                onClick={() => {
+                  setVideoMode(true);
+                  pauseAudio();
+                  setActiveVideoSource('expanded_video');
+                }}
+                className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold text-foreground-muted hover:text-foreground"
+              >
+                <Video className="w-3 h-3" />
+                <span>Video</span>
+              </button>
+            </div>
+          ) : (
+            <span className="text-xs font-bold uppercase tracking-wider text-foreground-muted truncate">
+              {currentTrack.album || 'Now Playing'}
+            </span>
+          )}
+        </div>
+
+        {/* Right: Quality Badge & More Options Button */}
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="relative" ref={qualityMenuRef}>
+            <button
+              onClick={() => setQualityMenuOpen(!qualityMenuOpen)}
+              className={`px-2.5 py-1 rounded-full border text-[10px] font-bold tracking-wider uppercase transition-all backdrop-blur-md active:scale-95 ${
+                audioQuality === 'lossless'
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-[0_0_8px_rgba(245,158,11,0.25)]'
+                  : audioQuality === 'data_saver'
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                  : 'bg-white/10 text-foreground dark:text-white border-white/15'
+              }`}
+            >
+              {audioQuality === 'lossless' ? 'Hi-Res' : audioQuality === 'data_saver' ? 'Saver' : '320k'}
+            </button>
+
+            {qualityMenuOpen && (
+              <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl bg-[#181920]/95 backdrop-blur-2xl border border-white/15 p-2 shadow-2xl z-50 animate-fadeIn">
+                {qualityOptions.map((opt) => (
+                  <button
+                    key={opt.id}
+                    onClick={() => {
+                      setAudioQuality(opt.id);
+                      setQualityMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-all ${
+                      audioQuality === opt.id ? 'bg-primary/20 text-primary' : 'hover:bg-white/10 text-white'
+                    }`}
+                  >
+                    <div>
+                      <div className="text-xs font-bold">{opt.label}</div>
+                      <div className="text-[10px] text-white/50">{opt.badge}</div>
+                    </div>
+                    {audioQuality === opt.id && <Check className="w-4 h-4 text-primary" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={() => setIsMoreMenuOpen(true)}
+            className="w-9 h-9 rounded-full bg-white/10 backdrop-blur-xl border border-white/10 flex items-center justify-center text-foreground active:scale-90 transition-transform"
+            title="More Options"
+          >
+            <MoreHorizontal className="w-5 h-5" />
+          </button>
+        </div>
+      </header>
+
+      {/* Desktop Top Header Bar (hidden md:flex) */}
+      <header className="hidden md:flex relative z-50 items-center justify-between px-6 py-3 border-b border-border/40 shrink-0">
         <button
           onClick={() => {
             setExpanded(false);
@@ -635,8 +805,190 @@ export const ExpandedPlayer: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Center Area: Split vs Fullscreen Lyrics vs Centered Artwork */}
-      <div className="relative z-10 flex-1 min-h-0 flex items-center justify-center px-6 py-2 md:px-10 gap-4 md:gap-8 overflow-hidden">
+      {/* BitChord / Apple Music Mobile Center Canvas (flex md:hidden) */}
+      <div className="flex md:hidden relative z-10 flex-1 min-h-0 w-full flex-col items-center justify-center px-4 py-1 overflow-hidden select-none">
+        {/* VIEW 1: Large Artwork & Track Info (Default) */}
+        {mobileView === 'artwork' && (
+          <div className="flex-1 min-h-0 w-full max-w-sm flex flex-col items-center justify-between py-2 animate-fadeIn">
+            {/* Embedded Video Mode OR Full-bleed Cover Artwork */}
+            {isVideoMode && !currentTrack.isLocal ? (
+              <div className="w-full flex-1 min-h-0 flex flex-col items-center justify-center gap-2">
+                <div className="relative w-full aspect-video rounded-3xl overflow-hidden shadow-2xl border border-white/10 bg-black animate-fadeIn max-h-[36vh]">
+                  {useDirectVideo ? (
+                    <video
+                      ref={videoElementRef}
+                      key={`direct-${currentVideoId}`}
+                      src={`/api/stream/${currentVideoId}/video`}
+                      controls
+                      autoPlay
+                      playsInline
+                      className="w-full h-full object-contain bg-black"
+                      onTimeUpdate={(e) => {
+                        const ct = e.currentTarget.currentTime;
+                        if (!isNaN(ct)) usePlayerStore.setState({ currentTime: ct });
+                      }}
+                      onDurationChange={(e) => {
+                        const dur = e.currentTarget.duration;
+                        if (!isNaN(dur) && dur > 0) usePlayerStore.setState({ duration: dur });
+                      }}
+                      onPlay={() => {
+                        pauseAudio();
+                        setActiveVideoSource('expanded_video');
+                        usePlayerStore.setState({ isPlaying: true });
+                      }}
+                      onPause={() => usePlayerStore.setState({ isPlaying: false })}
+                      onEnded={() => usePlayerStore.getState().next()}
+                    />
+                  ) : (
+                    <iframe
+                      ref={iframeRef}
+                      key={currentVideoId}
+                      src={`https://www.youtube.com/embed/${currentVideoId}?autoplay=1&enablejsapi=1&rel=0&iv_load_policy=3&vq=hd1080&origin=${window.location.origin}`}
+                      title={currentTrack.title}
+                      className="w-full h-full border-0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                      allowFullScreen
+                    />
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="relative group flex items-center justify-center my-auto w-full py-2">
+                <div className="relative aspect-square w-[76vw] max-w-[310px] max-h-[38vh]">
+                  {/* Spinning Vinyl Record Layer Behind Artwork */}
+                  <div
+                    className={`absolute -right-6 top-1/2 -translate-y-1/2 w-[90%] h-[90%] rounded-full bg-zinc-950 border-4 border-zinc-800 shadow-2xl flex items-center justify-center pointer-events-none transition-transform duration-500 ${
+                      isPlaying ? 'animate-spin-slow' : ''
+                    }`}
+                  >
+                    <div className="w-16 h-16 rounded-full border-4 border-zinc-700/80 bg-zinc-900 flex items-center justify-center">
+                      <div className="w-4 h-4 rounded-full bg-primary/80" />
+                    </div>
+                  </div>
+
+                  {/* High-res Full-bleed Cover Artwork */}
+                  <div className="relative w-full h-full rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.6)] border border-white/15 z-10 bg-surface">
+                    <img
+                      src={currentTrack.thumbnail || '/placeholder.png'}
+                      alt={currentTrack.title}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Below Artwork: Track Details + Apple Music Heart */}
+            <div className="flex items-center justify-between w-full px-2 mt-3 mb-1 shrink-0">
+              <div className="min-w-0 flex-1 text-left">
+                <h2 className="text-xl font-black text-foreground tracking-tight truncate">
+                  {currentTrack.title}
+                </h2>
+                <p className="text-sm text-foreground-muted font-medium truncate mt-0.5">
+                  {currentTrack.artist}
+                </p>
+              </div>
+              <button
+                onClick={handleToggleFavorite}
+                className="p-2.5 rounded-full hover:bg-white/10 active:scale-90 transition-transform ml-2 shrink-0"
+                title={isLiked ? "Remove from Liked Songs" : "Save to Liked Songs"}
+              >
+                <Heart className={`w-6 h-6 transition-colors ${isLiked ? 'fill-primary text-primary' : 'text-foreground-muted hover:text-foreground'}`} />
+              </button>
+            </div>
+
+            {/* Audiophile Specs Line */}
+            {showAudiophileSpecs && (
+              <div className="w-full text-left px-2 shrink-0">
+                <button
+                  onClick={toggleStatsForNerds}
+                  className="inline-flex items-center gap-1.5 text-[11px] font-mono text-foreground-muted hover:text-foreground tracking-wide transition-colors cursor-pointer"
+                  title="Click to view Audio Pipeline signal path"
+                >
+                  <Activity className="w-3 h-3 text-primary" />
+                  <span>{audioStats?.format || (audioStats?.isLossless ? 'FLAC' : 'OPUS')}</span>
+                  <span>·</span>
+                  <span>{audioStats?.bitDepth || (audioStats?.isLossless ? 24 : 16)}-bit</span>
+                  <span>·</span>
+                  <span>{((audioStats?.sampleRate || 48000) / 1000).toFixed(1)} kHz</span>
+                  <span>·</span>
+                  <span>Bit-Perfect</span>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* VIEW 2: Fullscreen Apple Music Synced Lyrics */}
+        {mobileView === 'lyrics' && (
+          <div className="flex-1 min-h-0 w-full max-w-md mx-auto p-1 overflow-hidden animate-fadeIn flex flex-col">
+            <div className="w-full h-full min-h-0 flex flex-col bg-black/35 backdrop-blur-2xl border border-white/10 rounded-3xl overflow-hidden relative shadow-2xl">
+              <LyricsView
+                isFullScreen={true}
+                onToggleFullscreen={() => {}}
+                onClose={() => setMobileView('artwork')}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* VIEW 3: Fullscreen Up Next Queue */}
+        {mobileView === 'queue' && (
+          <div className="flex-1 min-h-0 w-full max-w-md mx-auto p-1 overflow-hidden animate-fadeIn flex flex-col">
+            <div className="w-full h-full min-h-0 flex flex-col bg-black/35 backdrop-blur-2xl border border-white/10 rounded-3xl overflow-hidden relative shadow-2xl p-4">
+              <div className="flex items-center justify-between pb-3 border-b border-white/10 shrink-0">
+                <div className="flex items-center gap-2">
+                  <ListMusic className="w-4 h-4 text-primary" />
+                  <span className="text-xs font-bold text-white uppercase tracking-wider">
+                    Up Next Queue ({queue.length})
+                  </span>
+                </div>
+                <button
+                  onClick={() => setMobileView('artwork')}
+                  className="text-xs text-white/70 hover:text-white font-medium px-3 py-1 rounded-full bg-white/10 active:scale-95 transition-all"
+                >
+                  Done
+                </button>
+              </div>
+
+              <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5 py-3 pr-1">
+                {queue.map((t, idx) => {
+                  const isCurrent = idx === queueIndex;
+                  return (
+                    <div
+                      key={`${t.id}_${idx}`}
+                      onClick={() => playTrack(t)}
+                      className={`flex items-center justify-between p-2.5 rounded-2xl cursor-pointer transition-all active:scale-[0.98] ${
+                        isCurrent
+                          ? 'bg-primary/25 border border-primary/40 text-white font-bold shadow-sm'
+                          : 'hover:bg-white/10 text-white/80'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <img
+                          src={t.thumbnail}
+                          alt=""
+                          className="w-10 h-10 rounded-xl object-cover shrink-0 shadow-sm border border-white/10"
+                        />
+                        <div className="min-w-0">
+                          <p className="text-xs truncate">{t.title}</p>
+                          <p className="text-[11px] text-white/60 truncate">{t.artist}</p>
+                        </div>
+                      </div>
+                      <span className="text-xs font-mono text-white/50 ml-2">
+                        {t.duration}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Desktop Main Center Area: Split vs Fullscreen Lyrics vs Centered Artwork */}
+      <div className="hidden md:flex relative z-10 flex-1 min-h-0 items-center justify-center px-6 py-2 md:px-10 gap-4 md:gap-8 overflow-hidden">
         {lyricsEnabled && lyricsLayoutMode === 'fullscreen' && activeTab === 'lyrics' ? (
           <div className="w-full max-w-4xl h-full min-h-0 flex flex-col bg-surface-glass border border-border-glass rounded-3xl backdrop-blur-xl overflow-hidden relative shadow-2xl mx-auto animate-fadeIn">
             <LyricsView
@@ -958,10 +1310,145 @@ export const ExpandedPlayer: React.FC = () => {
         )}
       </div>
 
-      {/* Bottom Expanded Controls Bar */}
+      {/* BitChord / Apple Music Mobile Bottom Deck (flex md:hidden) */}
+      <footer className="flex md:hidden relative z-10 flex-col items-center gap-2 px-5 pt-2 pb-4 bg-black/40 backdrop-blur-2xl border-t border-white/10 shrink-0 w-full select-none">
+        {/* Scrubber Timeline */}
+        <div className="w-full max-w-sm flex items-center gap-2.5 px-1">
+          <span className="text-[11px] font-mono text-foreground-muted w-9 text-right">
+            {formatTime(currentTime)}
+          </span>
+          <div
+            className="flex-1 h-1.5 bg-white/15 rounded-full cursor-pointer relative group overflow-hidden"
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const pos = (e.clientX - rect.left) / rect.width;
+              seek(pos * duration);
+            }}
+          >
+            <div
+              className="h-full bg-gradient-to-r from-primary to-accent rounded-full transition-all"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+          <span className="text-[11px] font-mono text-foreground-muted w-10 text-left">
+            {duration > 0 && currentTime <= duration ? `-${formatTime(duration - currentTime)}` : formatTime(duration)}
+          </span>
+        </div>
+
+        {/* Transport Buttons: Shuffle, Prev, Big Play/Pause, Next, Repeat */}
+        <div className="flex items-center justify-between w-full max-w-sm px-4 pt-1">
+          <button
+            onClick={toggleShuffle}
+            className={`p-2 rounded-full transition-colors ${
+              shuffle ? 'text-primary' : 'text-foreground-muted hover:text-foreground'
+            }`}
+          >
+            <Shuffle className="w-5 h-5" />
+          </button>
+
+          <button onClick={previous} className="p-2 text-foreground active:scale-90 transition-transform">
+            <SkipBack className="w-7 h-7 fill-current" />
+          </button>
+
+          <button
+            onClick={togglePlay}
+            disabled={isLoading}
+            className="w-14 h-14 rounded-full bg-primary hover:bg-primary-hover text-white flex items-center justify-center shadow-xl shadow-primary/35 active:scale-90 transition-all"
+          >
+            {isLoading ? (
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : isPlaying ? (
+              <Pause className="w-6 h-6 fill-current" />
+            ) : (
+              <Play className="w-6 h-6 fill-current ml-0.5" />
+            )}
+          </button>
+
+          <button onClick={next} className="p-2 text-foreground active:scale-90 transition-transform">
+            <SkipForward className="w-7 h-7 fill-current" />
+          </button>
+
+          <button
+            onClick={cycleRepeat}
+            className={`p-2 rounded-full transition-colors ${
+              repeatMode !== 'off' ? 'text-primary' : 'text-foreground-muted hover:text-foreground'
+            }`}
+          >
+            {repeatMode === 'one' ? <Repeat1 className="w-5 h-5" /> : <Repeat className="w-5 h-5" />}
+          </button>
+        </div>
+
+        {/* Apple Music Bottom Action Bar: Lyrics, EQ, Pipeline, Queue, Download */}
+        <div className="flex items-center justify-between w-full max-w-sm px-4 pt-1.5 border-t border-white/5">
+          <button
+            onClick={() => setMobileView(mobileView === 'lyrics' ? 'artwork' : 'lyrics')}
+            title="Synced Lyrics"
+            className={`p-2.5 rounded-full transition-all active:scale-90 ${
+              mobileView === 'lyrics'
+                ? 'bg-primary text-white shadow-md shadow-primary/35 ring-2 ring-primary/40'
+                : 'text-foreground-muted hover:text-foreground hover:bg-white/10'
+            }`}
+          >
+            <Mic2 className="w-5 h-5" />
+          </button>
+
+          <button
+            onClick={toggleEqualizer}
+            title="Graphic Equalizer"
+            className={`p-2.5 rounded-full transition-all active:scale-90 ${
+              isEqualizerOpen
+                ? 'bg-primary text-white shadow-md shadow-primary/35'
+                : 'text-foreground-muted hover:text-foreground hover:bg-white/10'
+            }`}
+          >
+            <Sliders className="w-5 h-5" />
+          </button>
+
+          <button
+            onClick={toggleStatsForNerds}
+            title="Inspect Audio Pipeline"
+            className="p-2.5 rounded-full text-foreground-muted hover:text-foreground hover:bg-white/10 transition-all active:scale-90"
+          >
+            <Activity className="w-5 h-5" />
+          </button>
+
+          <button
+            onClick={() => setMobileView(mobileView === 'queue' ? 'artwork' : 'queue')}
+            title="Up Next Queue"
+            className={`p-2.5 rounded-full transition-all active:scale-90 relative ${
+              mobileView === 'queue'
+                ? 'bg-primary text-white shadow-md shadow-primary/35 ring-2 ring-primary/40'
+                : 'text-foreground-muted hover:text-foreground hover:bg-white/10'
+            }`}
+          >
+            <ListMusic className="w-5 h-5" />
+            {queue.length > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-mono flex items-center justify-center font-bold">
+                {queue.length > 99 ? '99+' : queue.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={handleDownloadCurrent}
+            title="Download lossless audio"
+            className={`p-2.5 rounded-full border transition-all active:scale-90 ${
+              downloadQueued
+                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                : audioStats?.isLossless
+                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                : 'text-foreground-muted border-transparent hover:text-foreground hover:bg-white/10'
+            }`}
+          >
+            <Download className="w-5 h-5" />
+          </button>
+        </div>
+      </footer>
+
+      {/* Desktop Bottom Expanded Controls Bar (hidden md:flex) */}
       <footer 
         style={{ backgroundColor: 'var(--bg-surface)' }}
-        className="relative z-10 px-6 py-2.5 sm:py-3 bg-surface border-t border-border flex flex-col items-center gap-2 shrink-0"
+        className="hidden md:flex relative z-10 px-6 py-2.5 sm:py-3 bg-surface border-t border-border flex-col items-center gap-2 shrink-0"
       >
         {/* Progress Bar with Timers */}
         <div className="w-full max-w-2xl flex items-center gap-3">
@@ -1149,6 +1636,94 @@ export const ExpandedPlayer: React.FC = () => {
           </button>
         </div>
       </footer>
+
+      {/* BitChord / Apple Music Mobile "More Options" Sheet */}
+      {isMoreMenuOpen && (
+        <div className="fixed inset-0 z-[700] md:hidden flex flex-col justify-end">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fadeIn"
+            onClick={() => setIsMoreMenuOpen(false)}
+          />
+          <div className="relative bg-[#14151b]/95 backdrop-blur-2xl border-t border-white/15 rounded-t-[32px] p-5 shadow-2xl z-10 space-y-4 animate-slideUp pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
+            <div className="w-10 h-1 bg-white/20 rounded-full mx-auto -mt-1 mb-2" />
+            <div className="flex items-center gap-3 pb-3 border-b border-white/10">
+              <img
+                src={currentTrack.thumbnail || '/placeholder.png'}
+                alt=""
+                className="w-12 h-12 rounded-xl object-cover shadow-md border border-white/10"
+              />
+              <div className="min-w-0 flex-1">
+                <h4 className="font-bold text-sm text-white truncate">{currentTrack.title}</h4>
+                <p className="text-xs text-white/60 truncate">{currentTrack.artist}</p>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              {!currentTrack.isLocal && (
+                <button
+                  onClick={() => {
+                    startRadio();
+                    setIsMoreMenuOpen(false);
+                  }}
+                  className="w-full flex items-center gap-3 p-3 rounded-2xl bg-white/5 hover:bg-white/10 text-white text-xs font-bold transition-all active:scale-[0.98]"
+                >
+                  <Radio className="w-4 h-4 text-primary" />
+                  <span>Start Song Radio</span>
+                </button>
+              )}
+
+              <button
+                onClick={() => {
+                  toggleSleepTimer();
+                  setIsMoreMenuOpen(false);
+                }}
+                className="w-full flex items-center justify-between p-3 rounded-2xl bg-white/5 hover:bg-white/10 text-white text-xs font-bold transition-all active:scale-[0.98]"
+              >
+                <div className="flex items-center gap-3">
+                  <Timer className="w-4 h-4 text-amber-400" />
+                  <span>Sleep Timer</span>
+                </div>
+                {sleepTimerRemaining !== null && (
+                  <span className="text-[11px] font-mono text-amber-400">{sleepTimerRemaining}m left</span>
+                )}
+              </button>
+
+              <button
+                onClick={() => {
+                  toggleEqualizer();
+                  setIsMoreMenuOpen(false);
+                }}
+                className="w-full flex items-center gap-3 p-3 rounded-2xl bg-white/5 hover:bg-white/10 text-white text-xs font-bold transition-all active:scale-[0.98]"
+              >
+                <Sliders className="w-4 h-4 text-purple-400" />
+                <span>Graphic Equalizer</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  toggleStatsForNerds();
+                  setIsMoreMenuOpen(false);
+                }}
+                className="w-full flex items-center gap-3 p-3 rounded-2xl bg-white/5 hover:bg-white/10 text-white text-xs font-bold transition-all active:scale-[0.98]"
+              >
+                <Activity className="w-4 h-4 text-emerald-400" />
+                <span>Audio Pipeline & Signal Path</span>
+              </button>
+
+              <button
+                onClick={handleShare}
+                className="w-full flex items-center justify-between p-3 rounded-2xl bg-white/5 hover:bg-white/10 text-white text-xs font-bold transition-all active:scale-[0.98]"
+              >
+                <div className="flex items-center gap-3">
+                  <Share2 className="w-4 h-4 text-blue-400" />
+                  <span>Share Song Link</span>
+                </div>
+                {shareCopied && <span className="text-[10px] text-emerald-400 font-semibold">Copied!</span>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Live Signal Path, Decoder to Output Modal */}
       <AudioPipelineModal isOpen={enableStatsForNerds && showStatsForNerds} onClose={toggleStatsForNerds} />
