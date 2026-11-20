@@ -130,11 +130,11 @@ export const api = {
   clearCompleted: () => fetchJson<any>(`${API_BASE}/api/downloader/clear-completed`, { method: 'DELETE' }),
 
   // Spotify Importer
-  importSpotify: (url: string, limit = 50) =>
+  importSpotify: (url: string, limit = 150, saveToLibrary = true) =>
     fetchJson<any>(`${API_BASE}/api/spotify/import`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, limit }),
+      body: JSON.stringify({ url, limit, save_to_library: saveToLibrary }),
     }),
 
   // Local Library

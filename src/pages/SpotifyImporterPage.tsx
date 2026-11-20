@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { ListMusic, Play, Download, CheckCircle2, ArrowRight, Sparkles } from 'lucide-react';
+import { ListMusic, Play, Download, CheckCircle2, ArrowRight, Sparkles, FolderHeart } from 'lucide-react';
 import { api } from '../services/api';
 import { usePlayerStore } from '../stores/usePlayerStore';
 import { useDownloadStore } from '../stores/useDownloadStore';
+import { useNavigationStore } from '../stores/useNavigationStore';
 
 export const SpotifyImporterPage: React.FC = () => {
   const [spotifyUrl, setSpotifyUrl] = useState('');
@@ -11,6 +12,7 @@ export const SpotifyImporterPage: React.FC = () => {
 
   const { playTrack } = usePlayerStore();
   const { queueDownload } = useDownloadStore();
+  const { setActiveTab } = useNavigationStore();
 
   const handleImport = async () => {
     if (!spotifyUrl.trim()) return;
@@ -96,6 +98,22 @@ export const SpotifyImporterPage: React.FC = () => {
       {/* Imported Result View */}
       {importedData && (
         <div className="bg-surface border border-border rounded-3xl p-6 shadow-xl space-y-6 animate-fadeIn">
+          {/* Saved to Library Status Banner */}
+          {importedData.savedToLibrary && (
+            <div className="flex items-center justify-between p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-xs font-bold">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span>Saved to My Playlists ({importedData.matchedCount} tracks ready in your Library)</span>
+              </div>
+              <button
+                onClick={() => setActiveTab('library')}
+                className="px-3.5 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-bold transition-all active:scale-95 shadow-sm"
+              >
+                Open in Library &gt;
+              </button>
+            </div>
+          )}
+
           {/* Header Details */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-border">
             <div className="flex items-center gap-4">
@@ -115,7 +133,14 @@ export const SpotifyImporterPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+              <button
+                onClick={() => setActiveTab('library')}
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-surface-elevated hover:bg-surface border border-border text-foreground font-bold text-xs transition-all hover:scale-105 active:scale-95"
+              >
+                <FolderHeart className="w-4 h-4 text-primary" />
+                <span>My Playlists</span>
+              </button>
               <button
                 onClick={handlePlayAll}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-primary hover:bg-primary-hover text-white font-bold text-xs shadow-md shadow-primary/20 transition-all hover:scale-105 active:scale-95"
@@ -125,10 +150,10 @@ export const SpotifyImporterPage: React.FC = () => {
               </button>
               <button
                 onClick={handleDownloadAll}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-surface-elevated hover:bg-surface-elevated/80 border border-border text-foreground font-bold text-xs transition-all hover:scale-105"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-surface-elevated hover:bg-surface-elevated/80 border border-border text-foreground font-bold text-xs transition-all hover:scale-105"
               >
                 <Download className="w-4 h-4" />
-                <span>Download All (320k)</span>
+                <span>Download (320k)</span>
               </button>
             </div>
           </div>
