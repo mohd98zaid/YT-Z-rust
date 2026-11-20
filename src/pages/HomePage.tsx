@@ -66,7 +66,7 @@ export const HomePage: React.FC = () => {
   }
 
   return (
-    <div className="p-4 sm:p-6 md:p-8 space-y-8 md:space-y-10 max-w-7xl mx-auto pb-32 md:pb-28">
+    <div className="p-4 sm:p-6 md:p-8 space-y-8 md:space-y-10 max-w-7xl mx-auto pb-40 md:pb-28">
       {/* Hero Welcome Banner */}
       <div className="relative rounded-3xl overflow-hidden p-5 sm:p-8 border border-border bg-gradient-to-r from-surface-elevated via-surface to-surface-elevated/70 shadow-2xl flex items-center justify-between">
         <div className="relative z-1 max-w-xl space-y-3">

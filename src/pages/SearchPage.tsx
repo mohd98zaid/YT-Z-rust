@@ -166,7 +166,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '' }) => 
   ];
 
   return (
-    <div className="p-4 sm:p-6 md:p-8 space-y-6 max-w-7xl mx-auto pb-32 md:pb-28">
+    <div className="p-4 sm:p-6 md:p-8 space-y-6 max-w-7xl mx-auto pb-40 md:pb-28">
       {/* Search Header Form */}
       <div className="space-y-4">
         <h1 className="text-3xl font-black text-foreground tracking-tight">Search & Discover</h1>

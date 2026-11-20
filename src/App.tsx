@@ -30,7 +30,7 @@ export const App: React.FC = () => {
   const { initTheme } = useThemeStore();
   const { restoreSessionFromConfig } = usePlayerStore();
   const { initWebSocket } = useDownloadStore();
-  const isExpanded = usePlayerStore((s) => s.isExpanded);
+  const { isExpanded, currentTrack } = usePlayerStore();
 
   useEffect(() => {
     initTheme();
@@ -96,11 +96,26 @@ export const App: React.FC = () => {
           </ErrorBoundary>
         </main>
 
-        {/* Docked Mini Player */}
-        {!isExpanded && <MiniPlayer />}
+        {/* Desktop Docked Mini Player (Hidden on Mobile) */}
+        {!isExpanded && (
+          <div className="hidden md:block">
+            <MiniPlayer mode="desktop" />
+          </div>
+        )}
 
-        {/* Mobile Bottom Navigation Bar (md:hidden) */}
-        <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
+        {/* BitChord Mobile Floating Glass Stack (md:hidden) */}
+        <div className="fixed bottom-0 inset-x-0 z-40 md:hidden pointer-events-none pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] px-3.5 space-y-2">
+          {/* Floating Glass MiniPlayer */}
+          {currentTrack && !isExpanded && (
+            <div className="pointer-events-auto max-w-md mx-auto animate-fadeIn">
+              <MiniPlayer mode="mobile" />
+            </div>
+          )}
+          {/* Floating Glass Bottom Nav */}
+          <div className="pointer-events-auto max-w-md mx-auto">
+            <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
+          </div>
+        </div>
       </div>
 
       {/* Expanded Fullscreen Player Overlay */}

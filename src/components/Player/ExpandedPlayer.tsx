@@ -385,7 +385,7 @@ export const ExpandedPlayer: React.FC = () => {
       </div>
 
       {/* Top Header Bar */}
-      <header className="relative z-50 flex items-center justify-between px-6 py-2.5 sm:py-3 border-b border-border/40 shrink-0">
+      <header className="relative z-50 flex items-center justify-between px-3 sm:px-6 py-2.5 sm:py-3 border-b border-border/40 shrink-0">
         <button
           onClick={() => {
             setExpanded(false);
@@ -394,10 +394,11 @@ export const ExpandedPlayer: React.FC = () => {
               setActiveVideoSource(null);
             }
           }}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-elevated hover:bg-surface border border-border text-foreground hover:text-primary text-xs font-semibold transition-all hover:scale-105 shadow-sm"
+          className="flex items-center gap-1.5 p-2 sm:px-3 sm:py-1.5 rounded-full bg-surface-elevated hover:bg-surface border border-border text-foreground hover:text-primary text-xs font-semibold transition-all hover:scale-105 shadow-sm"
+          title="Minimize player"
         >
           <ChevronDown className="w-4 h-4" />
-          <span>Minimize</span>
+          <span className="hidden sm:inline">Minimize</span>
         </button>
 
         {/* Tab Selector: Lyrics vs Up Next */}
@@ -1018,9 +1019,9 @@ export const ExpandedPlayer: React.FC = () => {
           </div>
         )}
 
-        {/* Quick Audio Pipeline Diagnostics Card */}
+        {/* Quick Audio Pipeline Diagnostics Card (Tablet & Desktop) */}
         {showAudioPipelineCard && (
-          <div className="w-full max-w-sm mx-auto px-2 mt-1 mb-1">
+          <div className="hidden sm:block w-full max-w-sm mx-auto px-2 mt-1 mb-1">
             <button
               onClick={toggleStatsForNerds}
               style={{ backgroundColor: 'var(--bg-surface)' }}
