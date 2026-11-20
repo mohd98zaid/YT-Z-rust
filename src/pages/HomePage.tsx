@@ -1,46 +1,33 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Play, Download, Sparkles, TrendingUp, Music, Disc3, RefreshCw } from 'lucide-react';
 import { api } from '../services/api';
 import { Track } from '../types';
 import { usePlayerStore } from '../stores/usePlayerStore';
 import { useDownloadStore } from '../stores/useDownloadStore';
+import { useHomeStore } from '../stores/useHomeStore';
 
 export const HomePage: React.FC = () => {
-  const [sections, setSections] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isRefreshingQuickPicks, setIsRefreshingQuickPicks] = useState(false);
-  const [quickPicksMood, setQuickPicksMood] = useState('all');
+  const {
+    sections,
+    loading,
+    isRefreshing,
+    hasLoaded,
+    quickPicksMood,
+    loadHome,
+    refreshQuickPicks,
+    setQuickPicksMood,
+  } = useHomeStore();
+
   const { playTrack } = usePlayerStore();
   const { queueDownload } = useDownloadStore();
 
+  // Load once on start, preserves exact same feed across all page switches until explicit refresh
   useEffect(() => {
-    api.getHome().then((data) => {
-      setSections(data || []);
-      setLoading(false);
-    }).catch((err) => {
-      console.error('Failed to load home feed', err);
-      setLoading(false);
-    });
-  }, []);
+    loadHome(false);
+  }, [loadHome]);
 
-  const handleRefreshQuickPicks = async (mood = quickPicksMood) => {
-    setIsRefreshingQuickPicks(true);
-    try {
-      const freshPicks = await api.getQuickPicks(true, mood, 10);
-      if (freshPicks && freshPicks.length > 0) {
-        setSections((prev) =>
-          prev.map((sec) =>
-            sec.title.toLowerCase().includes('quick')
-              ? { ...sec, items: freshPicks }
-              : sec
-          )
-        );
-      }
-    } catch (err) {
-      console.error('Failed to refresh quick picks', err);
-    } finally {
-      setIsRefreshingQuickPicks(false);
-    }
+  const handleRefreshQuickPicks = (mood = quickPicksMood) => {
+    refreshQuickPicks(mood);
   };
 
   const handleDownload = (e: React.MouseEvent, track: Track) => {
@@ -56,9 +43,9 @@ export const HomePage: React.FC = () => {
     });
   };
 
-  if (loading) {
+  if (loading && !hasLoaded) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-4 text-foreground-muted">
+      <div className="flex flex-col items-center justify-center h-full gap-4 text-foreground-muted py-24">
         <div className="w-10 h-10 border-3 border-primary border-t-transparent rounded-full animate-spin" />
         <span className="text-sm font-semibold">Tuning into YouTube Music Feed...</span>
       </div>
@@ -70,10 +57,22 @@ export const HomePage: React.FC = () => {
       {/* Hero Welcome Banner */}
       <div className="relative rounded-3xl overflow-hidden p-5 sm:p-8 border border-border bg-gradient-to-r from-surface-elevated via-surface to-surface-elevated/70 shadow-2xl flex items-center justify-between">
         <div className="relative z-1 max-w-xl space-y-3">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-extrabold border border-primary/30">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>YT-Z STREAMING & DOWNLOADER</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-extrabold border border-primary/30">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>YT-Z STREAMING & DOWNLOADER</span>
+            </div>
+            <button
+              onClick={() => loadHome(true)}
+              disabled={isRefreshing}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-elevated hover:bg-surface border border-border text-foreground text-xs font-bold transition-all active:scale-95 shadow-sm"
+              title="Refresh Home Feed from YouTube Music"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-primary' : 'text-primary'}`} />
+              <span>{isRefreshing ? 'Refreshing Feed...' : 'Refresh Feed'}</span>
+            </button>
           </div>
+
           <h1 className="text-3xl sm:text-4xl font-extrabold text-foreground tracking-tight">
             High-Fidelity Audio & Studio Downloader
           </h1>
@@ -143,16 +142,16 @@ export const HomePage: React.FC = () => {
                   {/* Refresh Quick Picks Button */}
                   <button
                     onClick={() => handleRefreshQuickPicks(quickPicksMood)}
-                    disabled={isRefreshingQuickPicks}
+                    disabled={isRefreshing}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface border border-border hover:border-primary/50 text-xs font-bold text-foreground hover:bg-surface-elevated shadow-sm transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
                     title="Refresh Quick picks with new fresh tracks"
                   >
                     <RefreshCw
                       className={`w-3.5 h-3.5 ${
-                        isRefreshingQuickPicks ? 'animate-spin text-primary' : 'text-primary'
+                        isRefreshing ? 'animate-spin text-primary' : 'text-primary'
                       }`}
                     />
-                    <span>{isRefreshingQuickPicks ? 'Refreshing...' : 'Refresh'}</span>
+                    <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
                   </button>
                 </div>
               )}

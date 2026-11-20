@@ -230,16 +230,30 @@ function initAudioEngine(state: PlayerState) {
       } catch {}
     }
 
-    // Gapless Smart Pre-buffering: pre-fetch next track when 25s remaining
+    // Gapless Smart Pre-buffering: pre-fetch next track before current completes (35s remaining or > 70% elapsed)
     const dur = audioElement.duration;
-    if (dur > 0 && time > 0 && dur - time < 25) {
-      const { queue, queueIndex, repeatMode } = usePlayerStore.getState();
+    if (dur > 0 && time > 0 && (dur - time < 35 || time > dur * 0.7)) {
+      const { queue, queueIndex, repeatMode, audioQuality } = usePlayerStore.getState();
       const nextIndex =
         queueIndex + 1 < queue.length ? queueIndex + 1 : repeatMode === 'all' ? 0 : -1;
       if (nextIndex !== -1 && queue[nextIndex]) {
         const nextTrack = queue[nextIndex];
         if (preloadedTrackId !== nextTrack.id) {
           preloadedTrackId = nextTrack.id;
+          const videoId = nextTrack.videoId || nextTrack.id;
+          const quality = audioQuality || 'lossless';
+          const durParam = nextTrack.durationSeconds || 0;
+
+          // 1. Pre-warm stream metadata & backend cache (0ms resolution on track switch)
+          if (!nextTrack.isLocal) {
+            api.getAudioStream(videoId, nextTrack.title, nextTrack.artist, durParam, quality).catch(() => {});
+            api.getSkipSegments(videoId).catch(() => {});
+          }
+
+          // 2. Pre-cache lyrics for instant display
+          api.getLyrics(nextTrack.title, nextTrack.artist, durParam).catch(() => {});
+
+          // 3. Preload audio stream buffer into audio cache
           if (!preloadAudioElement) {
             preloadAudioElement = new Audio();
             preloadAudioElement.preload = 'auto';
@@ -247,7 +261,7 @@ function initAudioEngine(state: PlayerState) {
           const nextUrl =
             nextTrack.isLocal && nextTrack.filePath
               ? `${API_BASE}/api/library/stream?path=${encodeURIComponent(nextTrack.filePath)}`
-              : `${API_BASE}/api/stream/${encodeURIComponent(nextTrack.videoId || nextTrack.id)}/audio?title=${encodeURIComponent(nextTrack.title || '')}&artist=${encodeURIComponent(nextTrack.artist || '')}&duration=${nextTrack.durationSeconds || 0}&quality=lossless`;
+              : `${API_BASE}/api/stream/${encodeURIComponent(videoId)}/audio?title=${encodeURIComponent(nextTrack.title || '')}&artist=${encodeURIComponent(nextTrack.artist || '')}&duration=${durParam}&quality=${quality}`;
           preloadAudioElement.src = nextUrl;
           preloadAudioElement.load();
         }
