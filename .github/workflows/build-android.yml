@@ -28,11 +28,11 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      # Yahan humne saare zaroori Android packages add kar diye hain
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
-          # Sirf platform-tools install karega, deprecated 'tools' ko skip karega
-          packages: 'platform-tools'
+          packages: 'platform-tools platforms;android-34 build-tools;34.0.0 ndk;26.1.10909125'
 
       - name: Install Frontend Dependencies
         run: npm install
@@ -47,6 +47,8 @@ jobs:
         run: npx tauri android build --debug
         env:
           ANDROID_HOME: ${{ env.ANDROID_HOME }}
+          # Rust ko batana padega ki NDK kahan hai
+          NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/26.1.10909125
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
