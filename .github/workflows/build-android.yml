@@ -28,7 +28,12 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # Yahan humne saare zaroori Android packages add kar diye hain
+      # Naye Linux dependencies install karein jo OpenSSL build ke liye zaroori hain
+      - name: Install Linux Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev pkg-config perl make
+
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
@@ -47,8 +52,10 @@ jobs:
         run: npx tauri android build --debug
         env:
           ANDROID_HOME: ${{ env.ANDROID_HOME }}
-          # Rust ko batana padega ki NDK kahan hai
+          # Rust ko batane ke liye ki NDK kahan hai (OpenSSL vendored build ke liye zaroori)
           NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/26.1.10909125
+          ANDROID_NDK_ROOT: ${{ env.ANDROID_HOME }}/ndk/26.1.10909125
+          PKG_CONFIG_ALLOW_CROSS: 1
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
