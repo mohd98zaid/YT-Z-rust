@@ -35,11 +35,22 @@ export const App: React.FC = () => {
   useEffect(() => {
     initTheme();
     initNavigation();
+
+    // Start playing the last song immediately when starting the app
+    const initialPlayerState = usePlayerStore.getState();
+    if (initialPlayerState.currentTrack && !initialPlayerState.isPlaying) {
+      initialPlayerState.autoPlayLastTrack();
+    }
+
     api.getConfig().then((cfg) => {
       if (cfg) {
-        restoreSessionFromConfig(cfg);
+        restoreSessionFromConfig(cfg, true);
+      } else {
+        usePlayerStore.getState().autoPlayLastTrack();
       }
-    }).catch(() => {});
+    }).catch(() => {
+      usePlayerStore.getState().autoPlayLastTrack();
+    });
 
     const cleanupWs = initWebSocket();
 

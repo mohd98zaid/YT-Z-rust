@@ -131,7 +131,8 @@ interface PlayerState {
   removeFromQueue: (index: number) => void;
   clearQueue: () => void;
   loadLyrics: (track: Track) => Promise<void>;
-  restoreSessionFromConfig: (cfg: any) => void;
+  restoreSessionFromConfig: (cfg: any, autoPlay?: boolean) => void;
+  autoPlayLastTrack: (track?: Track, queue?: Track[], seekTime?: number) => Promise<void>;
 }
 
 // Global Audio Element and Web Audio Context
@@ -1163,44 +1164,57 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     }
   },
 
-  restoreSessionFromConfig: (cfg: any) => {
+  restoreSessionFromConfig: (cfg: any, autoPlay: boolean = true) => {
     if (!cfg) return;
     const current = get().currentTrack;
-    if (!current && cfg.current_track) {
-      const restored = {
-        currentTrack: cfg.current_track,
-        queue: cfg.queue && cfg.queue.length > 0 ? cfg.queue : [cfg.current_track],
-        queueIndex: typeof cfg.queue_index === 'number' ? cfg.queue_index : 0,
-        currentTime: typeof cfg.current_time === 'number' ? cfg.current_time : 0,
-        volume: typeof cfg.volume === 'number' ? cfg.volume : 0.85,
-        isMuted: Boolean(cfg.is_muted),
-        repeatMode: (cfg.repeat_mode as any) || 'off',
-        shuffle: Boolean(cfg.shuffle),
-        playbackSpeed: typeof cfg.playback_speed === 'number' ? cfg.playback_speed : 1.0,
-        audioQuality: cfg.audio_quality || 'lossless',
-        eqEnabled: cfg.eq_enabled !== undefined ? cfg.eq_enabled : true,
-        eqPreset: cfg.eq_preset || 'Flat',
-        eqBands: cfg.eq_bands || [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        skipSilence: Boolean(cfg.skip_silence),
-        volumeNormalization: Boolean(cfg.volume_normalization),
-        audioStats: cfg.audio_stats || null,
-        duration: cfg.current_track?.durationSeconds || 0,
+    const targetTrack = cfg.current_track || current || initialSession.currentTrack;
+    if (targetTrack) {
+      const restoredQueue = cfg.queue && cfg.queue.length > 0
+        ? cfg.queue
+        : (get().queue.length > 0 ? get().queue : [targetTrack]);
+      const restoredIndex = typeof cfg.queue_index === 'number'
+        ? cfg.queue_index
+        : (get().queueIndex >= 0 ? get().queueIndex : 0);
+      const restoredTime = typeof cfg.current_time === 'number'
+        ? cfg.current_time
+        : (get().currentTime || initialSession.currentTime || 0);
+
+      const wasPlaying = get().isPlaying;
+
+      const restored: Partial<PlayerState> = {
+        currentTrack: targetTrack,
+        queue: restoredQueue,
+        queueIndex: restoredIndex,
+        currentTime: wasPlaying ? get().currentTime : restoredTime,
+        volume: typeof cfg.volume === 'number' ? cfg.volume : (get().volume || 0.85),
+        isMuted: Boolean(cfg.is_muted ?? get().isMuted),
+        repeatMode: (cfg.repeat_mode as any) || get().repeatMode || 'off',
+        shuffle: Boolean(cfg.shuffle ?? get().shuffle),
+        playbackSpeed: typeof cfg.playback_speed === 'number' ? cfg.playback_speed : (get().playbackSpeed || 1.0),
+        audioQuality: cfg.audio_quality || get().audioQuality || 'lossless',
+        eqEnabled: cfg.eq_enabled !== undefined ? cfg.eq_enabled : get().eqEnabled,
+        eqPreset: cfg.eq_preset || get().eqPreset || 'Flat',
+        eqBands: cfg.eq_bands || get().eqBands || [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        skipSilence: Boolean(cfg.skip_silence ?? get().skipSilence),
+        volumeNormalization: Boolean(cfg.volume_normalization ?? get().volumeNormalization),
+        audioStats: cfg.audio_stats || get().audioStats || null,
+        duration: targetTrack.durationSeconds || get().duration || 0,
       };
       set(restored);
 
       try {
-        localStorage.setItem('ytz_persisted_current_track', JSON.stringify(restored.currentTrack));
-        localStorage.setItem('ytz_persisted_queue', JSON.stringify(restored.queue));
-        localStorage.setItem('ytz_persisted_queue_index', String(restored.queueIndex));
-        localStorage.setItem('ytz_persisted_current_time', String(restored.currentTime));
+        localStorage.setItem('ytz_persisted_current_track', JSON.stringify(targetTrack));
+        localStorage.setItem('ytz_persisted_queue', JSON.stringify(restoredQueue));
+        localStorage.setItem('ytz_persisted_queue_index', String(restoredIndex));
+        localStorage.setItem('ytz_persisted_current_time', String(restoredTime));
         localStorage.setItem('ytz_persisted_volume', String(restored.volume));
         localStorage.setItem('ytz_is_muted', String(restored.isMuted));
-        localStorage.setItem('ytz_persisted_repeat_mode', restored.repeatMode);
+        localStorage.setItem('ytz_persisted_repeat_mode', restored.repeatMode || 'off');
         localStorage.setItem('ytz_persisted_shuffle', String(restored.shuffle));
         localStorage.setItem('ytz_playback_speed', String(restored.playbackSpeed));
-        localStorage.setItem('ytz_audio_quality', restored.audioQuality);
+        localStorage.setItem('ytz_audio_quality', restored.audioQuality || 'lossless');
         localStorage.setItem('ytz_eq_enabled', String(restored.eqEnabled));
-        localStorage.setItem('ytz_eq_preset', restored.eqPreset);
+        localStorage.setItem('ytz_eq_preset', restored.eqPreset || 'Flat');
         localStorage.setItem('ytz_eq_bands', JSON.stringify(restored.eqBands));
         localStorage.setItem('ytz_skip_silence', String(restored.skipSilence));
         localStorage.setItem('ytz_volume_normalization', String(restored.volumeNormalization));
@@ -1208,7 +1222,45 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
           localStorage.setItem('ytz_persisted_audio_stats', JSON.stringify(restored.audioStats));
         }
       } catch {}
+
+      if (autoPlay && !wasPlaying) {
+        get().autoPlayLastTrack(targetTrack, restoredQueue, restoredTime);
+      }
     }
+  },
+
+  autoPlayLastTrack: async (track?: Track, queue?: Track[], seekTime?: number) => {
+    const state = get();
+    if (state.isPlaying) return;
+
+    const targetTrack = track || state.currentTrack || initialSession.currentTrack;
+    if (!targetTrack) return;
+
+    const targetQueue = queue || state.queue || initialSession.queue || [targetTrack];
+    const targetTime = typeof seekTime === 'number'
+      ? seekTime
+      : (state.currentTime || initialSession.currentTime || 0);
+
+    const startPlayback = () => {
+      get().playTrack(targetTrack, targetQueue, targetTime).catch((err) => {
+        console.warn('Browser autoplay policy prevented direct start; waiting for first interaction...', err);
+        const onFirstGesture = () => {
+          if (!get().isPlaying) {
+            get().playTrack(targetTrack, targetQueue, targetTime).catch(() => {});
+          }
+          window.removeEventListener('click', onFirstGesture);
+          window.removeEventListener('keydown', onFirstGesture);
+          window.removeEventListener('touchstart', onFirstGesture);
+          window.removeEventListener('pointerdown', onFirstGesture);
+        };
+        window.addEventListener('click', onFirstGesture, { once: true });
+        window.addEventListener('keydown', onFirstGesture, { once: true });
+        window.addEventListener('touchstart', onFirstGesture, { once: true });
+        window.addEventListener('pointerdown', onFirstGesture, { once: true });
+      });
+    };
+
+    startPlayback();
   },
 }));
 
