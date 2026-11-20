@@ -232,42 +232,11 @@ function initAudioEngine(state: PlayerState) {
       } catch {}
     }
 
-    // Gapless Smart Pre-buffering: pre-fetch next track before current completes (35s remaining or > 70% elapsed)
-    const dur = audioElement.duration;
-    if (dur > 0 && time > 0 && (dur - time < 35 || time > dur * 0.7)) {
-      const { queue, queueIndex, repeatMode, audioQuality } = usePlayerStore.getState();
-      const nextIndex =
-        queueIndex + 1 < queue.length ? queueIndex + 1 : repeatMode === 'all' ? 0 : -1;
-      if (nextIndex !== -1 && queue[nextIndex]) {
-        const nextTrack = queue[nextIndex];
-        if (preloadedTrackId !== nextTrack.id) {
-          preloadedTrackId = nextTrack.id;
-          const videoId = nextTrack.videoId || nextTrack.id;
-          const quality = audioQuality || 'lossless';
-          const durParam = nextTrack.durationSeconds || 0;
-
-          // 1. Pre-warm stream metadata & backend cache (0ms resolution on track switch)
-          if (!nextTrack.isLocal) {
-            api.getAudioStream(videoId, nextTrack.title, nextTrack.artist, durParam, quality).catch(() => {});
-            api.getSkipSegments(videoId).catch(() => {});
-          }
-
-          // 2. Pre-cache lyrics for instant display
-          api.getLyrics(nextTrack.title, nextTrack.artist, durParam).catch(() => {});
-
-          // 3. Preload audio stream buffer into audio cache
-          if (!preloadAudioElement) {
-            preloadAudioElement = new Audio();
-            preloadAudioElement.preload = 'auto';
-          }
-          const nextUrl =
-            nextTrack.isLocal && nextTrack.filePath
-              ? `${API_BASE}/api/library/stream?path=${encodeURIComponent(nextTrack.filePath)}`
-              : `${API_BASE}/api/stream/${encodeURIComponent(videoId)}/audio?title=${encodeURIComponent(nextTrack.title || '')}&artist=${encodeURIComponent(nextTrack.artist || '')}&duration=${durParam}&quality=${quality}`;
-          preloadAudioElement.src = nextUrl;
-          preloadAudioElement.load();
-        }
-      }
+    // Gapless Smart Pre-buffering: ensure next track is pre-cached in RAM as early as possible
+    const { queue, queueIndex } = usePlayerStore.getState();
+    const nextIdx = queueIndex + 1 < queue.length ? queueIndex + 1 : -1;
+    if (nextIdx !== -1 && queue[nextIdx] && !preloadedAudioBlobs.has(queue[nextIdx].id) && !currentPreloadingTrackId) {
+      preloadNextTrack();
     }
 
     // Check SponsorBlock skip segments
@@ -338,8 +307,127 @@ function initAudioEngine(state: PlayerState) {
   });
 }
 
-let preloadedTrackId: string | null = null;
-let preloadAudioElement: HTMLAudioElement | null = null;
+// In-Memory Preload & Gapless Cache Manager
+const preloadedAudioBlobs = new Map<string, string>(); // trackId -> blobUrl
+const preloadedStatsMap = new Map<string, AudioStats>();
+const preloadedLyricsMap = new Map<string, any>();
+const preloadedSegmentsMap = new Map<string, any[]>();
+let currentPreloadAbortController: AbortController | null = null;
+let currentPreloadingTrackId: string | null = null;
+
+export const preloadNextTrack = async () => {
+  const { queue, queueIndex, repeatMode, shuffle, audioQuality } = usePlayerStore.getState();
+  if (queue.length === 0 || queueIndex < 0) return;
+
+  let nextIndex = queueIndex + 1;
+  if (shuffle) {
+    nextIndex = (queueIndex + 1) % queue.length;
+  } else if (nextIndex >= queue.length) {
+    nextIndex = repeatMode === 'all' ? 0 : -1;
+  }
+
+  if (nextIndex === -1 || !queue[nextIndex]) return;
+  const nextTrack = queue[nextIndex];
+  const nextId = nextTrack.id;
+
+  // Already cached in memory
+  if (preloadedAudioBlobs.has(nextId)) {
+    return;
+  }
+
+  // Already in-flight
+  if (currentPreloadingTrackId === nextId) {
+    return;
+  }
+
+  // Abort previous in-flight preload if queue changed
+  if (currentPreloadAbortController) {
+    currentPreloadAbortController.abort();
+    currentPreloadAbortController = null;
+  }
+
+  currentPreloadingTrackId = nextId;
+  const controller = new AbortController();
+  currentPreloadAbortController = controller;
+
+  const videoId = nextTrack.videoId || nextTrack.id;
+  const quality = audioQuality || 'lossless';
+  const durParam = nextTrack.durationSeconds || 0;
+
+  // 1. Pre-warm stream metadata & backend resolution in background
+  if (!nextTrack.isLocal) {
+    api.getAudioStream(videoId, nextTrack.title, nextTrack.artist, durParam, quality)
+      .then((streamInfo) => {
+        if (streamInfo) {
+          preloadedStatsMap.set(nextId, {
+            codec: streamInfo.codec,
+            bitrate: streamInfo.bitrate,
+            duration: nextTrack.durationSeconds || 0,
+            provider: streamInfo.addonName || (streamInfo.isLossless ? 'Hi-Res Lossless Module' : 'YouTube Music 256k'),
+            isLossless: streamInfo.isLossless,
+            sampleRate: streamInfo.sampleRate,
+            bitDepth: streamInfo.bitDepth,
+            qualityTier: streamInfo.qualityTier,
+            addonName: streamInfo.addonName,
+          });
+        }
+      })
+      .catch(() => {});
+
+    api.getSkipSegments(videoId)
+      .then((segs) => {
+        if (segs) preloadedSegmentsMap.set(nextId, segs);
+      })
+      .catch(() => {});
+  }
+
+  // 2. Pre-cache lyrics for instant display
+  api.getLyrics(nextTrack.title, nextTrack.artist, durParam)
+    .then((lyrics) => {
+      if (lyrics) preloadedLyricsMap.set(nextId, lyrics);
+    })
+    .catch(() => {});
+
+  // 3. Preload full audio stream into client-side RAM Blob
+  const nextUrl =
+    nextTrack.isLocal && nextTrack.filePath
+      ? `${API_BASE}/api/library/stream?path=${encodeURIComponent(nextTrack.filePath)}`
+      : `${API_BASE}/api/stream/${encodeURIComponent(videoId)}/audio?title=${encodeURIComponent(nextTrack.title || '')}&artist=${encodeURIComponent(nextTrack.artist || '')}&duration=${durParam}&quality=${quality}`;
+
+  try {
+    const response = await fetch(nextUrl, { signal: controller.signal });
+    if (!response.ok) {
+      throw new Error(`Preload HTTP error ${response.status}`);
+    }
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+
+    // Keep cache size bounded to prevent unbounded memory growth
+    if (preloadedAudioBlobs.size >= 3) {
+      for (const [oldId, oldUrl] of preloadedAudioBlobs.entries()) {
+        URL.revokeObjectURL(oldUrl);
+        preloadedAudioBlobs.delete(oldId);
+        preloadedStatsMap.delete(oldId);
+        preloadedLyricsMap.delete(oldId);
+        preloadedSegmentsMap.delete(oldId);
+        break;
+      }
+    }
+
+    preloadedAudioBlobs.set(nextId, blobUrl);
+    console.log(`[Cache] Next track preloaded in RAM: "${nextTrack.title}" (${(blob.size / 1024 / 1024).toFixed(2)} MB)`);
+  } catch (err: any) {
+    if (err.name === 'AbortError') {
+      console.log(`[Cache] Preload aborted for track change: ${nextTrack.title}`);
+    } else {
+      console.warn(`[Cache] Preload failed for ${nextTrack.title}:`, err);
+    }
+  } finally {
+    if (currentPreloadingTrackId === nextId) {
+      currentPreloadingTrackId = null;
+    }
+  }
+};
 
 // Helper to load persisted player session from previous runs
 const loadPersistedSession = () => {
@@ -689,7 +777,22 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       let codec = 'opus';
       let bitrate = 160;
 
-      if (track.isLocal && track.filePath) {
+      // 1. Instant RAM Cache Hit Check
+      const cachedBlobUrl = preloadedAudioBlobs.get(track.id);
+      const cachedStats = preloadedStatsMap.get(track.id);
+      const cachedSegments = preloadedSegmentsMap.get(track.id);
+
+      if (cachedStats) {
+        set({ audioStats: cachedStats });
+      }
+      if (cachedSegments) {
+        set({ skipSegments: cachedSegments });
+      }
+
+      if (cachedBlobUrl) {
+        streamUrl = cachedBlobUrl;
+        console.log(`[Playback] Instant 0ms playback from pre-cached RAM blob: "${track.title}"`);
+      } else if (track.isLocal && track.filePath) {
         streamUrl = `${API_BASE}/api/library/stream?path=${encodeURIComponent(track.filePath)}`;
         codec = track.filePath.split('.').pop() || 'mp3';
         set({
@@ -711,39 +814,43 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         streamUrl = `${API_BASE}/api/stream/${encodeURIComponent(videoId)}/audio?title=${titleParam}&artist=${artistParam}&duration=${durParam}&quality=${quality}`;
 
         // Fetch stream metadata with Lossless Addon details in background
-        api.getAudioStream(videoId, track.title, track.artist, durParam, quality).then((streamInfo) => {
-          set({
-            audioStats: {
-              codec: streamInfo.codec,
-              bitrate: streamInfo.bitrate,
-              duration: track.durationSeconds || 0,
-              provider: streamInfo.addonName || (streamInfo.isLossless ? 'Hi-Res Lossless Module' : 'YouTube Music 256k'),
-              isLossless: streamInfo.isLossless,
-              sampleRate: streamInfo.sampleRate,
-              bitDepth: streamInfo.bitDepth,
-              qualityTier: streamInfo.qualityTier,
-              addonName: streamInfo.addonName,
-            },
+        if (!cachedStats) {
+          api.getAudioStream(videoId, track.title, track.artist, durParam, quality).then((streamInfo) => {
+            set({
+              audioStats: {
+                codec: streamInfo.codec,
+                bitrate: streamInfo.bitrate,
+                duration: track.durationSeconds || 0,
+                provider: streamInfo.addonName || (streamInfo.isLossless ? 'Hi-Res Lossless Module' : 'YouTube Music 256k'),
+                isLossless: streamInfo.isLossless,
+                sampleRate: streamInfo.sampleRate,
+                bitDepth: streamInfo.bitDepth,
+                qualityTier: streamInfo.qualityTier,
+                addonName: streamInfo.addonName,
+              },
+            });
+          }).catch(() => {
+            set({
+              audioStats: {
+                codec: 'opus',
+                bitrate: 160,
+                duration: track.durationSeconds || 0,
+                provider: 'YouTube Music Engine',
+                isLossless: false,
+                sampleRate: 48000,
+                bitDepth: 16,
+                qualityTier: 'standard',
+              },
+            });
           });
-        }).catch(() => {
-          set({
-            audioStats: {
-              codec: 'opus',
-              bitrate: 160,
-              duration: track.durationSeconds || 0,
-              provider: 'YouTube Music Engine',
-              isLossless: false,
-              sampleRate: 48000,
-              bitDepth: 16,
-              qualityTier: 'standard',
-            },
-          });
-        });
+        }
 
         // Fetch SponsorBlock skip segments in background
-        api.getSkipSegments(videoId).then((segs) => {
-          set({ skipSegments: segs || [] });
-        }).catch(() => {});
+        if (!cachedSegments) {
+          api.getSkipSegments(videoId).then((segs) => {
+            set({ skipSegments: segs || [] });
+          }).catch(() => {});
+        }
       }
 
       // If user opened a video or switched tracks while resolving, strictly abort audio
@@ -775,6 +882,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
       // Fetch Lyrics in background
       get().loadLyrics(track);
+
+      // Pre-cache NEXT track in queue immediately for gapless instant handover
+      setTimeout(() => {
+        preloadNextTrack();
+      }, 300);
 
       // Update OS / Windows MediaSession metadata & hardware keys
       if (typeof window !== 'undefined' && 'mediaSession' in navigator) {
@@ -994,6 +1106,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       localStorage.setItem('ytz_persisted_shuffle', String(nextShuffle));
     } catch {}
     set({ shuffle: nextShuffle });
+    setTimeout(preloadNextTrack, 200);
   },
 
   cycleRepeat: () => {
@@ -1169,6 +1282,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   loadLyrics: async (track: Track) => {
     if (!get().lyricsEnabled) {
       set({ lyrics: null, isLyricsLoading: false });
+      return;
+    }
+    const cached = preloadedLyricsMap.get(track.id);
+    if (cached) {
+      set({ lyrics: cached, isLyricsLoading: false });
       return;
     }
     set({ isLyricsLoading: true });
