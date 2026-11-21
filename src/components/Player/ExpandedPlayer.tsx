@@ -183,16 +183,16 @@ export const ExpandedPlayer: React.FC = () => {
     {
       id: 'lossless',
       label: 'Lossless / Hi-Res',
-      badge: 'FLAC 24-bit',
-      desc: 'Bit-perfect audiophile stream up to 96kHz / 1411k+',
+      badge: 'FLAC Master',
+      desc: 'Plays FLAC when available (local library or lossless bridge), with 320k HQ fallback',
       icon: Sparkles,
       color: 'text-amber-400 bg-amber-500/10 border-amber-500/30',
     },
     {
       id: 'high',
       label: 'High Quality',
-      badge: '256k–320k',
-      desc: 'Maximum YouTube Music Opus fidelity & clarity',
+      badge: '320k AAC',
+      desc: '320 kbps AAC / 256k Opus maximum streaming fidelity',
       icon: Zap,
       color: 'text-primary bg-primary/10 border-primary/30',
     },
@@ -641,7 +641,7 @@ export const ExpandedPlayer: React.FC = () => {
               }`}
             >
               {audioQuality === 'lossless' && <Sparkles className="w-2.5 h-2.5 text-amber-300" />}
-              <span>{audioQuality === 'lossless' ? (audioStats?.isLossless ? 'Hi-Res' : 'Studio 320k') : audioQuality === 'data_saver' ? 'Saver' : '320k'}</span>
+              <span>{audioQuality === 'lossless' ? (audioStats?.isLossless ? 'Lossless' : '320k HQ') : audioQuality === 'data_saver' ? 'Saver' : '320k'}</span>
             </button>
 
             {qualityMenuOpen && (
@@ -1607,7 +1607,7 @@ export const ExpandedPlayer: React.FC = () => {
                     : audioStats?.isLossless
                     ? `${(audioStats?.codec || 'FLAC').toUpperCase()} ${audioStats?.bitDepth || 24}-bit · ${((audioStats?.sampleRate || 48000) / 1000).toFixed(0)} kHz`
                     : audioStats?.bitrate && audioStats.bitrate >= 320
-                    ? `${(audioStats?.codec || 'AAC').toUpperCase()} 320 kbps Studio Master · ${((audioStats?.sampleRate || 44100) / 1000).toFixed(1)} kHz`
+                    ? `${(audioStats?.codec || 'AAC').toUpperCase()} 320 kbps HQ · ${((audioStats?.sampleRate || 44100) / 1000).toFixed(1)} kHz`
                     : `${(audioStats?.codec || 'OPUS').toUpperCase()} ${audioStats?.bitDepth || 16}-bit · ${((audioStats?.sampleRate || 48000) / 1000).toFixed(0)} kHz`}
                 </div>
               </div>
@@ -1758,7 +1758,7 @@ export const ExpandedPlayer: React.FC = () => {
                   audioStats?.isLossless
                     ? 'bg-amber-500/20 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/50 dark:border-amber-500/30'
                     : audioStats?.bitrate && audioStats.bitrate >= 320
-                    ? 'bg-amber-500/15 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/40 dark:border-amber-500/25'
+                    ? 'bg-cyan-500/15 dark:bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border border-cyan-500/40 dark:border-cyan-500/25'
                     : 'bg-surface-elevated hover:bg-border/60 text-foreground border border-border'
                 }`}
                 title="Click to inspect live Audio Pipeline signal path"
@@ -1766,9 +1766,9 @@ export const ExpandedPlayer: React.FC = () => {
                 <Activity className="w-3 h-3 text-primary" />
                 <span>
                   {audioStats?.isLossless
-                    ? (audioStats?.qualityTier === 'hi-res' ? 'Hi-Res Lossless (FLAC)' : 'Lossless')
+                    ? (audioStats?.qualityTier === 'hi-res' ? 'Hi-Res Lossless (24-bit FLAC)' : 'Lossless CD (16-bit FLAC)')
                     : audioStats?.bitrate && audioStats.bitrate >= 320
-                    ? 'Hi-Res Studio Master (320k)'
+                    ? 'High Quality (320k AAC)'
                     : audioStats?.bitrate && audioStats.bitrate >= 256
                     ? 'High Quality (256k)'
                     : audioStats?.codec === 'opus'

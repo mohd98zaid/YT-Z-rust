@@ -477,7 +477,7 @@ export const loadCurrentTrackCompletely = async (
         bitrate: effectiveMeasured,
         measuredBitrate: effectiveMeasured,
         duration: dur,
-        provider: headerAddon || headerSource || 'Studio Master (320k)',
+        provider: headerAddon || headerSource || 'High Quality Stream (320k AAC)',
         isLossless: headerLossless,
         sampleRate: headerSampleRate ? parseInt(headerSampleRate, 10) : 44100,
         bitDepth: headerBitDepth ? parseInt(headerBitDepth, 10) : 16,
@@ -583,7 +583,7 @@ export const preloadNextTrack = async () => {
           const isLosslessStream = Boolean(streamInfo.isLossless);
           const effectiveCodec = (streamInfo.codec || (isLosslessStream ? 'flac' : 'opus')).toLowerCase();
           const effectiveBitrate = streamInfo.bitrate || (isLosslessStream ? 1411 : (effectiveCodec === 'opus' ? 160 : 320));
-          const effectiveProvider = streamInfo.addonName || (isLosslessStream ? 'Studio Master Lossless' : (streamInfo.source === 'youtube' ? 'YouTube Music Direct' : 'Studio Stream (320k)'));
+          const effectiveProvider = streamInfo.addonName || (isLosslessStream ? 'Bit-Perfect Lossless FLAC' : (streamInfo.source === 'youtube' ? 'YouTube Music Direct' : 'High Quality Stream (320k AAC)'));
 
           cachedStats = {
             codec: effectiveCodec,
@@ -1119,7 +1119,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
           const isLosslessStream = Boolean(streamInfo.isLossless);
           const effectiveCodec = (streamInfo.codec || (isLosslessStream ? 'flac' : 'opus')).toLowerCase();
           const effectiveBitrate = streamInfo.bitrate || (isLosslessStream ? 1411 : (effectiveCodec === 'opus' ? 160 : 320));
-          const effectiveProvider = streamInfo.addonName || (isLosslessStream ? 'Studio Master Lossless' : (streamInfo.source === 'youtube' ? 'YouTube Music Direct' : 'Studio Master (320k)'));
+          const effectiveProvider = streamInfo.addonName || (isLosslessStream ? 'Bit-Perfect Lossless FLAC' : (streamInfo.source === 'youtube' ? 'YouTube Music Direct' : 'High Quality Stream (320k AAC)'));
 
           set((s) => ({
             audioStats: {

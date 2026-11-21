@@ -690,7 +690,7 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">Format: </span>
-                    <span className="text-zinc-300 font-normal">{formatStr}{isLossless ? ' (Bit-Perfect Lossless)' : (bitrateKbps >= 320 ? ' (Studio Master AAC)' : '')}</span>
+                    <span className="text-zinc-300 font-normal">{formatStr}{isLossless ? ' (Bit-Perfect Lossless)' : (bitrateKbps >= 320 ? ' (High Quality Lossy AAC)' : ' (Standard Lossy)')}</span>
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">Bit Depth: </span>
@@ -702,8 +702,8 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">Bitrate: </span>
-                    <span className={isLossless ? 'text-emerald-400 font-medium' : (bitrateKbps >= 320 ? 'text-amber-300 font-medium' : 'text-zinc-300 font-normal')}>
-                      {bitrateKbps.toLocaleString()} kbps{bitrateKbps >= 320 && !isLossless ? ' (Studio Master)' : ''}{audioStats?.measuredBitrate ? ' (Measured Wire)' : (isLossless ? ' (Lossless Master)' : '')}
+                    <span className={isLossless ? 'text-emerald-400 font-medium' : (bitrateKbps >= 320 ? 'text-cyan-300 font-medium' : 'text-zinc-300 font-normal')}>
+                      {bitrateKbps.toLocaleString()} kbps{bitrateKbps >= 320 && !isLossless ? ' (HQ Stream)' : ''}{audioStats?.measuredBitrate ? ' · Measured Wire' : (isLossless ? ' (Lossless Master)' : '')}
                     </span>
                   </div>
                   <div>
@@ -724,6 +724,12 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
                       </span>
                     </span>
                   </div>
+                  {audioQuality === 'lossless' && !isLossless && (
+                    <div className="mt-2.5 p-2 rounded-xl bg-blue-500/10 border border-blue-500/20 text-[11px] text-blue-200/90 leading-snug">
+                      <span className="font-bold text-blue-300">Lossless Notice: </span>
+                      No FLAC stream available on CDN for this track. Automatically playing highest available fidelity ({bitrateKbps} kbps {formatStr} HQ).
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

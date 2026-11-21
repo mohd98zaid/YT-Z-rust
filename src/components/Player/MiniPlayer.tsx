@@ -195,8 +195,8 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
                     {audioStats?.codec?.toUpperCase() || 'FLAC'} {audioStats?.bitDepth || 24}-bit
                   </span>
                 ) : audioStats?.bitrate && audioStats.bitrate >= 320 ? (
-                  <span className="shrink-0 px-1.5 py-0.2 rounded text-[8px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/35 font-mono tracking-wider">
-                    STUDIO 320k
+                  <span className="shrink-0 px-1.5 py-0.2 rounded text-[8px] font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/35 font-mono tracking-wider">
+                    320k HQ
                   </span>
                 ) : (
                   <span className="shrink-0 px-1 py-0.2 rounded text-[8px] font-mono text-white/70 bg-white/10 border border-white/15">
@@ -342,10 +342,10 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
                     e.stopPropagation();
                     setQualityMenuOpen(true);
                   }}
-                  className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/35 shadow-sm cursor-pointer hover:scale-105 transition-transform"
-                  title="Hi-Res Studio Master (320 kbps AAC · 1411k PCM) - Click to change quality"
+                  className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold tracking-wider bg-cyan-500/15 text-cyan-300 border border-cyan-500/35 shadow-sm cursor-pointer hover:scale-105 transition-transform"
+                  title="High Quality Lossy Stream (320 kbps AAC) - Click to change quality"
                 >
-                  STUDIO 320k
+                  320k HQ
                 </span>
               ) : (
                 <span
@@ -592,16 +592,16 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
                   {
                     id: 'lossless',
                     label: 'Lossless / Hi-Res',
-                    badge: 'FLAC 24-bit',
-                    desc: 'Bit-perfect audiophile stream up to 96kHz / 1411k+',
+                    badge: 'FLAC Master',
+                    desc: 'Plays FLAC when available (local library or lossless bridge), with 320k HQ fallback',
                     icon: Sparkles,
                     color: 'text-amber-500 bg-amber-500/10 border-amber-500/30',
                   },
                   {
                     id: 'high',
                     label: 'High Quality',
-                    badge: '256k–320k',
-                    desc: 'Maximum YouTube Music Opus fidelity & clarity',
+                    badge: '320k AAC',
+                    desc: '320 kbps AAC / 256k Opus maximum streaming fidelity',
                     icon: Zap,
                     color: 'text-primary bg-primary/10 border-primary/30',
                   },
