@@ -382,6 +382,113 @@ export const ExpandedPlayer: React.FC = () => {
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
+  // Touch & Pointer Scrubber Dragging
+  const [isScrubbing, setIsScrubbing] = useState(false);
+  const [scrubTime, setScrubTime] = useState(0);
+  const mobileScrubberRef = useRef<HTMLDivElement>(null);
+  const desktopScrubberRef = useRef<HTMLDivElement>(null);
+
+  const calculateScrubTime = (clientX: number, target: HTMLDivElement | null) => {
+    if (!target || duration <= 0) return 0;
+    const rect = target.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    return ratio * duration;
+  };
+
+  const handlePointerDownScrub = (e: React.PointerEvent<HTMLDivElement>, ref: React.RefObject<HTMLDivElement | null>) => {
+    e.preventDefault();
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {}
+    setIsScrubbing(true);
+    const t = calculateScrubTime(e.clientX, ref.current);
+    setScrubTime(t);
+  };
+
+  const handlePointerMoveScrub = (e: React.PointerEvent<HTMLDivElement>, ref: React.RefObject<HTMLDivElement | null>) => {
+    if (!isScrubbing) return;
+    const t = calculateScrubTime(e.clientX, ref.current);
+    setScrubTime(t);
+  };
+
+  const handlePointerUpScrub = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isScrubbing) return;
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch {}
+    setIsScrubbing(false);
+    seek(scrubTime);
+  };
+
+  // Touch & Pointer Volume Dragging
+  const [isVolumeDragging, setIsVolumeDragging] = useState(false);
+  const mobileVolumeBarRef = useRef<HTMLDivElement>(null);
+
+  const calculateVolumeRatio = (clientX: number, target: HTMLDivElement | null) => {
+    if (!target) return volume;
+    const rect = target.getBoundingClientRect();
+    return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+  };
+
+  const handlePointerDownVolume = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {}
+    setIsVolumeDragging(true);
+    const v = calculateVolumeRatio(e.clientX, mobileVolumeBarRef.current);
+    setVolume(v);
+    if (isMuted && v > 0) toggleMute();
+  };
+
+  const handlePointerMoveVolume = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isVolumeDragging) return;
+    const v = calculateVolumeRatio(e.clientX, mobileVolumeBarRef.current);
+    setVolume(v);
+  };
+
+  const handlePointerUpVolume = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isVolumeDragging) return;
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch {}
+    setIsVolumeDragging(false);
+  };
+
+  // Swipe Down to Minimize Gesture (Mobile)
+  const [sheetTranslateY, setSheetTranslateY] = useState(0);
+  const [isSwipingSheet, setIsSwipingSheet] = useState(false);
+  const swipeStartY = useRef(0);
+
+  const handleSheetTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    swipeStartY.current = e.touches[0].clientY;
+    setIsSwipingSheet(true);
+  };
+
+  const handleSheetTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!isSwipingSheet) return;
+    const currentY = e.touches[0].clientY;
+    const delta = currentY - swipeStartY.current;
+    if (delta > 0) {
+      setSheetTranslateY(delta);
+    } else {
+      setSheetTranslateY(0);
+    }
+  };
+
+  const handleSheetTouchEnd = () => {
+    if (!isSwipingSheet) return;
+    setIsSwipingSheet(false);
+    if (sheetTranslateY > 80) {
+      setExpanded(false);
+      if (isVideoMode) {
+        setVideoMode(false);
+        setActiveVideoSource(null);
+      }
+    }
+    setSheetTranslateY(0);
+  };
+
   const handleDownloadCurrent = async () => {
     if (!currentTrack) return;
     try {
@@ -409,7 +516,13 @@ export const ExpandedPlayer: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-[500] flex flex-col bg-background select-none overflow-hidden animate-fadeIn">
+    <div 
+      style={{
+        transform: sheetTranslateY > 0 ? `translate3d(0, ${sheetTranslateY}px, 0)` : undefined,
+        transition: isSwipingSheet ? 'none' : 'transform 0.25s cubic-bezier(0.2, 0.9, 0.4, 1)',
+      }}
+      className="fixed inset-0 z-[500] flex flex-col bg-background select-none overflow-hidden animate-fadeIn pb-safe"
+    >
       {/* Apple Music Fluid Ambient Mesh Visualizer */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none select-none">
         {/* Layer 1: Blurred Album Cover Base */}
@@ -428,21 +541,30 @@ export const ExpandedPlayer: React.FC = () => {
       </div>
 
       {/* BitChord / Apple Music Mobile Top Bar (flex md:hidden) */}
-      <header className="flex md:hidden relative z-50 items-center justify-between px-4 py-2.5 border-b border-white/10 shrink-0 select-none">
-        {/* Left: Minimize Button */}
-        <button
-          onClick={() => {
-            setExpanded(false);
-            if (isVideoMode) {
-              setVideoMode(false);
-              setActiveVideoSource(null);
-            }
-          }}
-          className="w-9 h-9 rounded-full bg-white/10 backdrop-blur-xl border border-white/10 flex items-center justify-center text-foreground active:scale-90 transition-transform"
-          title="Minimize player"
-        >
-          <ChevronDown className="w-5 h-5" />
-        </button>
+      <header 
+        onTouchStart={handleSheetTouchStart}
+        onTouchMove={handleSheetTouchMove}
+        onTouchEnd={handleSheetTouchEnd}
+        className="flex md:hidden relative z-50 flex-col px-4 pt-1.5 pb-2 border-b border-white/10 shrink-0 select-none touch-none"
+      >
+        {/* Top Grab Handle Pill for Swipe-down gesture */}
+        <div className="w-10 h-1 bg-white/25 rounded-full mx-auto mb-2 pointer-events-none" />
+
+        <div className="flex items-center justify-between w-full">
+          {/* Left: Minimize Button */}
+          <button
+            onClick={() => {
+              setExpanded(false);
+              if (isVideoMode) {
+                setVideoMode(false);
+                setActiveVideoSource(null);
+              }
+            }}
+            className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-xl border border-white/10 flex items-center justify-center text-foreground active:scale-90 transition-transform"
+            title="Minimize player"
+          >
+            <ChevronDown className="w-5 h-5" />
+          </button>
 
         {/* Center: Dynamic Mode Header Pill */}
         <div className="flex items-center justify-center min-w-0 px-2 flex-1">
@@ -546,11 +668,12 @@ export const ExpandedPlayer: React.FC = () => {
 
           <button
             onClick={() => setIsMoreMenuOpen(true)}
-            className="w-9 h-9 rounded-full bg-white/10 backdrop-blur-xl border border-white/10 flex items-center justify-center text-foreground active:scale-90 transition-transform"
+            className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-xl border border-white/10 flex items-center justify-center text-foreground active:scale-90 transition-transform"
             title="More Options"
           >
             <MoreHorizontal className="w-5 h-5" />
           </button>
+        </div>
         </div>
       </header>
 
@@ -854,10 +977,10 @@ export const ExpandedPlayer: React.FC = () => {
               </div>
             ) : (
               <div className="relative group flex items-center justify-center my-auto w-full py-2">
-                <div className="relative aspect-square w-[76vw] max-w-[310px] max-h-[38vh]">
+                <div className="relative aspect-square w-[72vw] max-w-[285px] max-h-[36vh] -translate-x-2.5 sm:-translate-x-3">
                   {/* Spinning Vinyl Record Layer Behind Artwork */}
                   <div
-                    className={`absolute -right-6 top-1/2 -translate-y-1/2 w-[90%] h-[90%] rounded-full bg-zinc-950 border-4 border-zinc-800 shadow-2xl flex items-center justify-center pointer-events-none transition-transform duration-500 ${
+                    className={`absolute -right-5 sm:-right-6 top-1/2 -translate-y-1/2 w-[90%] h-[90%] rounded-full bg-zinc-950 border-4 border-zinc-800 shadow-2xl flex items-center justify-center pointer-events-none transition-transform duration-500 ${
                       isPlaying ? 'animate-spin-slow' : ''
                     }`}
                   >
@@ -990,7 +1113,7 @@ export const ExpandedPlayer: React.FC = () => {
       {/* Desktop Main Center Area: Split vs Fullscreen Lyrics vs Centered Artwork */}
       <div className="hidden md:flex relative z-10 flex-1 min-h-0 items-center justify-center px-6 py-2 md:px-10 gap-4 md:gap-8 overflow-hidden">
         {lyricsEnabled && lyricsLayoutMode === 'fullscreen' && activeTab === 'lyrics' ? (
-          <div className="w-full max-w-4xl h-full min-h-0 flex flex-col bg-surface-glass border border-border-glass rounded-3xl backdrop-blur-xl overflow-hidden relative shadow-2xl mx-auto animate-fadeIn">
+          <div className="w-full max-w-4xl h-full min-h-0 flex flex-col bg-black/35 backdrop-blur-2xl border border-white/10 text-white rounded-3xl overflow-hidden relative shadow-2xl mx-auto animate-fadeIn">
             <LyricsView
               isFullScreen={true}
               onToggleFullscreen={() => setLyricsLayoutMode('split')}
@@ -1259,7 +1382,7 @@ export const ExpandedPlayer: React.FC = () => {
 
             {/* Right: Synced Lyrics View or Up Next Queue */}
             {(lyricsLayoutMode !== 'off' || activeTab !== 'lyrics') && (
-              <div className="w-full md:w-1/2 h-full min-h-0 flex flex-col bg-surface-glass border border-border-glass rounded-3xl backdrop-blur-xl overflow-hidden relative shadow-2xl animate-fadeIn">
+              <div className="w-full md:w-1/2 h-full min-h-0 flex flex-col bg-black/35 backdrop-blur-2xl border border-white/10 text-white rounded-3xl overflow-hidden relative shadow-2xl animate-fadeIn">
                 {activeTab === 'lyrics' ? (
                   <LyricsView
                     isFullScreen={false}
@@ -1311,42 +1434,71 @@ export const ExpandedPlayer: React.FC = () => {
       </div>
 
       {/* BitChord / Apple Music Mobile Bottom Deck (flex md:hidden) */}
-      <footer className="flex md:hidden relative z-10 flex-col items-center gap-2 px-5 pt-2 pb-4 bg-black/40 backdrop-blur-2xl border-t border-white/10 shrink-0 w-full select-none">
-        {/* Scrubber Timeline */}
+      <footer className="flex md:hidden relative z-10 flex-col items-center gap-2.5 px-5 pt-2 pb-5 bg-black/40 backdrop-blur-2xl border-t border-white/10 shrink-0 w-full select-none">
+        {/* Scrubber Timeline with Pointer-Capture Touch Dragging */}
         <div className="w-full max-w-sm flex items-center gap-2.5 px-1">
-          <span className="text-[11px] font-mono text-foreground-muted w-9 text-right">
-            {formatTime(currentTime)}
+          <span className="text-[11px] font-mono text-foreground-muted w-9 text-right select-none">
+            {formatTime(isScrubbing ? scrubTime : currentTime)}
           </span>
           <div
-            className="flex-1 h-1.5 bg-white/15 rounded-full cursor-pointer relative group overflow-hidden"
-            onClick={(e) => {
-              const rect = e.currentTarget.getBoundingClientRect();
-              const pos = (e.clientX - rect.left) / rect.width;
-              seek(pos * duration);
-            }}
+            ref={mobileScrubberRef}
+            onPointerDown={(e) => handlePointerDownScrub(e, mobileScrubberRef)}
+            onPointerMove={(e) => handlePointerMoveScrub(e, mobileScrubberRef)}
+            onPointerUp={handlePointerUpScrub}
+            onPointerCancel={handlePointerUpScrub}
+            className="flex-1 h-6 flex items-center cursor-pointer relative touch-none select-none group"
           >
+            {/* Scrubber Track */}
+            <div className="w-full h-1.5 bg-white/20 rounded-full overflow-hidden relative pointer-events-none">
+              <div
+                className="h-full bg-gradient-to-r from-primary to-accent rounded-full transition-none"
+                style={{
+                  width: `${
+                    duration > 0
+                      ? Math.min(100, Math.max(0, ((isScrubbing ? scrubTime : currentTime) / duration) * 100))
+                      : 0
+                  }%`,
+                }}
+              />
+            </div>
+            {/* Scrubber Knob Thumb */}
             <div
-              className="h-full bg-gradient-to-r from-primary to-accent rounded-full transition-all"
-              style={{ width: `${progressPercent}%` }}
+              className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white shadow-lg pointer-events-none transition-transform ${
+                isScrubbing ? 'scale-125 ring-4 ring-primary/40' : 'group-hover:scale-110'
+              }`}
+              style={{
+                left: `calc(${
+                  duration > 0
+                    ? Math.min(100, Math.max(0, ((isScrubbing ? scrubTime : currentTime) / duration) * 100))
+                    : 0
+                }% - 8px)`,
+              }}
             />
           </div>
-          <span className="text-[11px] font-mono text-foreground-muted w-10 text-left">
-            {duration > 0 && currentTime <= duration ? `-${formatTime(duration - currentTime)}` : formatTime(duration)}
+          <span className="text-[11px] font-mono text-foreground-muted w-10 text-left select-none">
+            {duration > 0 && currentTime <= duration
+              ? `-${formatTime(duration - (isScrubbing ? scrubTime : currentTime))}`
+              : formatTime(duration)}
           </span>
         </div>
 
         {/* Transport Buttons: Shuffle, Prev, Big Play/Pause, Next, Repeat */}
-        <div className="flex items-center justify-between w-full max-w-sm px-4 pt-1">
+        <div className="flex items-center justify-between w-full max-w-sm px-3 pt-0.5">
           <button
             onClick={toggleShuffle}
-            className={`p-2 rounded-full transition-colors ${
+            className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors active:scale-90 ${
               shuffle ? 'text-primary' : 'text-foreground-muted hover:text-foreground'
             }`}
+            title="Toggle shuffle"
           >
             <Shuffle className="w-5 h-5" />
           </button>
 
-          <button onClick={previous} className="p-2 text-foreground active:scale-90 transition-transform">
+          <button
+            onClick={previous}
+            className="w-11 h-11 flex items-center justify-center text-foreground active:scale-90 transition-transform"
+            title="Previous track"
+          >
             <SkipBack className="w-7 h-7 fill-current" />
           </button>
 
@@ -1354,6 +1506,7 @@ export const ExpandedPlayer: React.FC = () => {
             onClick={togglePlay}
             disabled={isLoading}
             className="w-14 h-14 rounded-full bg-primary hover:bg-primary-hover text-white flex items-center justify-center shadow-xl shadow-primary/35 active:scale-90 transition-all"
+            title={isPlaying ? "Pause" : "Play"}
           >
             {isLoading ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -1364,26 +1517,97 @@ export const ExpandedPlayer: React.FC = () => {
             )}
           </button>
 
-          <button onClick={next} className="p-2 text-foreground active:scale-90 transition-transform">
+          <button
+            onClick={next}
+            className="w-11 h-11 flex items-center justify-center text-foreground active:scale-90 transition-transform"
+            title="Next track"
+          >
             <SkipForward className="w-7 h-7 fill-current" />
           </button>
 
           <button
             onClick={cycleRepeat}
-            className={`p-2 rounded-full transition-colors ${
+            className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors active:scale-90 ${
               repeatMode !== 'off' ? 'text-primary' : 'text-foreground-muted hover:text-foreground'
             }`}
+            title={`Repeat mode: ${repeatMode}`}
           >
             {repeatMode === 'one' ? <Repeat1 className="w-5 h-5" /> : <Repeat className="w-5 h-5" />}
           </button>
         </div>
 
+        {/* Touch-Friendly Volume Slider (Mobile) */}
+        <div className="w-full max-w-sm flex items-center gap-2.5 px-2 select-none">
+          <button
+            onClick={toggleMute}
+            className="w-8 h-8 flex items-center justify-center text-foreground-muted hover:text-foreground active:scale-90 transition-transform shrink-0"
+            title={isMuted ? "Unmute" : "Mute"}
+          >
+            {isMuted || volume === 0 ? (
+              <VolumeX className="w-4 h-4 text-foreground-muted" />
+            ) : (
+              <Volume2 className="w-4 h-4 text-foreground-muted" />
+            )}
+          </button>
+          <div
+            ref={mobileVolumeBarRef}
+            onPointerDown={handlePointerDownVolume}
+            onPointerMove={handlePointerMoveVolume}
+            onPointerUp={handlePointerUpVolume}
+            onPointerCancel={handlePointerUpVolume}
+            className="flex-1 h-6 flex items-center cursor-pointer relative touch-none group"
+          >
+            <div className="w-full h-1.5 bg-white/20 rounded-full overflow-hidden relative pointer-events-none">
+              <div
+                className="h-full bg-white/80 group-hover:bg-primary rounded-full transition-none"
+                style={{ width: `${(isMuted ? 0 : volume) * 100}%` }}
+              />
+            </div>
+            <div
+              className={`absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-white shadow-md pointer-events-none transition-transform ${
+                isVolumeDragging ? 'scale-125 ring-2 ring-primary/40' : ''
+              }`}
+              style={{
+                left: `calc(${(isMuted ? 0 : volume) * 100}% - 7px)`,
+              }}
+            />
+          </div>
+        </div>
+
+        {/* BitChord Audio Pipeline Card (Mobile) */}
+        {showAudioPipelineCard && (
+          <button
+            onClick={toggleStatsForNerds}
+            className="w-full max-w-sm flex items-center justify-between px-3.5 py-2 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/10 text-foreground transition-all active:scale-[0.98] group shadow-sm cursor-pointer"
+            title="Inspect live signal path, decoder and output"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-7 h-7 rounded-full bg-primary/20 text-primary flex items-center justify-center shrink-0">
+                <Activity className="w-3.5 h-3.5" />
+              </div>
+              <div className="text-left truncate">
+                <div className="text-xs font-semibold text-foreground dark:text-white group-hover:text-primary transition-colors">
+                  Audio Pipeline
+                </div>
+                <div className="text-[10px] text-foreground-muted dark:text-white/60 truncate">
+                  {isVideoMode
+                    ? '16-bit AAC Sync · 44.1 kHz'
+                    : audioStats?.isLossless
+                    ? `${(audioStats?.codec || 'ALAC').toUpperCase()} ${audioStats?.bitDepth || 24}-bit · ${((audioStats?.sampleRate || 48000) / 1000).toFixed(0)} kHz`
+                    : `${(audioStats?.codec || 'OPUS').toUpperCase()} ${audioStats?.bitDepth || 16}-bit · ${((audioStats?.sampleRate || 48000) / 1000).toFixed(0)} kHz`}
+                </div>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-foreground-muted group-hover:text-foreground transition-colors shrink-0" />
+          </button>
+        )}
+
         {/* Apple Music Bottom Action Bar: Lyrics, EQ, Pipeline, Queue, Download */}
-        <div className="flex items-center justify-between w-full max-w-sm px-4 pt-1.5 border-t border-white/5">
+        <div className="flex items-center justify-between w-full max-w-sm px-2 pt-1 border-t border-white/5">
           <button
             onClick={() => setMobileView(mobileView === 'lyrics' ? 'artwork' : 'lyrics')}
             title="Synced Lyrics"
-            className={`p-2.5 rounded-full transition-all active:scale-90 ${
+            className={`w-10 h-10 flex items-center justify-center rounded-full transition-all active:scale-90 ${
               mobileView === 'lyrics'
                 ? 'bg-primary text-white shadow-md shadow-primary/35 ring-2 ring-primary/40'
                 : 'text-foreground-muted hover:text-foreground hover:bg-white/10'
@@ -1395,7 +1619,7 @@ export const ExpandedPlayer: React.FC = () => {
           <button
             onClick={toggleEqualizer}
             title="Graphic Equalizer"
-            className={`p-2.5 rounded-full transition-all active:scale-90 ${
+            className={`w-10 h-10 flex items-center justify-center rounded-full transition-all active:scale-90 ${
               isEqualizerOpen
                 ? 'bg-primary text-white shadow-md shadow-primary/35'
                 : 'text-foreground-muted hover:text-foreground hover:bg-white/10'
@@ -1407,7 +1631,7 @@ export const ExpandedPlayer: React.FC = () => {
           <button
             onClick={toggleStatsForNerds}
             title="Inspect Audio Pipeline"
-            className="p-2.5 rounded-full text-foreground-muted hover:text-foreground hover:bg-white/10 transition-all active:scale-90"
+            className="w-10 h-10 flex items-center justify-center rounded-full text-foreground-muted hover:text-foreground hover:bg-white/10 transition-all active:scale-90"
           >
             <Activity className="w-5 h-5" />
           </button>
@@ -1415,7 +1639,7 @@ export const ExpandedPlayer: React.FC = () => {
           <button
             onClick={() => setMobileView(mobileView === 'queue' ? 'artwork' : 'queue')}
             title="Up Next Queue"
-            className={`p-2.5 rounded-full transition-all active:scale-90 relative ${
+            className={`w-10 h-10 flex items-center justify-center rounded-full transition-all active:scale-90 relative ${
               mobileView === 'queue'
                 ? 'bg-primary text-white shadow-md shadow-primary/35 ring-2 ring-primary/40'
                 : 'text-foreground-muted hover:text-foreground hover:bg-white/10'
@@ -1423,7 +1647,7 @@ export const ExpandedPlayer: React.FC = () => {
           >
             <ListMusic className="w-5 h-5" />
             {queue.length > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-mono flex items-center justify-center font-bold">
+              <span className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-mono flex items-center justify-center font-bold">
                 {queue.length > 99 ? '99+' : queue.length}
               </span>
             )}
@@ -1432,7 +1656,7 @@ export const ExpandedPlayer: React.FC = () => {
           <button
             onClick={handleDownloadCurrent}
             title="Download lossless audio"
-            className={`p-2.5 rounded-full border transition-all active:scale-90 ${
+            className={`w-10 h-10 flex items-center justify-center rounded-full border transition-all active:scale-90 ${
               downloadQueued
                 ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
                 : audioStats?.isLossless
@@ -1450,26 +1674,48 @@ export const ExpandedPlayer: React.FC = () => {
         style={{ backgroundColor: 'var(--bg-surface)' }}
         className="hidden md:flex relative z-10 px-6 py-2.5 sm:py-3 bg-surface border-t border-border flex-col items-center gap-2 shrink-0"
       >
-        {/* Progress Bar with Timers */}
+        {/* Progress Bar with Timers & Touch-Scrubbing */}
         <div className="w-full max-w-2xl flex items-center gap-3">
-          <span className="text-xs font-mono text-foreground-subtle w-10 text-right">
-            {formatTime(currentTime)}
+          <span className="text-xs font-mono text-foreground-subtle w-10 text-right select-none">
+            {formatTime(isScrubbing ? scrubTime : currentTime)}
           </span>
           <div
-            className="flex-1 h-2 bg-surface-elevated rounded-full cursor-pointer relative group overflow-hidden"
-            onClick={(e) => {
-              const rect = e.currentTarget.getBoundingClientRect();
-              const pos = (e.clientX - rect.left) / rect.width;
-              seek(pos * duration);
-            }}
+            ref={desktopScrubberRef}
+            onPointerDown={(e) => handlePointerDownScrub(e, desktopScrubberRef)}
+            onPointerMove={(e) => handlePointerMoveScrub(e, desktopScrubberRef)}
+            onPointerUp={handlePointerUpScrub}
+            onPointerCancel={handlePointerUpScrub}
+            className="flex-1 h-6 flex items-center cursor-pointer relative touch-none select-none group"
           >
+            <div className="w-full h-2 bg-surface-elevated rounded-full overflow-hidden relative pointer-events-none">
+              <div
+                className="h-full bg-gradient-to-r from-primary to-accent rounded-full transition-none"
+                style={{
+                  width: `${
+                    duration > 0
+                      ? Math.min(100, Math.max(0, ((isScrubbing ? scrubTime : currentTime) / duration) * 100))
+                      : 0
+                  }%`,
+                }}
+              />
+            </div>
             <div
-              className="h-full bg-gradient-to-r from-primary to-accent rounded-full transition-all"
-              style={{ width: `${progressPercent}%` }}
+              className={`absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-white shadow-md pointer-events-none transition-transform ${
+                isScrubbing ? 'scale-125 ring-2 ring-primary/40' : 'opacity-0 group-hover:opacity-100'
+              }`}
+              style={{
+                left: `calc(${
+                  duration > 0
+                    ? Math.min(100, Math.max(0, ((isScrubbing ? scrubTime : currentTime) / duration) * 100))
+                    : 0
+                }% - 7px)`,
+              }}
             />
           </div>
-          <span className="text-xs font-mono text-foreground-subtle w-12 text-left">
-            {duration > 0 && currentTime <= duration ? `-${formatTime(duration - currentTime)}` : formatTime(duration)}
+          <span className="text-xs font-mono text-foreground-subtle w-12 text-left select-none">
+            {duration > 0 && currentTime <= duration
+              ? `-${formatTime(duration - (isScrubbing ? scrubTime : currentTime))}`
+              : formatTime(duration)}
           </span>
         </div>
 

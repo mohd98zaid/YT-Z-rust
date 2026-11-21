@@ -111,7 +111,7 @@ export const LyricsView: React.FC<LyricsViewProps> = ({
 
   return (
     <div
-      className={`h-full flex flex-col relative select-none transition-all duration-500 ${currentBgClass} ${
+      className={`h-full flex flex-col relative select-none text-white transition-all duration-500 ${currentBgClass} ${
         isFullScreen ? 'px-4 sm:px-12 md:px-20 py-2' : ''
       }`}
       style={{ fontFamily: currentFont }}
@@ -127,16 +127,16 @@ export const LyricsView: React.FC<LyricsViewProps> = ({
                 className="w-8 h-8 rounded-lg object-cover shadow-md border border-white/10"
               />
               <div className="text-left hidden sm:block">
-                <div className="text-xs font-bold text-foreground dark:text-white truncate max-w-[200px] md:max-w-xs">
+                <div className="text-xs font-bold text-white truncate max-w-[200px] md:max-w-xs">
                   {currentTrack.title}
                 </div>
-                <div className="text-[10px] text-foreground-muted dark:text-white/60 truncate">
+                <div className="text-[10px] text-white/60 truncate">
                   {currentTrack.artist}
                 </div>
               </div>
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 text-xs text-foreground-muted font-medium">
+            <div className="flex items-center gap-1.5 text-xs text-white/70 font-medium">
               <Sparkles className="w-3.5 h-3.5 text-primary" />
               <span>Synced Lyrics</span>
             </div>
