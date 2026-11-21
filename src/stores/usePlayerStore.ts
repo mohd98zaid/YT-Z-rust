@@ -20,6 +20,7 @@ interface AudioStats {
   codec: string;
   format?: string;
   bitrate: number;
+  measuredBitrate?: number;
   duration: number;
   provider: string;
   isLossless?: boolean;
@@ -417,6 +418,14 @@ export const loadCurrentTrackCompletely = async (
       throw new Error(`Current track HTTP error: ${response.status}`);
     }
 
+    const headerCodec = response.headers.get('X-Audio-Codec');
+    const headerBitrate = response.headers.get('X-Audio-Bitrate');
+    const headerLossless = response.headers.get('X-Audio-Lossless') === 'true';
+    const headerSource = response.headers.get('X-Audio-Source');
+    const headerSampleRate = response.headers.get('X-Audio-Sample-Rate');
+    const headerBitDepth = response.headers.get('X-Audio-Bit-Depth');
+    const headerAddon = response.headers.get('X-Audio-Addon-Name');
+
     const blob = await response.blob();
     if (resolutionId !== currentTrackResolutionId) {
       console.log(`[TwoSongCache] Stale track download discarded: ${track.title}`);
@@ -428,6 +437,12 @@ export const loadCurrentTrackCompletely = async (
       URL.revokeObjectURL(slotCurrent.blobUrl);
     }
 
+    // Calculate genuine wire bitrate from measured bytes and duration
+    const dur = track.durationSeconds || 0;
+    const measuredBitrate = (blob.size > 0 && dur > 0)
+      ? Math.round((blob.size * 8) / (dur * 1000))
+      : null;
+
     slotCurrent = {
       trackId: track.id,
       blobUrl,
@@ -438,16 +453,49 @@ export const loadCurrentTrackCompletely = async (
     };
 
     console.log(
-      `[TwoSongCache] Slot 1 (Current Song) 100% loaded completely: "${track.title}" (${(blob.size / 1024 / 1024).toFixed(2)} MB)`
+      `[TwoSongCache] Slot 1 (Current Song) 100% loaded: "${track.title}" (${(blob.size / 1024 / 1024).toFixed(2)} MB, measured: ${measuredBitrate || 'N/A'} kbps)`
     );
 
-    usePlayerStore.setState((s) => ({
-      twoSongCache: {
-        ...s.twoSongCache,
-        currentLoaded: true,
-        currentBufferPercent: 100,
-      },
-    }));
+    usePlayerStore.setState((s) => {
+      const prev = s.audioStats;
+      const effectiveMeasured = (measuredBitrate && measuredBitrate >= 32 && measuredBitrate <= 9216)
+        ? measuredBitrate
+        : (headerBitrate ? parseInt(headerBitrate, 10) : prev?.bitrate || 320);
+
+      const updatedStats: AudioStats = prev ? {
+        ...prev,
+        bitrate: effectiveMeasured,
+        measuredBitrate: effectiveMeasured,
+        codec: headerCodec || prev.codec,
+        sampleRate: headerSampleRate ? parseInt(headerSampleRate, 10) : prev.sampleRate,
+        bitDepth: headerBitDepth ? parseInt(headerBitDepth, 10) : prev.bitDepth,
+        isLossless: headerLossless ?? prev.isLossless,
+        provider: headerAddon || headerSource || prev.provider,
+        addonName: headerAddon || prev.addonName,
+      } : {
+        codec: headerCodec || 'aac',
+        bitrate: effectiveMeasured,
+        measuredBitrate: effectiveMeasured,
+        duration: dur,
+        provider: headerAddon || headerSource || 'Studio Master (320k)',
+        isLossless: headerLossless,
+        sampleRate: headerSampleRate ? parseInt(headerSampleRate, 10) : 44100,
+        bitDepth: headerBitDepth ? parseInt(headerBitDepth, 10) : 16,
+      };
+
+      if (slotCurrent) {
+        slotCurrent.stats = updatedStats;
+      }
+
+      return {
+        audioStats: updatedStats,
+        twoSongCache: {
+          ...s.twoSongCache,
+          currentLoaded: true,
+          currentBufferPercent: 100,
+        },
+      };
+    });
 
     // CURRENT SONG IS NOW 100% COMPLETELY LOADED.
     // We can safely begin preloading the NEXT song without starving current playback!
@@ -532,16 +580,10 @@ export const preloadNextTrack = async () => {
     api.getAudioStream(videoId, nextTrack.title, nextTrack.artist, durParam, quality)
       .then((streamInfo) => {
         if (streamInfo) {
-          const isLosslessStream = Boolean(streamInfo.isLossless || quality === 'lossless');
-          const effectiveBitrate = isLosslessStream
-            ? (streamInfo.bitrate && streamInfo.bitrate >= 1000 ? streamInfo.bitrate : (streamInfo.bitDepth === 24 ? 2304 : 1411))
-            : streamInfo.bitrate;
-          const effectiveCodec = isLosslessStream
-            ? (streamInfo.codec?.toLowerCase().includes('alac') ? 'alac' : 'flac')
-            : streamInfo.codec;
-          const effectiveProvider = (streamInfo.addonName && !streamInfo.addonName.includes('320k'))
-            ? streamInfo.addonName
-            : (isLosslessStream ? 'Hi-Res Lossless Master (FLAC)' : 'YouTube Music 256k');
+          const isLosslessStream = Boolean(streamInfo.isLossless);
+          const effectiveCodec = (streamInfo.codec || (isLosslessStream ? 'flac' : 'opus')).toLowerCase();
+          const effectiveBitrate = streamInfo.bitrate || (isLosslessStream ? 1411 : (effectiveCodec === 'opus' ? 160 : 320));
+          const effectiveProvider = streamInfo.addonName || (isLosslessStream ? 'Studio Master Lossless' : (streamInfo.source === 'youtube' ? 'YouTube Music Direct' : 'Studio Stream (320k)'));
 
           cachedStats = {
             codec: effectiveCodec,
@@ -549,8 +591,8 @@ export const preloadNextTrack = async () => {
             duration: nextTrack.durationSeconds || 0,
             provider: effectiveProvider,
             isLossless: isLosslessStream,
-            sampleRate: streamInfo.sampleRate || (isLosslessStream ? 96000 : 44100),
-            bitDepth: streamInfo.bitDepth || (isLosslessStream ? 24 : 16),
+            sampleRate: streamInfo.sampleRate || (effectiveCodec === 'opus' ? 48000 : 44100),
+            bitDepth: streamInfo.bitDepth || (isLosslessStream && effectiveBitrate > 1500 ? 24 : 16),
             qualityTier: streamInfo.qualityTier || (isLosslessStream ? 'lossless' : 'high'),
             addonName: effectiveProvider,
           };
@@ -1074,37 +1116,32 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
         // Fetch stream metadata with Lossless Addon details in background
         api.getAudioStream(videoId, track.title, track.artist, durParam, quality).then((streamInfo) => {
-          const isLosslessStream = Boolean(streamInfo.isLossless || quality === 'lossless');
-          const effectiveBitrate = isLosslessStream
-            ? (streamInfo.bitrate && streamInfo.bitrate >= 1000 ? streamInfo.bitrate : (streamInfo.bitDepth === 24 ? 2304 : 1411))
-            : streamInfo.bitrate;
-          const effectiveCodec = isLosslessStream
-            ? (streamInfo.codec?.toLowerCase().includes('alac') ? 'alac' : 'flac')
-            : streamInfo.codec;
-          const effectiveProvider = (streamInfo.addonName && !streamInfo.addonName.includes('320k'))
-            ? streamInfo.addonName
-            : (isLosslessStream ? 'Hi-Res Lossless Master (FLAC)' : 'YouTube Music 256k');
+          const isLosslessStream = Boolean(streamInfo.isLossless);
+          const effectiveCodec = (streamInfo.codec || (isLosslessStream ? 'flac' : 'opus')).toLowerCase();
+          const effectiveBitrate = streamInfo.bitrate || (isLosslessStream ? 1411 : (effectiveCodec === 'opus' ? 160 : 320));
+          const effectiveProvider = streamInfo.addonName || (isLosslessStream ? 'Studio Master Lossless' : (streamInfo.source === 'youtube' ? 'YouTube Music Direct' : 'Studio Master (320k)'));
 
-          set({
+          set((s) => ({
             audioStats: {
               codec: effectiveCodec,
-              bitrate: effectiveBitrate,
+              bitrate: s.audioStats?.measuredBitrate || effectiveBitrate,
+              measuredBitrate: s.audioStats?.measuredBitrate,
               duration: track.durationSeconds || 0,
               provider: effectiveProvider,
               isLossless: isLosslessStream,
-              sampleRate: streamInfo.sampleRate || (isLosslessStream ? 96000 : 44100),
-              bitDepth: streamInfo.bitDepth || (isLosslessStream ? 24 : 16),
+              sampleRate: streamInfo.sampleRate || (effectiveCodec === 'opus' ? 48000 : 44100),
+              bitDepth: streamInfo.bitDepth || (isLosslessStream && effectiveBitrate > 1500 ? 24 : 16),
               qualityTier: streamInfo.qualityTier || (isLosslessStream ? 'lossless' : 'high'),
               addonName: effectiveProvider,
             },
-          });
+          }));
         }).catch(() => {
           set({
             audioStats: {
               codec: 'opus',
               bitrate: 160,
               duration: track.durationSeconds || 0,
-              provider: 'YouTube Music Engine',
+              provider: 'YouTube Music Direct (160k Opus)',
               isLossless: false,
               sampleRate: 48000,
               bitDepth: 16,
