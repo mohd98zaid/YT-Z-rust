@@ -196,11 +196,11 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
   const resamplerIoRate = isResampling
     ? `${trackSampleRateKhz} kHz → ${dacSampleRateKhz} kHz`
     : `${trackSampleRateKhz} kHz → ${trackSampleRateKhz} kHz`;
-  const resamplerType = isResampling ? 'Polyphase Sinc Interpolator' : 'None (Bit-Matched)';
+  const resamplerType = isResampling ? 'Polyphase Sinc Interpolator' : 'None';
   const resamplerCutoff = isResampling
     ? `0.99 Nyquist (${((Math.min(trackSampleRate, dacSampleRate) / 2) * 0.99).toFixed(1)} kHz)`
-    : `Nyquist (${(trackSampleRate / 2).toFixed(1)} kHz Full Bandwidth)`;
-  const resamplerQuality = isResampling ? 'High-Fidelity Sinc Resampling' : 'Bit-Perfect Passthrough';
+    : '—';
+  const resamplerQuality = isResampling ? 'High-Fidelity Sinc Resampling' : 'Passthrough';
 
   // 3. Dynamic DSP Info
   const baseLatencyMs = audioCtx?.baseLatency ? (audioCtx.baseLatency * 1000).toFixed(1) : '5.3';
@@ -690,11 +690,11 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">Format: </span>
-                    <span className="text-zinc-300 font-normal">{formatStr}{isLossless ? ' (Bit-Perfect Lossless)' : (bitrateKbps >= 320 ? ' (High Quality Lossy AAC)' : ' (Standard Lossy)')}</span>
+                    <span className="text-zinc-300 font-normal">{formatStr}</span>
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">Bit Depth: </span>
-                    <span className="text-zinc-300 font-normal">{bitDepth}-bit{isLossless ? ' (Lossless Master)' : ''}</span>
+                    <span className="text-zinc-300 font-normal">{bitDepth}-bit</span>
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">Sample Rate: </span>
@@ -703,7 +703,7 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
                   <div>
                     <span className="font-semibold text-white/95">Bitrate: </span>
                     <span className={isLossless ? 'text-emerald-400 font-medium' : (bitrateKbps >= 320 ? 'text-cyan-300 font-medium' : 'text-zinc-300 font-normal')}>
-                      {bitrateKbps.toLocaleString()} kbps{bitrateKbps >= 320 && !isLossless ? ' (HQ Stream)' : ''}{audioStats?.measuredBitrate ? ' · Measured Wire' : (isLossless ? ' (Lossless Master)' : '')}
+                      {bitrateKbps.toLocaleString()} kbps
                     </span>
                   </div>
                   <div>
@@ -750,7 +750,7 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">Decoded Format: </span>
-                    <span className="text-zinc-300 font-normal">Float32 PCM (IEEE-754)</span>
+                    <span className="text-zinc-300 font-normal">{isAndroid || isIOS ? '16-bit PCM' : 'Float32 PCM (IEEE-754)'}</span>
                   </div>
                 </div>
               </div>

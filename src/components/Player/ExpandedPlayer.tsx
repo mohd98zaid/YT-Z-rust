@@ -1605,7 +1605,9 @@ export const ExpandedPlayer: React.FC = () => {
                   {isVideoMode
                     ? '16-bit AAC Sync · 44.1 kHz'
                     : audioStats?.isLossless
-                    ? `${(audioStats?.codec || 'FLAC').toUpperCase()} ${audioStats?.bitDepth || 24}-bit · ${((audioStats?.sampleRate || 48000) / 1000).toFixed(0)} kHz`
+                    ? (typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent)
+                        ? `16-bit fallback · ${((audioStats?.sampleRate || 48000) / 1000).toFixed(0)} kHz`
+                        : `${(audioStats?.codec || 'FLAC').toUpperCase()} ${audioStats?.bitDepth || 24}-bit · ${((audioStats?.sampleRate || 48000) / 1000).toFixed(0)} kHz`)
                     : audioStats?.bitrate && audioStats.bitrate >= 320
                     ? `${(audioStats?.codec || 'AAC').toUpperCase()} 320 kbps HQ · ${((audioStats?.sampleRate || 44100) / 1000).toFixed(1)} kHz`
                     : `${(audioStats?.codec || 'OPUS').toUpperCase()} ${audioStats?.bitDepth || 16}-bit · ${((audioStats?.sampleRate || 48000) / 1000).toFixed(0)} kHz`}
@@ -1925,7 +1927,11 @@ export const ExpandedPlayer: React.FC = () => {
                   <div className="text-[11px] text-white/70 truncate">
                     {isVideoMode
                       ? '16-bit AAC Sync · 44.1 kHz'
-                      : `${(audioStats?.codec || 'aac').toUpperCase()} ${audioStats?.bitDepth || 16}-bit · ${((audioStats?.sampleRate || 44100) / 1000).toFixed(1)} kHz · ${audioStats?.bitrate || 320} kbps`}
+                      : audioStats?.isLossless
+                      ? `${(audioStats?.codec || 'FLAC').toUpperCase()} ${audioStats?.bitDepth || 24}-bit Lossless · ${((audioStats?.sampleRate || 48000) / 1000).toFixed(0)} kHz · ${audioStats?.bitrate || 1411} kbps`
+                      : audioStats?.bitrate && audioStats.bitrate >= 320
+                      ? `${(audioStats?.codec || 'AAC').toUpperCase()} 320 kbps HQ · ${((audioStats?.sampleRate || 44100) / 1000).toFixed(1)} kHz`
+                      : `${(audioStats?.codec || 'OPUS').toUpperCase()} ${audioStats?.bitDepth || 16}-bit · ${((audioStats?.sampleRate || 48000) / 1000).toFixed(0)} kHz · ${audioStats?.bitrate || 160} kbps`}
                   </div>
                 </div>
               </div>
