@@ -310,14 +310,14 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
                 >
                   SAVER
                 </span>
-              ) : audioStats?.isLossless ? (
+              ) : (audioStats?.isLossless || audioQuality === 'lossless') ? (
                 <span
                   onClick={(e) => {
                     e.stopPropagation();
                     setQualityMenuOpen(true);
                   }}
                   className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-black tracking-wider bg-gradient-to-r from-amber-500/20 to-yellow-500/20 text-amber-300 border border-amber-500/40 shadow-[0_0_8px_rgba(245,158,11,0.25)] cursor-pointer hover:scale-105 transition-transform"
-                  title={`Bit-Perfect Lossless FLAC (${audioStats.bitDepth || 16}-bit/${Math.round((audioStats.sampleRate || 44100)/1000)}kHz) - Click to change quality`}
+                  title={`Bit-Perfect Lossless FLAC (${audioStats?.bitDepth || 24}-bit/${Math.round((audioStats?.sampleRate || 96000)/1000)}kHz) - Click to change quality`}
                 >
                   LOSSLESS
                 </span>

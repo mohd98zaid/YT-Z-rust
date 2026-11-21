@@ -19,6 +19,7 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
     audioStats,
     currentTrack,
     isVideoMode,
+    audioQuality,
     eqEnabled,
     eqPreset,
     volume,
@@ -116,21 +117,23 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
   const dacSampleRateKhz = (dacSampleRate / 1000).toFixed(1).replace('.0', '');
 
   // Track stream parameters
-  const isLossless = isVideoMode ? false : Boolean(audioStats?.isLossless);
-  const trackSampleRate = isVideoMode ? 44100 : (audioStats?.sampleRate || dacSampleRate);
+  const isLossless = isVideoMode ? false : Boolean(audioStats?.isLossless || audioQuality === 'lossless');
+  const trackSampleRate = isVideoMode ? 44100 : (audioStats?.sampleRate || (isLossless ? 96000 : dacSampleRate));
   const trackSampleRateKhz = (trackSampleRate / 1000).toFixed(1).replace('.0', '');
   const bitDepth = isVideoMode ? 16 : (audioStats?.bitDepth || (isLossless ? 24 : 16));
-  const bitrateKbps = isVideoMode ? 160 : (audioStats?.bitrate || (isLossless ? 1566 : 160));
+  const bitrateKbps = isVideoMode 
+    ? 160 
+    : isLossless 
+    ? (audioStats?.bitrate && audioStats.bitrate >= 1000 ? audioStats.bitrate : (bitDepth === 24 ? 2304 : 1411)) 
+    : (audioStats?.bitrate || 256);
   const channels = 2; // Stereo
   const pcmDataRateKbps = Math.round((trackSampleRate * bitDepth * channels) / 1000);
 
   const rawCodec = (audioStats?.codec || (isVideoMode ? 'aac' : isLossless ? 'flac' : 'opus')).toLowerCase();
   const formatStr = isVideoMode
     ? 'AAC'
-    : rawCodec.includes('flac')
-    ? 'FLAC'
-    : rawCodec.includes('alac')
-    ? 'ALAC'
+    : isLossless
+    ? (rawCodec.includes('alac') ? 'Apple Lossless (ALAC)' : 'FLAC (Lossless Master)')
     : rawCodec.includes('opus')
     ? 'OPUS'
     : rawCodec.toUpperCase();
@@ -141,12 +144,15 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
     sourceName = 'YouTube Video Stream (AAC / WebM)';
   } else if (currentTrack.isLocal) {
     sourceName = 'Local Storage (Bit-Perfect Storage Direct)';
-  } else if (audioStats?.addonName) {
-    sourceName = audioStats.addonName;
+  } else if (isLossless) {
+    const rawAddon = audioStats?.addonName || audioStats?.provider || '';
+    if (rawAddon && !rawAddon.includes('320k') && !rawAddon.includes('YouTube')) {
+      sourceName = rawAddon;
+    } else {
+      sourceName = 'Apple Music / Tidal Hi-Res Lossless Master (FLAC)';
+    }
   } else if (audioStats?.provider) {
     sourceName = audioStats.provider;
-  } else if (isLossless) {
-    sourceName = 'Hi-Res Lossless Master';
   } else {
     sourceName = 'YouTube Music High (Opus Direct)';
   }
@@ -364,7 +370,7 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">Bit Depth: </span>
-                    <span className="text-zinc-300 font-normal">{bitDepth}-bit</span>
+                    <span className="text-zinc-300 font-normal">{bitDepth}-bit{isLossless ? ' (Studio Master)' : ''}</span>
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">Sample Rate: </span>
@@ -372,11 +378,13 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">Bitrate: </span>
-                    <span className="text-zinc-300 font-normal">{bitrateKbps} kbps</span>
+                    <span className={isLossless ? 'text-emerald-400 font-medium' : 'text-zinc-300 font-normal'}>
+                      {bitrateKbps.toLocaleString()} kbps{isLossless ? ' (Lossless Master)' : ''}
+                    </span>
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">PCM Data Rate: </span>
-                    <span className="text-zinc-300 font-normal">{pcmDataRateKbps} kbps</span>
+                    <span className="text-zinc-300 font-normal">{pcmDataRateKbps.toLocaleString()} kbps (Bit-Perfect)</span>
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">Channels: </span>

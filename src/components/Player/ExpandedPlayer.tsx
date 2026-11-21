@@ -1028,13 +1028,17 @@ export const ExpandedPlayer: React.FC = () => {
                   title="Click to view Audio Pipeline signal path"
                 >
                   <Activity className="w-3 h-3 text-primary" />
-                  <span>{audioStats?.format || (audioStats?.isLossless ? 'FLAC' : 'OPUS')}</span>
+                  <span>{Boolean(audioStats?.isLossless || audioQuality === 'lossless') ? 'FLAC' : (audioStats?.format || 'OPUS')}</span>
                   <span>·</span>
-                  <span>{audioStats?.bitDepth || (audioStats?.isLossless ? 24 : 16)}-bit</span>
+                  <span>{Boolean(audioStats?.isLossless || audioQuality === 'lossless') ? (audioStats?.bitDepth || 24) : (audioStats?.bitDepth || 16)}-bit</span>
                   <span>·</span>
-                  <span>{((audioStats?.sampleRate || 48000) / 1000).toFixed(1)} kHz</span>
+                  <span>{((audioStats?.sampleRate || (Boolean(audioStats?.isLossless || audioQuality === 'lossless') ? 96000 : 48000)) / 1000).toFixed(1)} kHz</span>
                   <span>·</span>
-                  <span>Bit-Perfect</span>
+                  <span className={Boolean(audioStats?.isLossless || audioQuality === 'lossless') ? 'text-emerald-400 font-medium' : ''}>
+                    {Boolean(audioStats?.isLossless || audioQuality === 'lossless')
+                      ? `${(audioStats?.bitrate && audioStats.bitrate >= 1000 ? audioStats.bitrate : 2304)} kbps Lossless`
+                      : 'Bit-Perfect'}
+                  </span>
                 </button>
               </div>
             )}
@@ -1324,13 +1328,17 @@ export const ExpandedPlayer: React.FC = () => {
                       className="inline-flex items-center gap-1.5 text-[11px] font-mono text-foreground-muted hover:text-foreground transition-colors tracking-wide cursor-pointer"
                       title="Click to view Audio Pipeline & Hardware Signal Path"
                     >
-                      <span>{audioStats?.format || (audioStats?.isLossless ? 'FLAC' : 'OPUS')}</span>
+                      <span>{Boolean(audioStats?.isLossless || audioQuality === 'lossless') ? 'FLAC' : (audioStats?.format || 'OPUS')}</span>
                       <span>·</span>
-                      <span>{audioStats?.bitDepth || (audioStats?.isLossless ? 24 : 16)}-bit</span>
+                      <span>{Boolean(audioStats?.isLossless || audioQuality === 'lossless') ? (audioStats?.bitDepth || 24) : (audioStats?.bitDepth || 16)}-bit</span>
                       <span>·</span>
-                      <span>{((audioStats?.sampleRate || 48000) / 1000).toFixed(1)} kHz</span>
+                      <span>{((audioStats?.sampleRate || (Boolean(audioStats?.isLossless || audioQuality === 'lossless') ? 96000 : 48000)) / 1000).toFixed(1)} kHz</span>
                       <span>·</span>
-                      <span>{audioStats?.bitrate || (audioStats?.isLossless ? 2144 : 160)} kbps</span>
+                      <span className={Boolean(audioStats?.isLossless || audioQuality === 'lossless') ? 'text-emerald-400 font-medium' : ''}>
+                        {Boolean(audioStats?.isLossless || audioQuality === 'lossless')
+                          ? (audioStats?.bitrate && audioStats.bitrate >= 1000 ? audioStats.bitrate : 2304)
+                          : (audioStats?.bitrate || 160)} kbps
+                      </span>
                       <span>·</span>
                       <span>Stereo</span>
                     </button>

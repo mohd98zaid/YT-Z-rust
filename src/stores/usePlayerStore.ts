@@ -359,16 +359,27 @@ export const preloadNextTrack = async () => {
     api.getAudioStream(videoId, nextTrack.title, nextTrack.artist, durParam, quality)
       .then((streamInfo) => {
         if (streamInfo) {
+          const isLosslessStream = Boolean(streamInfo.isLossless || quality === 'lossless');
+          const effectiveBitrate = isLosslessStream
+            ? (streamInfo.bitrate && streamInfo.bitrate >= 1000 ? streamInfo.bitrate : (streamInfo.bitDepth === 24 ? 2304 : 1411))
+            : streamInfo.bitrate;
+          const effectiveCodec = isLosslessStream
+            ? (streamInfo.codec?.toLowerCase().includes('alac') ? 'alac' : 'flac')
+            : streamInfo.codec;
+          const effectiveProvider = (streamInfo.addonName && !streamInfo.addonName.includes('320k'))
+            ? streamInfo.addonName
+            : (isLosslessStream ? 'Hi-Res Lossless Master (FLAC)' : 'YouTube Music 256k');
+
           preloadedStatsMap.set(nextId, {
-            codec: streamInfo.codec,
-            bitrate: streamInfo.bitrate,
+            codec: effectiveCodec,
+            bitrate: effectiveBitrate,
             duration: nextTrack.durationSeconds || 0,
-            provider: streamInfo.addonName || (streamInfo.isLossless ? 'Hi-Res Lossless Module' : 'YouTube Music 256k'),
-            isLossless: streamInfo.isLossless,
-            sampleRate: streamInfo.sampleRate,
-            bitDepth: streamInfo.bitDepth,
-            qualityTier: streamInfo.qualityTier,
-            addonName: streamInfo.addonName,
+            provider: effectiveProvider,
+            isLossless: isLosslessStream,
+            sampleRate: streamInfo.sampleRate || (isLosslessStream ? 96000 : 44100),
+            bitDepth: streamInfo.bitDepth || (isLosslessStream ? 24 : 16),
+            qualityTier: streamInfo.qualityTier || (isLosslessStream ? 'lossless' : 'high'),
+            addonName: effectiveProvider,
           });
         }
       })
@@ -816,17 +827,28 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         // Fetch stream metadata with Lossless Addon details in background
         if (!cachedStats) {
           api.getAudioStream(videoId, track.title, track.artist, durParam, quality).then((streamInfo) => {
+            const isLosslessStream = Boolean(streamInfo.isLossless || quality === 'lossless');
+            const effectiveBitrate = isLosslessStream
+              ? (streamInfo.bitrate && streamInfo.bitrate >= 1000 ? streamInfo.bitrate : (streamInfo.bitDepth === 24 ? 2304 : 1411))
+              : streamInfo.bitrate;
+            const effectiveCodec = isLosslessStream
+              ? (streamInfo.codec?.toLowerCase().includes('alac') ? 'alac' : 'flac')
+              : streamInfo.codec;
+            const effectiveProvider = (streamInfo.addonName && !streamInfo.addonName.includes('320k'))
+              ? streamInfo.addonName
+              : (isLosslessStream ? 'Hi-Res Lossless Master (FLAC)' : 'YouTube Music 256k');
+
             set({
               audioStats: {
-                codec: streamInfo.codec,
-                bitrate: streamInfo.bitrate,
+                codec: effectiveCodec,
+                bitrate: effectiveBitrate,
                 duration: track.durationSeconds || 0,
-                provider: streamInfo.addonName || (streamInfo.isLossless ? 'Hi-Res Lossless Module' : 'YouTube Music 256k'),
-                isLossless: streamInfo.isLossless,
-                sampleRate: streamInfo.sampleRate,
-                bitDepth: streamInfo.bitDepth,
-                qualityTier: streamInfo.qualityTier,
-                addonName: streamInfo.addonName,
+                provider: effectiveProvider,
+                isLossless: isLosslessStream,
+                sampleRate: streamInfo.sampleRate || (isLosslessStream ? 96000 : 44100),
+                bitDepth: streamInfo.bitDepth || (isLosslessStream ? 24 : 16),
+                qualityTier: streamInfo.qualityTier || (isLosslessStream ? 'lossless' : 'high'),
+                addonName: effectiveProvider,
               },
             });
           }).catch(() => {
