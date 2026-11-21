@@ -194,6 +194,10 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
                   <span className="shrink-0 px-1.5 py-0.2 rounded text-[8px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono tracking-wider">
                     {audioStats?.codec?.toUpperCase() || 'FLAC'} {audioStats?.bitDepth || 24}-bit
                   </span>
+                ) : audioStats?.bitrate && audioStats.bitrate >= 320 ? (
+                  <span className="shrink-0 px-1.5 py-0.2 rounded text-[8px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/35 font-mono tracking-wider">
+                    STUDIO 320k
+                  </span>
                 ) : (
                   <span className="shrink-0 px-1 py-0.2 rounded text-[8px] font-mono text-white/70 bg-white/10 border border-white/15">
                     {audioStats?.codec?.toUpperCase() || 'AAC'} {audioStats?.bitrate ? `${audioStats.bitrate}k` : '320k'}
@@ -332,6 +336,17 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
                 >
                   LOSSLESS
                 </span>
+              ) : audioStats?.bitrate && audioStats.bitrate >= 320 ? (
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setQualityMenuOpen(true);
+                  }}
+                  className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/35 shadow-sm cursor-pointer hover:scale-105 transition-transform"
+                  title="Hi-Res Studio Master (320 kbps AAC · 1411k PCM) - Click to change quality"
+                >
+                  STUDIO 320k
+                </span>
               ) : (
                 <span
                   onClick={(e) => {
@@ -341,7 +356,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
                   className="shrink-0 inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-medium bg-surface-elevated text-foreground-subtle border border-border cursor-pointer hover:text-foreground"
                   title="Click to change streaming quality"
                 >
-                  {audioStats?.codec?.toUpperCase() || 'AAC'} {audioStats?.bitrate ? `${audioStats.bitrate}k` : '320k'}
+                  {audioStats?.codec?.toUpperCase() || 'AAC'} {audioStats?.bitrate ? `${audioStats.bitrate}k` : '160k'}
                 </span>
               )
             )}

@@ -690,11 +690,11 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">Format: </span>
-                    <span className="text-zinc-300 font-normal">{formatStr}</span>
+                    <span className="text-zinc-300 font-normal">{formatStr}{isLossless ? ' (Bit-Perfect Lossless)' : (bitrateKbps >= 320 ? ' (Studio Master AAC)' : '')}</span>
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">Bit Depth: </span>
-                    <span className="text-zinc-300 font-normal">{bitDepth}-bit{isLossless ? ' (Master)' : ''}</span>
+                    <span className="text-zinc-300 font-normal">{bitDepth}-bit{isLossless ? ' (Lossless Master)' : ''}</span>
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">Sample Rate: </span>
@@ -702,8 +702,8 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">Bitrate: </span>
-                    <span className={isLossless ? 'text-emerald-400 font-medium' : 'text-zinc-300 font-normal'}>
-                      {bitrateKbps.toLocaleString()} kbps{audioStats?.measuredBitrate ? ' (Measured Stream)' : (isLossless ? ' (Lossless Master)' : '')}
+                    <span className={isLossless ? 'text-emerald-400 font-medium' : (bitrateKbps >= 320 ? 'text-amber-300 font-medium' : 'text-zinc-300 font-normal')}>
+                      {bitrateKbps.toLocaleString()} kbps{bitrateKbps >= 320 && !isLossless ? ' (Studio Master)' : ''}{audioStats?.measuredBitrate ? ' (Measured Wire)' : (isLossless ? ' (Lossless Master)' : '')}
                     </span>
                   </div>
                   <div>

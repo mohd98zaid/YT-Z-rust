@@ -632,7 +632,7 @@ export const ExpandedPlayer: React.FC = () => {
           <div className="relative" ref={qualityMenuRef}>
             <button
               onClick={() => setQualityMenuOpen(!qualityMenuOpen)}
-              className={`px-2.5 py-1 rounded-full border text-[10px] font-bold tracking-wider uppercase transition-all backdrop-blur-md active:scale-95 ${
+              className={`px-2.5 py-1 rounded-full border text-[10px] font-bold tracking-wider uppercase transition-all backdrop-blur-md active:scale-95 flex items-center gap-1 ${
                 audioQuality === 'lossless'
                   ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-[0_0_8px_rgba(245,158,11,0.25)]'
                   : audioQuality === 'data_saver'
@@ -640,7 +640,8 @@ export const ExpandedPlayer: React.FC = () => {
                   : 'bg-white/10 text-foreground dark:text-white border-white/15'
               }`}
             >
-              {audioQuality === 'lossless' ? 'Hi-Res' : audioQuality === 'data_saver' ? 'Saver' : '320k'}
+              {audioQuality === 'lossless' && <Sparkles className="w-2.5 h-2.5 text-amber-300" />}
+              <span>{audioQuality === 'lossless' ? (audioStats?.isLossless ? 'Hi-Res' : 'Studio 320k') : audioQuality === 'data_saver' ? 'Saver' : '320k'}</span>
             </button>
 
             {qualityMenuOpen && (
@@ -1604,7 +1605,9 @@ export const ExpandedPlayer: React.FC = () => {
                   {isVideoMode
                     ? '16-bit AAC Sync · 44.1 kHz'
                     : audioStats?.isLossless
-                    ? `${(audioStats?.codec || 'ALAC').toUpperCase()} ${audioStats?.bitDepth || 24}-bit · ${((audioStats?.sampleRate || 48000) / 1000).toFixed(0)} kHz`
+                    ? `${(audioStats?.codec || 'FLAC').toUpperCase()} ${audioStats?.bitDepth || 24}-bit · ${((audioStats?.sampleRate || 48000) / 1000).toFixed(0)} kHz`
+                    : audioStats?.bitrate && audioStats.bitrate >= 320
+                    ? `${(audioStats?.codec || 'AAC').toUpperCase()} 320 kbps Studio Master · ${((audioStats?.sampleRate || 44100) / 1000).toFixed(1)} kHz`
                     : `${(audioStats?.codec || 'OPUS').toUpperCase()} ${audioStats?.bitDepth || 16}-bit · ${((audioStats?.sampleRate || 48000) / 1000).toFixed(0)} kHz`}
                 </div>
               </div>
@@ -1754,6 +1757,8 @@ export const ExpandedPlayer: React.FC = () => {
                 className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-bold transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm ${
                   audioStats?.isLossless
                     ? 'bg-amber-500/20 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/50 dark:border-amber-500/30'
+                    : audioStats?.bitrate && audioStats.bitrate >= 320
+                    ? 'bg-amber-500/15 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/40 dark:border-amber-500/25'
                     : 'bg-surface-elevated hover:bg-border/60 text-foreground border border-border'
                 }`}
                 title="Click to inspect live Audio Pipeline signal path"
@@ -1761,8 +1766,14 @@ export const ExpandedPlayer: React.FC = () => {
                 <Activity className="w-3 h-3 text-primary" />
                 <span>
                   {audioStats?.isLossless
-                    ? (audioStats?.qualityTier === 'hi-res' ? 'Hi-Res Lossless' : 'Lossless')
-                    : 'Standard Opus'}
+                    ? (audioStats?.qualityTier === 'hi-res' ? 'Hi-Res Lossless (FLAC)' : 'Lossless')
+                    : audioStats?.bitrate && audioStats.bitrate >= 320
+                    ? 'Hi-Res Studio Master (320k)'
+                    : audioStats?.bitrate && audioStats.bitrate >= 256
+                    ? 'High Quality (256k)'
+                    : audioStats?.codec === 'opus'
+                    ? 'YouTube HD (160k Opus)'
+                    : 'Standard Audio'}
                 </span>
               </button>
             )}
