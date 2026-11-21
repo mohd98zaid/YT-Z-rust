@@ -122,22 +122,11 @@ export const YouTubePage: React.FC = () => {
   }, [youtubeSearchQuery]);
 
   const [qualityMenuOpen, setQualityMenuOpen] = useState(false);
-  const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number; width: number } | null>(null);
   const qualityMenuRef = useRef<HTMLDivElement | null>(null);
   const dropdownMenuRef = useRef<HTMLDivElement | null>(null);
 
   const toggleQualityMenu = () => {
-    if (!qualityMenuOpen && qualityMenuRef.current) {
-      const rect = qualityMenuRef.current.getBoundingClientRect();
-      setDropdownPos({
-        top: Math.round(rect.bottom + 6),
-        right: Math.round(window.innerWidth - rect.right),
-        width: 260,
-      });
-      setQualityMenuOpen(true);
-    } else {
-      setQualityMenuOpen(false);
-    }
+    setQualityMenuOpen((prev) => !prev);
   };
 
   useEffect(() => {
@@ -640,28 +629,21 @@ export const YouTubePage: React.FC = () => {
                   <h1 className="text-base sm:text-lg md:text-xl font-bold text-white leading-snug line-clamp-2">
                     {activeVideo.title}
                   </h1>
-                  <button
-                    onClick={closeVideo}
-                    className="p-1.5 rounded-full hover:bg-white/10 text-white/70 hover:text-white shrink-0"
-                    title="Close Video"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
                 </div>
 
-                {/* Channel Row & Action Bar */}
+                {/* Channel Row & Unified Action Bar */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 border-b border-white/10 pb-3">
                   {/* Channel Details */}
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-red-600 to-amber-500 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-md">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-primary to-rose-400 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-md border border-white/20">
                       {activeVideo.artist ? activeVideo.artist.charAt(0).toUpperCase() : 'Y'}
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
                         <p className="text-sm font-bold text-white truncate">{activeVideo.artist || 'YouTube Official'}</p>
-                        <CheckCircle className="w-3.5 h-3.5 text-[#aaaaaa] shrink-0" />
+                        <CheckCircle className="w-3.5 h-3.5 text-primary shrink-0" />
                       </div>
-                      <p className="text-xs text-[#aaaaaa]">14.2M subscribers</p>
+                      <p className="text-xs text-white/60">Official Channel</p>
                     </div>
 
                     <button
@@ -673,9 +655,9 @@ export const YouTubePage: React.FC = () => {
                           return { ...prev, [channel]: state };
                         });
                       }}
-                      className={`ml-2 px-4 py-2 rounded-full text-xs font-bold transition-all shrink-0 ${
+                      className={`ml-2 px-4 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 shadow-md ${
                         subscribedChannels[activeVideo.artist || 'YouTube']
-                          ? 'bg-[#272727] text-white hover:bg-[#3f3f3f]'
+                          ? 'liquid-glass-control text-white/80 hover:text-white border border-white/20'
                           : 'bg-white text-black hover:bg-white/90 active:scale-95'
                       }`}
                     >
@@ -683,40 +665,37 @@ export const YouTubePage: React.FC = () => {
                     </button>
                   </div>
 
-                  {/* YouTube Action Buttons (Quality, Like/Dislike, Share, Audio, Download, Bypass, Theater) */}
+                  {/* Unified Liquid Glass Action Buttons */}
                   <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-1">
-                    {/* Prominent Video Quality Selector Pill */}
+                    {/* Quality Selector Pill with Embedded Safe Dropdown */}
                     <div className="relative" ref={qualityMenuRef}>
                       <button
                         onClick={toggleQualityMenu}
-                        className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/40 text-xs font-bold whitespace-nowrap shadow-sm transition-all"
-                        title="Change Playback Resolution (4K, 1440p, 1080p, 720p, etc.)"
+                        className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full liquid-glass-control border border-white/20 text-white hover:text-primary text-xs font-bold whitespace-nowrap shadow-sm hover:scale-105 transition-all"
+                        title="Change Playback Resolution"
                       >
-                        <Tv className="w-3.5 h-3.5 text-red-500" />
-                        <span>{videoQuality === 'hd2160' ? '4K Ultra' : videoQuality === 'hd1440' ? '1440p 2K' : videoQuality === 'hd720' ? '720p HD' : videoQuality === 'large' ? '480p' : videoQuality === 'medium' ? '360p' : videoQuality === 'auto' ? 'Auto' : '1080p HD'}</span>
-                        <ChevronDown className="w-3 h-3" />
+                        <Tv className="w-3.5 h-3.5 text-primary" />
+                        <span>{videoQuality === 'hd2160' ? '4K Ultra' : videoQuality === 'hd1440' ? '1440p' : videoQuality === 'hd720' ? '720p HD' : videoQuality === 'large' ? '480p' : videoQuality === 'medium' ? '360p' : videoQuality === 'auto' ? 'Auto' : '1080p HD'}</span>
+                        <ChevronDown className="w-3 h-3 text-white/70" />
                       </button>
 
-                      {qualityMenuOpen && dropdownPos && createPortal(
+                      {qualityMenuOpen && (
                         <div
                           ref={dropdownMenuRef}
-                          style={{
-                            position: 'fixed',
-                            top: `${dropdownPos.top}px`,
-                            right: `${dropdownPos.right}px`,
-                            width: `${dropdownPos.width}px`,
-                            zIndex: 99999,
-                          }}
-                          className="liquid-glass-card border border-white/20 rounded-2xl p-2 shadow-[0_20px_50px_rgba(0,0,0,0.7)] animate-fadeIn space-y-1 select-none text-white"
+                          className="absolute left-0 top-full mt-2 w-56 sm:w-64 liquid-glass-card border border-white/20 rounded-2xl p-2 shadow-[0_20px_50px_rgba(0,0,0,0.85)] z-50 animate-fadeIn space-y-1 select-none text-white backdrop-blur-2xl"
                         >
-                          <div className="px-3 py-1.5 border-b border-white/10 text-xs font-bold text-white">
-                            Select Quality
+                          <div className="px-3 py-1.5 border-b border-white/10 text-xs font-bold text-white flex items-center justify-between">
+                            <span>Playback Quality</span>
+                            <button onClick={() => setQualityMenuOpen(false)} className="text-white/60 hover:text-white p-0.5">
+                              <X className="w-3.5 h-3.5" />
+                            </button>
                           </div>
                           {[
                             { id: 'hd2160', label: '2160p 4K Ultra HD' },
                             { id: 'hd1440', label: '1440p Quad HD' },
                             { id: 'hd1080', label: '1080p Full HD (Default)' },
                             { id: 'hd720', label: '720p High Definition' },
+                            { id: 'large', label: '480p Standard Definition' },
                             { id: 'medium', label: '360p Data Saver' },
                             { id: 'auto', label: 'Auto (Adaptive)' },
                           ].map((q) => (
@@ -727,35 +706,34 @@ export const YouTubePage: React.FC = () => {
                                 setQualityMenuOpen(false);
                                 showToast(`Video quality set to ${q.label}`);
                               }}
-                              className={`w-full flex items-center justify-between p-2 rounded-xl text-xs font-semibold text-left transition-colors ${
-                                videoQuality === q.id ? 'bg-red-600 text-white' : 'hover:bg-white/10 text-white/80'
+                              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-left transition-all ${
+                                (videoQuality || 'hd1080') === q.id ? 'liquid-glass-prominent font-bold text-white' : 'hover:bg-white/10 text-white/80'
                               }`}
                             >
                               <span>{q.label}</span>
-                              {videoQuality === q.id && <Check className="w-3.5 h-3.5" />}
+                              {(videoQuality || 'hd1080') === q.id && <Check className="w-3.5 h-3.5 text-primary" />}
                             </button>
                           ))}
-                        </div>,
-                        document.body
+                        </div>
                       )}
                     </div>
 
                     {/* Theater Mode Button */}
                     <button
                       onClick={toggleTheaterMode}
-                      className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+                      className={`hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all border ${
                         isTheaterMode
-                          ? 'bg-red-600 text-white font-bold'
-                          : 'bg-[#272727] hover:bg-[#3f3f3f] text-white'
+                          ? 'liquid-glass-prominent text-white border-primary/40 font-bold'
+                          : 'liquid-glass-control text-white/80 border-white/15 hover:text-white'
                       }`}
-                      title={isTheaterMode ? "Default View (2 Columns)" : "Theater Mode (Wide Video)"}
+                      title={isTheaterMode ? "Standard View" : "Theater Mode"}
                     >
                       <Expand className="w-3.5 h-3.5" />
                       <span>{isTheaterMode ? "Standard" : "Theater"}</span>
                     </button>
 
                     {/* Like / Dislike joined pill */}
-                    <div className="flex items-center bg-[#272727] rounded-full divide-x divide-white/10">
+                    <div className="flex items-center rounded-full liquid-glass-control border border-white/15 divide-x divide-white/15 overflow-hidden">
                       <button
                         onClick={() => {
                           setLikedVideos((prev) => {
@@ -764,11 +742,11 @@ export const YouTubePage: React.FC = () => {
                             return { ...prev, [activeVideo.id]: cur };
                           });
                         }}
-                        className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-l-full hover:bg-white/10 transition-colors ${
-                          likedVideos[activeVideo.id] ? 'text-white font-bold' : 'text-white/80'
+                        className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold hover:bg-white/10 transition-colors ${
+                          likedVideos[activeVideo.id] ? 'text-primary font-bold' : 'text-white/80 hover:text-white'
                         }`}
                       >
-                        <ThumbsUp className={`w-3.5 h-3.5 ${likedVideos[activeVideo.id] ? 'fill-current text-white' : ''}`} />
+                        <ThumbsUp className={`w-3.5 h-3.5 ${likedVideos[activeVideo.id] ? 'fill-current text-primary' : ''}`} />
                         <span>{likedVideos[activeVideo.id] ? '142K' : '141K'}</span>
                       </button>
                       <button
@@ -779,36 +757,36 @@ export const YouTubePage: React.FC = () => {
                             return { ...prev, [activeVideo.id]: cur };
                           });
                         }}
-                        className="px-3 py-1.5 text-xs text-white/80 rounded-r-full hover:bg-white/10 transition-colors"
+                        className="px-2.5 py-1.5 text-xs text-white/80 hover:bg-white/10 hover:text-white transition-colors"
                         title="Dislike"
                       >
-                        <ThumbsDown className={`w-3.5 h-3.5 ${dislikedVideos[activeVideo.id] ? 'fill-current text-white' : ''}`} />
+                        <ThumbsDown className={`w-3.5 h-3.5 ${dislikedVideos[activeVideo.id] ? 'fill-current text-primary' : ''}`} />
                       </button>
                     </div>
 
-                    {/* Share */}
-                    <button
-                      onClick={() => handleShareVideo(activeVideo.id)}
-                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#272727] hover:bg-[#3f3f3f] text-white text-xs font-semibold whitespace-nowrap transition-colors"
-                    >
-                      <Share2 className="w-3.5 h-3.5" />
-                      <span>Share</span>
-                    </button>
-
-                    {/* Listen as Audio */}
+                    {/* Audio Mode */}
                     <button
                       onClick={() => handleListenAsAudio()}
-                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 text-xs font-semibold whitespace-nowrap transition-colors"
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full liquid-glass-prominent text-primary border border-primary/40 text-xs font-bold whitespace-nowrap shadow-sm hover:scale-105 transition-all"
                       title="Convert directly to audio and play in background"
                     >
                       <Music className="w-3.5 h-3.5" />
                       <span>Audio Mode</span>
                     </button>
 
+                    {/* Share */}
+                    <button
+                      onClick={() => handleShareVideo(activeVideo.id)}
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full liquid-glass-control border border-white/15 text-white/80 hover:text-white text-xs font-semibold whitespace-nowrap transition-all"
+                    >
+                      <Share2 className="w-3.5 h-3.5" />
+                      <span>Share</span>
+                    </button>
+
                     {/* Download MP4 */}
                     <button
                       onClick={() => handleDownloadVideo(activeVideo.id, activeVideo.title, activeVideo.artist, false)}
-                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#272727] hover:bg-[#3f3f3f] text-white text-xs font-semibold whitespace-nowrap transition-colors"
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full liquid-glass-control border border-white/15 text-white/80 hover:text-white text-xs font-semibold whitespace-nowrap transition-all hover:scale-105"
                       title="Download full 1080p MP4 Video"
                     >
                       <Download className="w-3.5 h-3.5 text-emerald-400" />
@@ -818,7 +796,7 @@ export const YouTubePage: React.FC = () => {
                     {/* Download MP3 */}
                     <button
                       onClick={() => handleDownloadVideo(activeVideo.id, activeVideo.title, activeVideo.artist, true)}
-                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#272727] hover:bg-[#3f3f3f] text-white text-xs font-semibold whitespace-nowrap transition-colors"
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full liquid-glass-control border border-white/15 text-white/80 hover:text-white text-xs font-semibold whitespace-nowrap transition-all hover:scale-105"
                       title="Download 320k Audio MP3"
                     >
                       <Download className="w-3.5 h-3.5 text-pink-400" />
@@ -828,14 +806,14 @@ export const YouTubePage: React.FC = () => {
                     {/* Direct Video Bypass Toggle */}
                     <button
                       onClick={toggleDirectVideo}
-                      className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border transition-colors ${
+                      className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border transition-all ${
                         useDirectVideo
-                          ? 'bg-emerald-600 text-white border-emerald-500'
-                          : 'bg-[#272727] text-white border-transparent hover:bg-[#3f3f3f]'
+                          ? 'liquid-glass-prominent text-emerald-300 border-emerald-500/40 shadow-sm'
+                          : 'liquid-glass-control text-white/70 border-white/15 hover:text-white'
                       }`}
                       title={useDirectVideo ? 'Direct HTML5 Video bypass active' : 'Switch to Direct Video bypass'}
                     >
-                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                       <span>{useDirectVideo ? 'Direct' : 'Bypass'}</span>
                     </button>
                   </div>

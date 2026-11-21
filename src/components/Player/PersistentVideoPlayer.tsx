@@ -269,51 +269,53 @@ export const PersistentVideoPlayer: React.FC = () => {
 
       {/* Top-Right Player Controls (Cinema & Fullscreen modes) */}
       {(isCinema || isFullscreen) && (
-        <div className="absolute top-3 right-3 z-30 flex items-center gap-1.5 pointer-events-auto select-none">
-          {/* Quality Pill Button & Dropdown */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowPlayerQualityMenu(!showPlayerQualityMenu);
-              }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full liquid-glass-control text-white text-xs font-bold shadow-lg transition-all active:scale-95 cursor-pointer"
-              title="Change Video Quality (4K, 1080p, 720p, etc.)"
-            >
-              <Tv className="w-3.5 h-3.5 text-red-500" />
-              <span>{getQualityLabel(videoQuality)}</span>
-              <ChevronDown className="w-3 h-3 text-white/70" />
-            </button>
-
-            {showPlayerQualityMenu && (
-              <div
-                className="absolute right-0 top-9 w-52 liquid-glass-card rounded-2xl p-1.5 shadow-[0_20px_50px_rgba(0,0,0,0.6)] z-50 text-white space-y-0.5 animate-fadeIn border border-white/20"
-                onClick={(e) => e.stopPropagation()}
+        <div className="absolute top-2.5 right-2.5 z-30 flex items-center gap-1.5 pointer-events-auto select-none">
+          {/* Quality Pill Button & Dropdown (Fullscreen mode only to avoid duplicating action bar quality on page) */}
+          {isFullscreen && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowPlayerQualityMenu(!showPlayerQualityMenu);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full liquid-glass-control text-white text-xs font-bold shadow-lg transition-all active:scale-95 cursor-pointer"
+                title="Change Video Quality (4K, 1080p, 720p, etc.)"
               >
-                <div className="px-3 py-1.5 text-[10px] font-bold text-white/60 uppercase tracking-wider border-b border-white/10 mb-1">
-                  Playback Quality
+                <Tv className="w-3.5 h-3.5 text-primary" />
+                <span>{getQualityLabel(videoQuality)}</span>
+                <ChevronDown className="w-3 h-3 text-white/70" />
+              </button>
+
+              {showPlayerQualityMenu && (
+                <div
+                  className="absolute right-0 top-9 w-52 liquid-glass-card rounded-2xl p-1.5 shadow-[0_20px_50px_rgba(0,0,0,0.8)] z-50 text-white space-y-0.5 animate-fadeIn border border-white/20"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="px-3 py-1.5 text-[10px] font-bold text-white/60 uppercase tracking-wider border-b border-white/10 mb-1">
+                    Playback Quality
+                  </div>
+                  {qualityOptions.map((q) => (
+                    <button
+                      key={q.id}
+                      onClick={() => {
+                        setVideoQuality(q.id);
+                        setShowPlayerQualityMenu(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                        (videoQuality || 'hd1080') === q.id
+                          ? 'liquid-glass-prominent font-bold'
+                          : 'hover:bg-white/10 text-white/80'
+                      }`}
+                    >
+                      <span>{q.label}</span>
+                      {(videoQuality || 'hd1080') === q.id && <Check className="w-3.5 h-3.5" />}
+                    </button>
+                  ))}
                 </div>
-                {qualityOptions.map((q) => (
-                  <button
-                    key={q.id}
-                    onClick={() => {
-                      setVideoQuality(q.id);
-                      setShowPlayerQualityMenu(false);
-                    }}
-                    className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                      (videoQuality || 'hd1080') === q.id
-                        ? 'liquid-glass-prominent font-bold'
-                        : 'hover:bg-white/10 text-white/80'
-                    }`}
-                  >
-                    <span>{q.label}</span>
-                    {(videoQuality || 'hd1080') === q.id && <Check className="w-3.5 h-3.5" />}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {/* Theater Mode Button (Desktop Cinema mode only) */}
           {isCinema && (
@@ -339,7 +341,7 @@ export const PersistentVideoPlayer: React.FC = () => {
               e.stopPropagation();
               togglePiP();
             }}
-            className="p-1.5 rounded-full liquid-glass-control text-white/90 hover:text-white"
+            className="hidden sm:flex p-1.5 rounded-full liquid-glass-control text-white/90 hover:text-white hover:scale-105 transition-all shadow-md"
             title="Picture-in-Picture (Sidebar PiP)"
           >
             <PictureInPicture2 className="w-4 h-4" />
@@ -352,7 +354,7 @@ export const PersistentVideoPlayer: React.FC = () => {
               e.stopPropagation();
               handleToggleFullscreen(e);
             }}
-            className="p-1.5 rounded-full liquid-glass-control text-white/90 hover:text-white"
+            className="p-1.5 rounded-full liquid-glass-control text-white/90 hover:text-white hover:scale-105 transition-all shadow-md"
             title="Fullscreen"
           >
             <Maximize2 className="w-4 h-4" />
@@ -365,7 +367,7 @@ export const PersistentVideoPlayer: React.FC = () => {
               e.stopPropagation();
               closeVideo();
             }}
-            className="p-1.5 rounded-full liquid-glass-control hover:bg-red-600/80 text-white/90 hover:text-white"
+            className="p-1.5 rounded-full liquid-glass-control hover:bg-red-600/80 text-white/90 hover:text-white hover:scale-105 transition-all shadow-md"
             title="Close Video"
           >
             <X className="w-4 h-4" />
@@ -375,10 +377,10 @@ export const PersistentVideoPlayer: React.FC = () => {
 
       {/* Direct Video Active Badge */}
       {useDirectVideo && (isCinema || isFullscreen) && (
-        <div className="absolute top-3 left-3 z-30 flex items-center gap-1.5 animate-fadeIn pointer-events-auto">
-          <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-600/90 text-white text-[10px] font-bold shadow-md shadow-emerald-600/30 backdrop-blur-md">
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Direct Video Active</span>
+        <div className="absolute top-2.5 left-2.5 z-30 flex items-center gap-1.5 animate-fadeIn pointer-events-auto">
+          <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-emerald-500/40 text-emerald-300 text-[10px] font-bold shadow-md">
+            <ShieldCheck className="w-3 h-3 text-emerald-400" />
+            <span>Direct 1080p</span>
           </span>
           <button
             type="button"
@@ -386,10 +388,10 @@ export const PersistentVideoPlayer: React.FC = () => {
               e.stopPropagation();
               setUseDirectVideo(false);
             }}
-            className="px-2 py-0.5 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white text-[10px] border border-white/20 transition-all"
+            className="px-2 py-0.5 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white text-[10px] border border-white/20 transition-all shadow-sm"
             title="Switch back to standard YouTube Embed Player"
           >
-            Try Embed
+            Embed
           </button>
         </div>
       )}

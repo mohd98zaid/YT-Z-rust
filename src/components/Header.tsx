@@ -231,13 +231,13 @@ export const Header: React.FC<HeaderProps> = ({
           <span>EQ</span>
         </button>
 
-        {/* Theme Indicator */}
+        {/* Theme Indicator (Desktop only to preserve search bar room on mobile) */}
         <div
           title={`Active Theme: ${currentTheme.name}`}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-full liquid-glass-control text-xs text-foreground font-medium"
+          className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full liquid-glass-control text-xs text-foreground font-medium"
         >
           <Palette className="w-3.5 h-3.5 text-primary" />
-          <span className="hidden sm:inline">{currentTheme.name}</span>
+          <span>{currentTheme.name}</span>
           <div
             className="w-3 h-3 rounded-full border border-white/30 shadow-sm"
             style={{ backgroundColor: currentTheme.colors.primary }}
