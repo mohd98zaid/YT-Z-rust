@@ -18,10 +18,17 @@ import {
   Disc,
   Camera,
   Image,
+  Shuffle,
+  Download,
+  Search,
+  Sparkles,
+  Volume2,
+  ArrowLeft,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { Track } from '../types';
 import { usePlayerStore } from '../stores/usePlayerStore';
+import { useDownloadStore } from '../stores/useDownloadStore';
 
 const PlaylistCoverImage: React.FC<{
   src?: string;
@@ -80,7 +87,95 @@ export const LibraryPage: React.FC = () => {
   const [editYear, setEditYear] = useState('');
   const [isSavingTags, setIsSavingTags] = useState(false);
 
-  const { playTrack } = usePlayerStore();
+  const { playTrack, currentTrack, isPlaying } = usePlayerStore();
+  const { queueDownload } = useDownloadStore();
+
+  // Inline Song Search for Playlist
+  const [isAddSongsOpen, setIsAddSongsOpen] = useState(false);
+  const [addSongQuery, setAddSongQuery] = useState('');
+  const [addSongResults, setAddSongResults] = useState<Track[]>([]);
+  const [isSearchingSongs, setIsSearchingSongs] = useState(false);
+  const [addedTrackIds, setAddedTrackIds] = useState<Set<string>>(new Set());
+  const [toastNotice, setToastNotice] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastNotice(msg);
+    setTimeout(() => setToastNotice(null), 3000);
+  };
+
+  const handleSearchSongsForPlaylist = async (q: string) => {
+    setAddSongQuery(q);
+    if (!q.trim() || q.trim().length < 2) {
+      setAddSongResults([]);
+      return;
+    }
+    setIsSearchingSongs(true);
+    try {
+      const res = await api.search(q.trim(), 'songs');
+      setAddSongResults(res || []);
+    } catch {
+      setAddSongResults([]);
+    } finally {
+      setIsSearchingSongs(false);
+    }
+  };
+
+  const handleAddTrackToCurrentPlaylist = async (track: Track) => {
+    if (!selectedPlaylist) return;
+    try {
+      await api.addTrackToPlaylist(selectedPlaylist.id, track);
+      setAddedTrackIds((prev) => new Set(prev).add(track.id));
+      const updated = await api.getCustomPlaylist(selectedPlaylist.id);
+      setSelectedPlaylist(updated);
+      const pls = await api.getCustomPlaylists();
+      setCustomPlaylists(pls || []);
+      showToast(`Added "${track.title}" to ${selectedPlaylist.name}!`);
+    } catch (err) {
+      showToast('Failed to add track to playlist');
+    }
+  };
+
+  const handleDownloadAllPlaylist = async (tracks: Track[]) => {
+    if (!tracks || tracks.length === 0) return;
+    try {
+      for (const t of tracks) {
+        const url = t.isLocal
+          ? t.filePath || ''
+          : `https://www.youtube.com/watch?v=${t.videoId || t.id}`;
+        await queueDownload({
+          url,
+          download_type: 'audio',
+          format: 'mp3',
+          quality: '320',
+          title: t.title,
+          artist: t.artist,
+          thumbnail: t.thumbnail,
+        });
+      }
+      showToast(`Queued ${tracks.length} tracks to 4K Downloader!`);
+    } catch {
+      showToast('Error queuing playlist tracks');
+    }
+  };
+
+  const formatPlaylistTotalDuration = (tracks: any[]) => {
+    if (!tracks || tracks.length === 0) return '0 min';
+    let totalSec = 0;
+    for (const t of tracks) {
+      if (typeof t.durationSeconds === 'number' && t.durationSeconds > 0) {
+        totalSec += t.durationSeconds;
+      } else if (typeof t.duration === 'string' && t.duration.includes(':')) {
+        const parts = t.duration.split(':').map(Number);
+        totalSec += parts.length === 3 ? parts[0] * 3600 + parts[1] * 60 + parts[2] : (parts[0] || 0) * 60 + (parts[1] || 0);
+      }
+    }
+    const hrs = Math.floor(totalSec / 3600);
+    const mins = Math.floor((totalSec % 3600) / 60);
+    if (hrs > 0) {
+      return `${hrs} hr ${mins} min`;
+    }
+    return `${mins} min`;
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -236,6 +331,14 @@ export const LibraryPage: React.FC = () => {
 
   return (
     <div className="p-4 sm:p-6 md:p-8 space-y-6 md:space-y-8 max-w-7xl mx-auto pb-40 md:pb-28">
+      {/* Toast Notice */}
+      {toastNotice && (
+        <div className="fixed top-20 right-6 z-50 bg-black/80 border border-primary/40 text-foreground text-xs font-semibold px-4 py-2.5 rounded-2xl shadow-2xl backdrop-blur-xl flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-primary" />
+          <span>{toastNotice}</span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
         <div>
@@ -389,14 +492,14 @@ export const LibraryPage: React.FC = () => {
         )
       ) : activeSubTab === 'playlists' ? (
         selectedPlaylist ? (
-          /* Single Playlist View */
+          /* Single Playlist View (Apple Music / BitChord style) */
           <div className="space-y-6">
             {/* Playlist Hero Banner */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 p-6 rounded-3xl liquid-glass-card relative overflow-hidden shadow-xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 p-6 rounded-3xl liquid-glass-card relative overflow-hidden shadow-2xl">
               {/* Playlist Cover Art with Change Cover Overlay */}
               <div
                 onClick={() => handleStartEditPlaylist(selectedPlaylist)}
-                className="relative w-36 h-36 sm:w-44 sm:h-44 rounded-2xl bg-black/40 overflow-hidden border border-white/10 shrink-0 shadow-2xl cursor-pointer group"
+                className="relative w-36 h-36 sm:w-48 sm:h-48 rounded-2xl bg-black/40 overflow-hidden border border-white/15 shrink-0 shadow-2xl cursor-pointer group"
                 title="Click to change playlist cover art"
               >
                 <PlaylistCoverImage
@@ -418,109 +521,248 @@ export const LibraryPage: React.FC = () => {
                   onClick={() => setSelectedPlaylist(null)}
                   className="inline-flex items-center gap-1.5 text-xs font-semibold text-foreground-muted hover:text-primary transition-colors cursor-pointer"
                 >
-                  ← Back to Playlists
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Back to Playlists</span>
                 </button>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/20">
+                    <span className="text-[10px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30">
                       PLAYLIST
                     </span>
-                    {selectedPlaylist.is_custom_thumbnail ? (
-                      <span className="text-[10px] font-bold text-foreground-subtle">Custom Cover</span>
-                    ) : (
-                      <span className="text-[10px] font-bold text-foreground-subtle">1st Song Artwork</span>
-                    )}
+                    <span className="text-[11px] font-semibold text-foreground-subtle">
+                      {selectedPlaylist.is_custom_thumbnail ? 'Custom Cover' : 'Dynamic Cover'}
+                    </span>
                   </div>
-                  <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight truncate mt-1">
+                  <h1 className="text-2xl sm:text-4xl font-black text-foreground tracking-tight truncate mt-1.5">
                     {selectedPlaylist.name}
                   </h1>
-                  <p className="text-xs text-foreground-muted line-clamp-2 mt-1">
-                    {selectedPlaylist.description || 'Custom user collection'} • {selectedPlaylist.trackCount} {selectedPlaylist.trackCount === 1 ? 'track' : 'tracks'}
+                  <p className="text-xs sm:text-sm text-foreground-muted line-clamp-2 mt-1">
+                    {selectedPlaylist.description || 'Personal playlist collection'}
                   </p>
+                  <div className="flex items-center gap-2 mt-2 text-xs text-foreground-subtle">
+                    <span className="font-semibold text-foreground">
+                      {selectedPlaylist.tracks?.length || 0} {selectedPlaylist.tracks?.length === 1 ? 'track' : 'tracks'}
+                    </span>
+                    <span>•</span>
+                    <span>{formatPlaylistTotalDuration(selectedPlaylist.tracks || [])}</span>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-2.5 pt-1">
+                {/* Playlist Action Bar */}
+                <div className="flex flex-wrap items-center gap-2.5 pt-2">
                   {selectedPlaylist.tracks && selectedPlaylist.tracks.length > 0 && (
-                    <button
-                      onClick={() => playTrack(selectedPlaylist.tracks[0], selectedPlaylist.tracks)}
-                      className="flex items-center gap-2 px-6 py-2.5 rounded-full liquid-glass-prominent text-white font-bold text-xs shadow-lg transition-all hover:scale-105 active:scale-95"
-                    >
-                      <Play className="w-4 h-4 fill-current" />
-                      <span>Play All</span>
-                    </button>
+                    <>
+                      <button
+                        onClick={() => playTrack(selectedPlaylist.tracks[0], selectedPlaylist.tracks)}
+                        className="flex items-center gap-2 px-5 py-2.5 rounded-full liquid-glass-prominent text-white font-bold text-xs shadow-lg transition-all hover:scale-105 active:scale-95"
+                      >
+                        <Play className="w-4 h-4 fill-current" />
+                        <span>Play All</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          const shuffled = [...selectedPlaylist.tracks].sort(() => Math.random() - 0.5);
+                          playTrack(shuffled[0], shuffled);
+                        }}
+                        className="flex items-center gap-1.5 px-4 py-2.5 rounded-full liquid-glass-control text-foreground hover:text-white text-xs font-semibold hover:scale-105 active:scale-95 transition-all"
+                      >
+                        <Shuffle className="w-3.5 h-3.5" />
+                        <span>Shuffle</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleDownloadAllPlaylist(selectedPlaylist.tracks)}
+                        className="flex items-center gap-1.5 px-4 py-2.5 rounded-full liquid-glass-control text-foreground hover:text-white text-xs font-semibold hover:scale-105 active:scale-95 transition-all"
+                        title="Download all playlist tracks in 320k / Lossless"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Download All</span>
+                      </button>
+                    </>
                   )}
+
+                  <button
+                    onClick={() => setIsAddSongsOpen(!isAddSongsOpen)}
+                    className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full text-xs font-semibold transition-all ${
+                      isAddSongsOpen
+                        ? 'liquid-glass-pill-active'
+                        : 'liquid-glass-control text-foreground hover:text-white'
+                    }`}
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>{isAddSongsOpen ? 'Close Search' : 'Add Songs'}</span>
+                  </button>
+
                   <button
                     onClick={() => handleStartEditPlaylist(selectedPlaylist)}
-                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-surface-elevated border border-border text-foreground hover:border-primary/50 text-xs font-semibold hover:scale-105 active:scale-95 transition-all"
+                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-full liquid-glass-control text-foreground hover:text-white text-xs font-semibold hover:scale-105 active:scale-95 transition-all"
                   >
                     <Edit3 className="w-3.5 h-3.5 text-foreground-muted" />
-                    <span>Edit Cover / Info</span>
+                    <span>Edit</span>
                   </button>
                 </div>
               </div>
             </div>
 
-            {selectedPlaylist.tracks && selectedPlaylist.tracks.length > 0 ? (
-              <div className="space-y-2">
-                {selectedPlaylist.tracks.map((track: any) => (
-                  <div
-                    key={track.id}
-                    onClick={() => playTrack(track, selectedPlaylist.tracks)}
-                    className="flex items-center justify-between p-3 rounded-2xl bg-surface border border-border hover:border-primary/40 hover:bg-surface-elevated cursor-pointer group transition-all"
-                  >
-                    <div className="flex items-center gap-3.5 min-w-0">
-                      <img
-                        src={track.thumbnail || '/placeholder.png'}
-                        alt=""
-                        className="w-11 h-11 rounded-xl object-cover shrink-0 shadow-sm"
-                      />
-                      <div className="min-w-0">
-                        <h4 className="font-semibold text-sm text-foreground truncate group-hover:text-primary transition-colors">
-                          {track.title}
-                        </h4>
-                        <p className="text-xs text-foreground-muted truncate">{track.artist}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2.5">
-                      <span className="text-xs font-mono text-foreground-subtle">{track.duration}</span>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRemoveTrackFromPlaylist(track.id);
-                        }}
-                        title="Remove from playlist"
-                        className="p-2 rounded-xl text-foreground-subtle hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                      <div className="w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
-                      </div>
-                    </div>
+            {/* Inline Quick Song Search & Adder */}
+            {isAddSongsOpen && (
+              <div className="p-5 rounded-3xl liquid-glass-card border border-primary/30 space-y-4 shadow-xl">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-primary" />
+                    <h3 className="text-sm font-bold text-foreground">Find & Add Songs to Playlist</h3>
                   </div>
-                ))}
+                  <span className="text-xs text-foreground-muted">Type song name or artist</span>
+                </div>
+
+                <div className="relative flex items-center">
+                  <Search className="w-4 h-4 absolute left-3.5 text-foreground-muted pointer-events-none" />
+                  <input
+                    type="text"
+                    value={addSongQuery}
+                    onChange={(e) => handleSearchSongsForPlaylist(e.target.value)}
+                    placeholder="Search songs to add immediately..."
+                    className="w-full bg-white/10 border border-white/20 focus:border-primary/50 text-foreground text-xs sm:text-sm rounded-full pl-10 pr-4 py-2 outline-none transition-all placeholder:text-foreground-subtle focus:ring-2 focus:ring-primary/20"
+                    autoFocus
+                  />
+                  {isSearchingSongs && (
+                    <RefreshCw className="w-4 h-4 absolute right-3.5 text-primary animate-spin" />
+                  )}
+                </div>
+
+                {addSongResults.length > 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-1">
+                    {addSongResults.map((t) => {
+                      const isAdded = addedTrackIds.has(t.id) || selectedPlaylist.tracks?.some((x: any) => x.id === t.id);
+                      return (
+                        <div
+                          key={t.id}
+                          className="flex items-center justify-between p-2.5 rounded-2xl liquid-glass-row"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <img
+                              src={t.thumbnail || '/placeholder.png'}
+                              alt=""
+                              className="w-9 h-9 rounded-xl object-cover shrink-0"
+                            />
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold text-foreground truncate">{t.title}</p>
+                              <p className="text-[11px] text-foreground-muted truncate">{t.artist}</p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleAddTrackToCurrentPlaylist(t)}
+                            disabled={isAdded}
+                            className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                              isAdded
+                                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                : 'liquid-glass-prominent text-white hover:scale-105 active:scale-95'
+                            }`}
+                          >
+                            {isAdded ? (
+                              <>
+                                <Check className="w-3 h-3" />
+                                <span>Added</span>
+                              </>
+                            ) : (
+                              <>
+                                <Plus className="w-3 h-3" />
+                                <span>Add</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Playlist Track List */}
+            {selectedPlaylist.tracks && selectedPlaylist.tracks.length > 0 ? (
+              <div className="space-y-1.5">
+                {selectedPlaylist.tracks.map((track: any, idx: number) => {
+                  const isCurrentPlaying = currentTrack?.id === track.id && isPlaying;
+                  return (
+                    <div
+                      key={track.id}
+                      onClick={() => playTrack(track, selectedPlaylist.tracks)}
+                      className={`flex items-center justify-between p-3 rounded-2xl liquid-glass-row cursor-pointer group transition-all ${
+                        isCurrentPlaying ? 'border-primary/40 bg-primary/10 shadow-[0_0_15px_rgba(255,0,0,0.15)]' : ''
+                      }`}
+                    >
+                      <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                        {/* Track Index or Playing Waveform */}
+                        <div className="w-6 text-center text-xs font-semibold text-foreground-subtle shrink-0">
+                          {isCurrentPlaying ? (
+                            <Volume2 className="w-4 h-4 text-primary animate-pulse mx-auto" />
+                          ) : (
+                            <span className="group-hover:hidden">{idx + 1}</span>
+                          )}
+                          <Play className="w-3.5 h-3.5 text-primary fill-current hidden group-hover:block mx-auto" />
+                        </div>
+
+                        <img
+                          src={track.thumbnail || '/placeholder.png'}
+                          alt=""
+                          className="w-11 h-11 rounded-xl object-cover shrink-0 shadow-md"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <h4 className={`font-semibold text-sm truncate transition-colors ${
+                            isCurrentPlaying ? 'text-primary font-bold' : 'text-foreground group-hover:text-primary'
+                          }`}>
+                            {track.title}
+                          </h4>
+                          <p className="text-xs text-foreground-muted truncate">{track.artist}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className="text-xs font-mono text-foreground-subtle">{track.duration}</span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveTrackFromPlaylist(track.id);
+                          }}
+                          title="Remove from playlist"
+                          className="p-2 rounded-xl text-foreground-subtle hover:text-red-400 hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-all"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
-              <div className="bg-surface border border-border rounded-3xl p-12 text-center text-foreground-muted space-y-2">
-                <Disc className="w-10 h-10 opacity-30 text-primary mx-auto mb-2" />
+              <div className="liquid-glass-card rounded-3xl p-12 text-center text-foreground-muted space-y-3">
+                <Disc className="w-12 h-12 opacity-30 text-primary mx-auto mb-2" />
                 <p className="text-base font-bold text-foreground">Playlist is empty</p>
-                <p className="text-xs text-foreground-subtle">
-                  Search tracks and click the options menu to add songs to this playlist.
+                <p className="text-xs text-foreground-subtle max-w-sm mx-auto">
+                  Click the <strong>Add Songs</strong> button above or search tracks in YT-Z to build your collection.
                 </p>
+                <button
+                  onClick={() => setIsAddSongsOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full liquid-glass-prominent text-white text-xs font-bold shadow-md hover:scale-105 active:scale-95 transition-all"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Songs Now</span>
+                </button>
               </div>
             )}
           </div>
         ) : customPlaylists.length === 0 ? (
-          <div className="bg-surface border border-border rounded-3xl p-12 text-center text-foreground-muted space-y-3">
-            <ListPlus className="w-10 h-10 opacity-30 text-primary mx-auto mb-2" />
+          <div className="liquid-glass-card rounded-3xl p-12 text-center text-foreground-muted space-y-3">
+            <ListPlus className="w-12 h-12 opacity-30 text-primary mx-auto mb-2" />
             <p className="text-base font-bold text-foreground">No custom playlists yet</p>
-            <p className="text-xs text-foreground-subtle">
-              Create and organize your favorite songs into custom collections.
+            <p className="text-xs text-foreground-subtle max-w-sm mx-auto">
+              Create and organize your favorite songs into custom collections with custom artwork.
             </p>
             <button
               onClick={() => setIsCreatePlaylistOpen(true)}
-              className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-hover shadow-md transition-all"
+              className="mt-2 inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full liquid-glass-prominent text-white text-xs font-bold shadow-lg hover:scale-105 active:scale-95 transition-all"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Create Playlist</span>
@@ -533,16 +775,21 @@ export const LibraryPage: React.FC = () => {
               <div
                 key={pl.id}
                 onClick={() => handleOpenPlaylist(pl.id)}
-                className="p-4 rounded-3xl bg-surface border border-border hover:border-primary/50 hover:bg-surface-elevated cursor-pointer group transition-all relative overflow-hidden"
+                className="p-4 rounded-3xl liquid-glass-card cursor-pointer group transition-all relative overflow-hidden"
               >
-                <div className="w-full aspect-square rounded-2xl bg-surface-elevated border border-white/5 overflow-hidden relative shadow-md">
+                <div className="w-full aspect-square rounded-2xl bg-black/40 border border-white/10 overflow-hidden relative shadow-lg">
                   <PlaylistCoverImage
                     src={pl.thumbnail}
                     alt={pl.name}
                     iconSize="md"
                   />
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                    <Play className="w-10 h-10 text-white fill-current drop-shadow-lg" />
+                    <div className="w-12 h-12 rounded-full liquid-glass-prominent flex items-center justify-center text-white shadow-xl transform scale-90 group-hover:scale-100 transition-transform">
+                      <Play className="w-5 h-5 fill-current ml-0.5" />
+                    </div>
+                  </div>
+                  <div className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-full bg-black/70 backdrop-blur-md border border-white/15 text-[10px] font-bold text-white shadow-md">
+                    {pl.trackCount} {pl.trackCount === 1 ? 'track' : 'tracks'}
                   </div>
                 </div>
 
@@ -552,13 +799,13 @@ export const LibraryPage: React.FC = () => {
                       {pl.name}
                     </h3>
                     <p className="text-xs text-foreground-muted truncate">
-                      {pl.trackCount} {pl.trackCount === 1 ? 'track' : 'tracks'}
+                      {pl.description || `${pl.trackCount} tracks`}
                     </p>
                   </div>
                   <button
                     onClick={(e) => handleDeletePlaylist(e, pl.id)}
                     title="Delete playlist"
-                    className="p-1.5 rounded-lg text-foreground-subtle hover:text-primary hover:bg-surface opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="p-1.5 rounded-lg text-foreground-subtle hover:text-red-400 hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

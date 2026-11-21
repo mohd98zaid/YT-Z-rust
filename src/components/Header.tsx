@@ -99,16 +99,7 @@ export const Header: React.FC<HeaderProps> = ({
   const showSuggestions = showDropdown && searchQuery.trim().length > 0 && suggestions.length > 0;
 
   return (
-    <header className="h-16 border-b border-white/15 liquid-glass px-3 sm:px-6 flex items-center justify-between relative z-30 shrink-0">
-      {/* Desktop Hamburger Sidebar Toggle */}
-      <button
-        onClick={toggleSidebarCollapse}
-        className="hidden md:flex p-2 mr-3 rounded-xl text-foreground-muted hover:text-foreground liquid-glass-control shrink-0"
-        title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-      >
-        <Menu className="w-5 h-5" />
-      </button>
-
+    <header className="h-16 border-b border-white/15 liquid-glass px-3 sm:px-6 flex items-center justify-between gap-4 relative z-30 shrink-0">
       {/* Mobile Branding (md:hidden) */}
       <div className="flex md:hidden items-center gap-2 mr-2 shrink-0">
         <img
@@ -122,7 +113,7 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Search Input Bar with Autocomplete & Search History */}
-      <div className="relative w-full max-w-xl z-40" ref={dropdownRef}>
+      <div className="relative w-full max-w-2xl flex-1 z-40" ref={dropdownRef}>
         <div className="relative flex items-center">
           <Search className="w-4 h-4 absolute left-3.5 text-foreground-muted pointer-events-none" />
           <input
@@ -142,7 +133,7 @@ export const Header: React.FC<HeaderProps> = ({
                 ? 'Search YouTube videos or paste video link...'
                 : activeTab === 'downloader'
                 ? 'Search music or paste media link to download...'
-                : 'Search music, artists or links...'
+                : 'Search music, artists, albums or YouTube links...'
             }
             className="w-full bg-white/10 hover:bg-white/15 focus:bg-white/15 border border-white/20 focus:border-primary/50 text-foreground placeholder:text-foreground-subtle text-xs sm:text-sm rounded-full pl-9 sm:pl-10 pr-9 py-2 outline-none transition-all duration-200 focus:ring-2 focus:ring-primary/30 placeholder:truncate shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_2px_8px_rgba(0,0,0,0.2)] backdrop-blur-xl"
           />

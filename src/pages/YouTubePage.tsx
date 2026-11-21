@@ -114,7 +114,7 @@ export const YouTubePage: React.FC = () => {
     if (youtubeSearchQuery && youtubeSearchQuery.trim()) {
       setSearchQuery(youtubeSearchQuery);
       setSearchLoading(true);
-      api.search(youtubeSearchQuery, 'videos').then((res) => {
+      api.searchYouTubeVideos(youtubeSearchQuery).then((res) => {
         setSearchResults(res || []);
         setSearchLoading(false);
       }).catch(() => setSearchLoading(false));
