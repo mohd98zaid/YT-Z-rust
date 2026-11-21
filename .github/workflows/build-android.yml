@@ -42,15 +42,20 @@ jobs:
       - name: Initialize Android Project
         run: npx tauri android init
 
-      - name: Allow localhost HTTP traffic
+      - name: Configure Android Permissions & Cleartext
         run: |
           MANIFEST=src-tauri/gen/android/app/src/main/AndroidManifest.xml
+          # Add INTERNET and ACCESS_NETWORK_STATE permissions if missing
+          if ! grep -q 'android.permission.INTERNET' "$MANIFEST"; then
+            sed -i '/<manifest/a \    <uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />' "$MANIFEST"
+          fi
+          # Allow cleartext HTTP traffic
           if grep -q 'android:usesCleartextTraffic' "$MANIFEST"; then
             sed -i 's/android:usesCleartextTraffic="false"/android:usesCleartextTraffic="true"/' "$MANIFEST"
           else
             sed -i 's/<application/<application android:usesCleartextTraffic="true"/' "$MANIFEST"
           fi
-          grep -n 'usesCleartextTraffic' "$MANIFEST"
+          grep -n -E 'usesCleartextTraffic|permission' "$MANIFEST"
 
       - name: Setup signing key
         run: |

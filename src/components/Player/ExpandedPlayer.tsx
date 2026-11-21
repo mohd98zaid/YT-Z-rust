@@ -371,8 +371,6 @@ export const ExpandedPlayer: React.FC = () => {
     }
   };
 
-  if (!isExpanded || !currentTrack) return null;
-
   const formatTime = (secs: number) => {
     if (isNaN(secs) || secs < 0) return '0:00';
     const m = Math.floor(secs / 60);
@@ -514,6 +512,8 @@ export const ExpandedPlayer: React.FC = () => {
       console.error('Failed to queue download', err);
     }
   };
+
+  if (!isExpanded || !currentTrack) return null;
 
   return (
     <div 

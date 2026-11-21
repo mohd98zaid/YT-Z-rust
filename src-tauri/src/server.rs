@@ -188,11 +188,18 @@ pub fn create_router(state: AppState) -> Router {
 
 pub async fn start_server(state: AppState, port: u16) {
     let app = create_router(state);
-    let addr = SocketAddr::from(([127, 0, 0, 1], port));
-    println!("YT-Z Rust Core Engine listening on http://{}", addr);
+    let loopback = SocketAddr::from(([127, 0, 0, 1], port));
+    let any_addr = SocketAddr::from(([0, 0, 0, 0], port));
+    println!("YT-Z Rust Core Engine starting on port {}", port);
 
-    if let Ok(listener) = tokio::net::TcpListener::bind(addr).await {
+    if let Ok(listener) = tokio::net::TcpListener::bind(any_addr).await {
+        println!("YT-Z Rust Core Engine bound to 0.0.0.0:{}", port);
         let _ = axum::serve(listener, app).await;
+    } else if let Ok(listener) = tokio::net::TcpListener::bind(loopback).await {
+        println!("YT-Z Rust Core Engine bound to 127.0.0.1:{}", port);
+        let _ = axum::serve(listener, app).await;
+    } else {
+        eprintln!("ERROR: Failed to bind YT-Z Rust Core Engine to port {}", port);
     }
 }
 

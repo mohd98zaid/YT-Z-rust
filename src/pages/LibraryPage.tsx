@@ -259,14 +259,14 @@ export const LibraryPage: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center justify-between border-b border-border/50 pb-3">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between border-b border-border/50 pb-2">
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none max-w-full pb-1">
           <button
             onClick={() => {
               setActiveSubTab('favorites');
               setSelectedPlaylist(null);
             }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
               activeSubTab === 'favorites'
                 ? 'bg-primary text-white shadow-md shadow-primary/20'
                 : 'text-foreground-muted hover:text-foreground hover:bg-surface-elevated'
@@ -278,7 +278,7 @@ export const LibraryPage: React.FC = () => {
 
           <button
             onClick={() => setActiveSubTab('playlists')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
               activeSubTab === 'playlists'
                 ? 'bg-primary text-white shadow-md shadow-primary/20'
                 : 'text-foreground-muted hover:text-foreground hover:bg-surface-elevated'
@@ -293,7 +293,7 @@ export const LibraryPage: React.FC = () => {
               setActiveSubTab('local');
               setSelectedPlaylist(null);
             }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
               activeSubTab === 'local'
                 ? 'bg-primary text-white shadow-md shadow-primary/20'
                 : 'text-foreground-muted hover:text-foreground hover:bg-surface-elevated'
@@ -308,7 +308,7 @@ export const LibraryPage: React.FC = () => {
               setActiveSubTab('history');
               setSelectedPlaylist(null);
             }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
               activeSubTab === 'history'
                 ? 'bg-primary text-white shadow-md shadow-primary/20'
                 : 'text-foreground-muted hover:text-foreground hover:bg-surface-elevated'

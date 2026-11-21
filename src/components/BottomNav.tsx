@@ -133,7 +133,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, setActiveTab })
               className={`relative flex items-center justify-center gap-1.5 py-2 px-3 rounded-full transition-all duration-200 active:scale-90 ${
                 isSelected
                   ? 'bg-primary text-white shadow-md shadow-primary/35 font-bold'
-                  : 'text-foreground-muted hover:text-foreground hover:bg-white/5 font-medium'
+                  : 'text-white/70 hover:text-white hover:bg-white/10 font-medium'
               }`}
             >
               <Icon className={`w-4 h-4 transition-transform duration-200 ${isSelected ? 'scale-110' : ''}`} />
@@ -150,7 +150,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, setActiveTab })
           className={`relative flex items-center justify-center gap-1.5 py-2 px-3 rounded-full transition-all duration-200 active:scale-90 ${
             isMoreActive
               ? 'bg-primary text-white shadow-md shadow-primary/35 font-bold'
-              : 'text-foreground-muted hover:text-foreground hover:bg-white/5 font-medium'
+              : 'text-white/70 hover:text-white hover:bg-white/10 font-medium'
           }`}
         >
           <div className="relative flex items-center justify-center">

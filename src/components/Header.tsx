@@ -122,7 +122,7 @@ export const Header: React.FC<HeaderProps> = ({
               loadSearchHistory();
             }}
             onKeyDown={handleKeyDown}
-            placeholder="Search songs, artists, albums, or paste link..."
+            placeholder="Search music, artists or links..."
             className="w-full bg-surface-elevated border border-border focus:border-primary/50 text-foreground placeholder:text-foreground-subtle text-xs sm:text-sm rounded-full pl-9 sm:pl-10 pr-9 py-2 outline-none transition-all duration-200 focus:ring-2 focus:ring-primary/20 placeholder:truncate"
           />
           {searchQuery && (

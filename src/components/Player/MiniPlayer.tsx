@@ -181,15 +181,15 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
             </div>
 
             <div className="min-w-0 flex-1 pr-1">
-              <h4 className="font-bold text-xs text-foreground truncate">{currentTrack.title}</h4>
+              <h4 className="font-bold text-xs text-white truncate">{currentTrack.title}</h4>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <p className="text-[11px] text-foreground-muted truncate">{currentTrack.artist}</p>
+                <p className="text-[11px] text-white/70 truncate">{currentTrack.artist}</p>
                 {audioStats?.isLossless ? (
                   <span className="shrink-0 px-1.5 py-0.2 rounded text-[8px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono tracking-wider">
                     FLAC 24-bit
                   </span>
                 ) : (
-                  <span className="shrink-0 px-1 py-0.2 rounded text-[8px] font-mono text-foreground-muted bg-white/5 border border-white/10">
+                  <span className="shrink-0 px-1 py-0.2 rounded text-[8px] font-mono text-white/60 bg-white/10 border border-white/15">
                     OPUS
                   </span>
                 )}
@@ -201,7 +201,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
           <div className="flex items-center gap-1 shrink-0 pr-1">
             <button
               onClick={previous}
-              className="p-1.5 text-foreground-muted hover:text-foreground active:scale-90 transition-transform"
+              className="p-1.5 text-white/75 hover:text-white active:scale-90 transition-transform"
               title="Previous track"
             >
               <SkipBack className="w-4 h-4 fill-current" />
@@ -224,7 +224,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
 
             <button
               onClick={next}
-              className="p-1.5 text-foreground-muted hover:text-foreground active:scale-90 transition-transform"
+              className="p-1.5 text-white/75 hover:text-white active:scale-90 transition-transform"
               title="Next track"
             >
               <SkipForward className="w-4 h-4 fill-current" />
