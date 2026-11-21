@@ -1029,16 +1029,14 @@ export const ExpandedPlayer: React.FC = () => {
                   title="Click to view Audio Pipeline signal path"
                 >
                   <Activity className="w-3 h-3 text-primary" />
-                  <span>{Boolean(audioStats?.isLossless || audioQuality === 'lossless') ? 'FLAC' : (audioStats?.format || 'OPUS')}</span>
+                  <span>{(audioStats?.codec || (isVideoMode ? 'aac' : 'opus')).toUpperCase()}</span>
                   <span>·</span>
-                  <span>{Boolean(audioStats?.isLossless || audioQuality === 'lossless') ? (audioStats?.bitDepth || 24) : (audioStats?.bitDepth || 16)}-bit</span>
+                  <span>{audioStats?.bitDepth || 16}-bit</span>
                   <span>·</span>
-                  <span>{((audioStats?.sampleRate || (Boolean(audioStats?.isLossless || audioQuality === 'lossless') ? 96000 : 48000)) / 1000).toFixed(1)} kHz</span>
+                  <span>{((audioStats?.sampleRate || ((audioStats?.codec || '').toLowerCase() === 'opus' ? 48000 : 44100)) / 1000).toFixed(1)} kHz</span>
                   <span>·</span>
-                  <span className={Boolean(audioStats?.isLossless || audioQuality === 'lossless') ? 'text-emerald-400 font-medium' : ''}>
-                    {Boolean(audioStats?.isLossless || audioQuality === 'lossless')
-                      ? `${(audioStats?.bitrate && audioStats.bitrate >= 1000 ? audioStats.bitrate : 2304)} kbps Lossless`
-                      : 'Bit-Perfect'}
+                  <span className={audioStats?.isLossless ? 'text-emerald-400 font-medium' : ''}>
+                    {audioStats?.bitrate ? `${audioStats.bitrate.toLocaleString()} kbps` : (isVideoMode ? '160 kbps' : '320 kbps')}{audioStats?.isLossless ? ' Lossless' : ''}
                   </span>
                 </button>
               </div>
@@ -1329,16 +1327,14 @@ export const ExpandedPlayer: React.FC = () => {
                       className="inline-flex items-center gap-1.5 text-[11px] font-mono text-foreground-muted hover:text-foreground transition-colors tracking-wide cursor-pointer"
                       title="Click to view Audio Pipeline & Hardware Signal Path"
                     >
-                      <span>{Boolean(audioStats?.isLossless || audioQuality === 'lossless') ? 'FLAC' : (audioStats?.format || 'OPUS')}</span>
+                      <span>{(audioStats?.codec || (isVideoMode ? 'aac' : 'opus')).toUpperCase()}</span>
                       <span>·</span>
-                      <span>{Boolean(audioStats?.isLossless || audioQuality === 'lossless') ? (audioStats?.bitDepth || 24) : (audioStats?.bitDepth || 16)}-bit</span>
+                      <span>{audioStats?.bitDepth || 16}-bit</span>
                       <span>·</span>
-                      <span>{((audioStats?.sampleRate || (Boolean(audioStats?.isLossless || audioQuality === 'lossless') ? 96000 : 48000)) / 1000).toFixed(1)} kHz</span>
+                      <span>{((audioStats?.sampleRate || ((audioStats?.codec || '').toLowerCase() === 'opus' ? 48000 : 44100)) / 1000).toFixed(1)} kHz</span>
                       <span>·</span>
-                      <span className={Boolean(audioStats?.isLossless || audioQuality === 'lossless') ? 'text-emerald-400 font-medium' : ''}>
-                        {Boolean(audioStats?.isLossless || audioQuality === 'lossless')
-                          ? (audioStats?.bitrate && audioStats.bitrate >= 1000 ? audioStats.bitrate : 2304)
-                          : (audioStats?.bitrate || 160)} kbps
+                      <span className={audioStats?.isLossless ? 'text-emerald-400 font-medium' : ''}>
+                        {audioStats?.bitrate ? `${audioStats.bitrate.toLocaleString()} kbps` : (isVideoMode ? '160 kbps' : '320 kbps')}
                       </span>
                       <span>·</span>
                       <span>Stereo</span>
@@ -1918,9 +1914,7 @@ export const ExpandedPlayer: React.FC = () => {
                   <div className="text-[11px] text-white/70 truncate">
                     {isVideoMode
                       ? '16-bit AAC Sync · 44.1 kHz'
-                      : audioStats?.isLossless
-                      ? `${(audioStats?.codec || 'ALAC').toUpperCase()} ${audioStats?.bitDepth || 24}-bit · ${((audioStats?.sampleRate || 48000) / 1000).toFixed(0)} kHz`
-                      : `${(audioStats?.codec || 'OPUS').toUpperCase()} ${audioStats?.bitDepth || 16}-bit · ${((audioStats?.sampleRate || 48000) / 1000).toFixed(0)} kHz`}
+                      : `${(audioStats?.codec || 'aac').toUpperCase()} ${audioStats?.bitDepth || 16}-bit · ${((audioStats?.sampleRate || 44100) / 1000).toFixed(1)} kHz · ${audioStats?.bitrate || 320} kbps`}
                   </div>
                 </div>
               </div>

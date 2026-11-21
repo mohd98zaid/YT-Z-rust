@@ -192,11 +192,11 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
                 <p className="text-[11px] text-white/80 truncate">{currentTrack.artist}</p>
                 {audioStats?.isLossless ? (
                   <span className="shrink-0 px-1.5 py-0.2 rounded text-[8px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono tracking-wider">
-                    FLAC 24-bit
+                    {audioStats?.codec?.toUpperCase() || 'FLAC'} {audioStats?.bitDepth || 24}-bit
                   </span>
                 ) : (
                   <span className="shrink-0 px-1 py-0.2 rounded text-[8px] font-mono text-white/70 bg-white/10 border border-white/15">
-                    OPUS
+                    {audioStats?.codec?.toUpperCase() || 'AAC'} {audioStats?.bitrate ? `${audioStats.bitrate}k` : '320k'}
                   </span>
                 )}
               </div>
@@ -321,14 +321,14 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
                 >
                   SAVER
                 </span>
-              ) : (audioStats?.isLossless || audioQuality === 'lossless') ? (
+              ) : audioStats?.isLossless ? (
                 <span
                   onClick={(e) => {
                     e.stopPropagation();
                     setQualityMenuOpen(true);
                   }}
                   className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-black tracking-wider bg-gradient-to-r from-amber-500/20 to-yellow-500/20 text-amber-300 border border-amber-500/40 shadow-[0_0_8px_rgba(245,158,11,0.25)] cursor-pointer hover:scale-105 transition-transform"
-                  title={`Bit-Perfect Lossless FLAC (${audioStats?.bitDepth || 24}-bit/${Math.round((audioStats?.sampleRate || 96000)/1000)}kHz) - Click to change quality`}
+                  title={`Bit-Perfect Lossless ${audioStats?.codec?.toUpperCase() || 'FLAC'} (${audioStats?.bitDepth || 24}-bit/${Math.round((audioStats?.sampleRate || 96000)/1000)}kHz) - Click to change quality`}
                 >
                   LOSSLESS
                 </span>
@@ -341,7 +341,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
                   className="shrink-0 inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-medium bg-surface-elevated text-foreground-subtle border border-border cursor-pointer hover:text-foreground"
                   title="Click to change streaming quality"
                 >
-                  {audioStats?.codec?.toUpperCase() || 'OPUS'}
+                  {audioStats?.codec?.toUpperCase() || 'AAC'} {audioStats?.bitrate ? `${audioStats.bitrate}k` : '320k'}
                 </span>
               )
             )}
