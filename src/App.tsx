@@ -22,6 +22,7 @@ import { useThemeStore } from './stores/useThemeStore';
 import { useDownloadStore } from './stores/useDownloadStore';
 import { usePlayerStore } from './stores/usePlayerStore';
 import { useNavigationStore } from './stores/useNavigationStore';
+import { useVideoStore } from './stores/useVideoStore';
 import { api } from './services/api';
 
 export const App: React.FC = () => {
@@ -31,6 +32,8 @@ export const App: React.FC = () => {
   const { restoreSessionFromConfig } = usePlayerStore();
   const { initWebSocket } = useDownloadStore();
   const { isExpanded, currentTrack } = usePlayerStore();
+  const { activeVideo, isPiP } = useVideoStore();
+  const isWatchingVideoInPage = Boolean(activeVideo && activeTab === 'youtube' && !isPiP);
 
   useEffect(() => {
     initTheme();
@@ -93,7 +96,7 @@ export const App: React.FC = () => {
         />
 
         {/* Scrollable Page Body */}
-        <main className="flex-1 overflow-y-auto">
+        <main id="main-content" className="flex-1 overflow-y-auto scroll-smooth">
           <ErrorBoundary fallbackTitle="Something went wrong while rendering this section">
             {activeTab === 'home' && <HomePage />}
             {activeTab === 'explore' && <ExplorePage />}
@@ -107,8 +110,8 @@ export const App: React.FC = () => {
           </ErrorBoundary>
         </main>
 
-        {/* Desktop Docked Mini Player (Hidden on Mobile) */}
-        {!isExpanded && (
+        {/* Desktop Docked Mini Player (Hidden when watching a video in YouTube page or on Mobile) */}
+        {!isExpanded && !isWatchingVideoInPage && (
           <div className="hidden md:block">
             <MiniPlayer mode="desktop" />
           </div>
@@ -116,8 +119,8 @@ export const App: React.FC = () => {
 
         {/* BitChord Mobile Floating Glass Stack (md:hidden) */}
         <div className="fixed bottom-0 inset-x-0 z-40 md:hidden pointer-events-none pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] px-3.5 space-y-2">
-          {/* Floating Glass MiniPlayer */}
-          {currentTrack && !isExpanded && (
+          {/* Floating Glass MiniPlayer (Hidden when watching video) */}
+          {currentTrack && !isExpanded && !isWatchingVideoInPage && (
             <div className="pointer-events-auto max-w-md mx-auto animate-fadeIn">
               <MiniPlayer mode="mobile" />
             </div>

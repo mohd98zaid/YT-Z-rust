@@ -143,13 +143,18 @@ export const PersistentVideoPlayer: React.FC = () => {
     window.addEventListener('resize', handleSync);
     window.addEventListener('scroll', handleSync, true);
 
+    const mainEl = document.getElementById('main-content');
+    if (mainEl) {
+      mainEl.addEventListener('scroll', handleSync, { passive: true });
+    }
+
     // Keep measuring for brief duration right after state change for silky animation
     let frameId: number;
     let count = 0;
     const animateSync = () => {
       updatePosition();
       count++;
-      if (count < 35) {
+      if (count < 45) {
         frameId = requestAnimationFrame(animateSync);
       }
     };
@@ -158,6 +163,9 @@ export const PersistentVideoPlayer: React.FC = () => {
     return () => {
       window.removeEventListener('resize', handleSync);
       window.removeEventListener('scroll', handleSync, true);
+      if (mainEl) {
+        mainEl.removeEventListener('scroll', handleSync);
+      }
       cancelAnimationFrame(frameId);
     };
   }, [activeVideo, isCinemaMode, activeTab, isPiP, updatePosition]);
@@ -217,8 +225,20 @@ export const PersistentVideoPlayer: React.FC = () => {
       left: `${coords.left}px`,
       width: `${coords.width}px`,
       height: `${coords.height}px`,
-      zIndex: isCinemaMode ? 10 : 35,
+      zIndex: isCinemaMode ? 20 : 35,
       transition: 'top 0.35s cubic-bezier(0.16, 1, 0.3, 1), left 0.35s cubic-bezier(0.16, 1, 0.3, 1), width 0.35s cubic-bezier(0.16, 1, 0.3, 1), height 0.35s cubic-bezier(0.16, 1, 0.3, 1), border-radius 0.35s ease',
+    };
+  } else if (isCinemaMode) {
+    // Cinema mode fallback while measuring anchor (hidden until positioned right in place)
+    containerStyle = {
+      position: 'fixed',
+      top: '64px',
+      left: '0px',
+      width: '100%',
+      height: '48vh',
+      opacity: 0,
+      zIndex: 20,
+      pointerEvents: 'none',
     };
   } else {
     // Initial fallback if target rect not yet computed

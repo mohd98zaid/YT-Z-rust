@@ -299,6 +299,20 @@ export const YouTubePage: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    if (activeVideo) {
+      const mainEl = document.getElementById('main-content') || document.querySelector('main');
+      if (mainEl) {
+        mainEl.scrollTo({ top: 0, behavior: 'instant' });
+      }
+      const timer = setTimeout(() => {
+        if (mainEl) mainEl.scrollTop = 0;
+        sentinelRef.current?.scrollIntoView({ behavior: 'auto', block: 'start' });
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [activeVideo?.id]);
+
   const handleSelectVideo = (video: Track) => {
     const id = video.videoId || video.id;
     const currentList = searchResults.length > 0 ? searchResults : trendingVideos;
@@ -318,7 +332,15 @@ export const YouTubePage: React.FC = () => {
       },
       queue
     );
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    const mainEl = document.getElementById('main-content') || document.querySelector('main');
+    if (mainEl) {
+      mainEl.scrollTo({ top: 0, behavior: 'instant' });
+    }
+    requestAnimationFrame(() => {
+      if (mainEl) mainEl.scrollTop = 0;
+      sentinelRef.current?.scrollIntoView({ behavior: 'auto', block: 'start' });
+    });
   };
 
   const handleDownloadVideo = (id: string, title: string, author: string, isAudio = false) => {
