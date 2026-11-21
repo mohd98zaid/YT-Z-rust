@@ -26,6 +26,7 @@ import {
   Bell,
   Sparkles,
   CheckCircle,
+  Expand,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { Track } from '../types';
@@ -92,6 +93,8 @@ export const YouTubePage: React.FC = () => {
     activeVideo,
     isPiP,
     isFullscreen,
+    isTheaterMode,
+    toggleTheaterMode,
     videoQuality,
     setVideoQuality,
     useDirectVideo,
@@ -543,28 +546,30 @@ export const YouTubePage: React.FC = () => {
           </form>
         </div>
 
-        {/* Desktop Filter Pills Row */}
-        <div className="max-w-7xl mx-auto flex items-center gap-2.5 overflow-x-auto scrollbar-none pt-3">
-          {categoryPills.map((cat) => {
-            const isSelected = trendingCategory === cat && searchResults.length === 0;
-            return (
-              <button
-                key={cat}
-                onClick={() => {
-                  setSearchResults([]);
-                  loadTrending(cat);
-                }}
-                className={`px-3 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap transition-all ${
-                  isSelected
-                    ? 'bg-white text-black font-bold shadow-sm'
-                    : 'bg-[#272727] text-white hover:bg-[#3f3f3f]'
-                }`}
-              >
-                {cat}
-              </button>
-            );
-          })}
-        </div>
+        {/* Desktop Filter Pills Row (Hidden when watching video to save vertical space) */}
+        {!activeVideo && (
+          <div className="max-w-7xl mx-auto flex items-center gap-2.5 overflow-x-auto scrollbar-none pt-3">
+            {categoryPills.map((cat) => {
+              const isSelected = trendingCategory === cat && searchResults.length === 0;
+              return (
+                <button
+                  key={cat}
+                  onClick={() => {
+                    setSearchResults([]);
+                    loadTrending(cat);
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap transition-all ${
+                    isSelected
+                      ? 'bg-white text-black font-bold shadow-sm'
+                      : 'bg-[#272727] text-white hover:bg-[#3f3f3f]'
+                  }`}
+                >
+                  {cat}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* ========================================================================= */}
@@ -572,14 +577,14 @@ export const YouTubePage: React.FC = () => {
       {/* ========================================================================= */}
       {activeVideo && (
         <div className="w-full bg-[#0f0f0f] border-b border-white/10 md:border-none pb-6">
-          <div className="flex flex-col lg:grid lg:grid-cols-3 lg:gap-6 max-w-7xl mx-auto md:p-6 lg:p-8">
-            {/* Left / Main Watch Deck (Span 2 on Desktop) */}
-            <div className="lg:col-span-2 space-y-3.5">
+          <div className={`flex flex-col ${isTheaterMode ? 'w-full max-w-7xl mx-auto space-y-6 md:p-6 lg:p-8' : 'lg:grid lg:grid-cols-3 lg:gap-6 max-w-7xl mx-auto md:p-6 lg:p-8'}`}>
+            {/* Left / Main Watch Deck */}
+            <div className={isTheaterMode ? "w-full space-y-3.5" : "lg:col-span-2 space-y-3.5"}>
               {/* Single Video Anchor (Measured by PersistentVideoPlayer) */}
               <div
                 ref={sentinelRef}
                 id="youtube-cinema-anchor"
-                className="sticky top-0 md:static z-40 relative w-full aspect-video bg-black overflow-hidden shadow-2xl rounded-none md:rounded-2xl max-h-[75vh]"
+                className="sticky top-0 md:static z-40 relative w-full aspect-video bg-black overflow-hidden shadow-2xl rounded-none md:rounded-2xl max-h-[52vh]"
               >
                 {isPiP && (
                   <div
@@ -641,8 +646,78 @@ export const YouTubePage: React.FC = () => {
                     </button>
                   </div>
 
-                  {/* YouTube Action Buttons (Like/Dislike, Share, Audio, Download, Bypass, Quality) */}
+                  {/* YouTube Action Buttons (Quality, Like/Dislike, Share, Audio, Download, Bypass, Theater) */}
                   <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-1">
+                    {/* Prominent Video Quality Selector Pill */}
+                    <div className="relative" ref={qualityMenuRef}>
+                      <button
+                        onClick={toggleQualityMenu}
+                        className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/40 text-xs font-bold whitespace-nowrap shadow-sm transition-all"
+                        title="Change Playback Resolution (4K, 1440p, 1080p, 720p, etc.)"
+                      >
+                        <Tv className="w-3.5 h-3.5 text-red-500" />
+                        <span>{videoQuality === 'hd2160' ? '4K Ultra' : videoQuality === 'hd1440' ? '1440p 2K' : videoQuality === 'hd720' ? '720p HD' : videoQuality === 'large' ? '480p' : videoQuality === 'medium' ? '360p' : videoQuality === 'auto' ? 'Auto' : '1080p HD'}</span>
+                        <ChevronDown className="w-3 h-3" />
+                      </button>
+
+                      {qualityMenuOpen && dropdownPos && createPortal(
+                        <div
+                          ref={dropdownMenuRef}
+                          style={{
+                            position: 'fixed',
+                            top: `${dropdownPos.top}px`,
+                            right: `${dropdownPos.right}px`,
+                            width: `${dropdownPos.width}px`,
+                            zIndex: 99999,
+                            backgroundColor: '#212121',
+                          }}
+                          className="border border-[#383838] rounded-2xl p-2 shadow-2xl animate-fadeIn space-y-1 select-none text-white"
+                        >
+                          <div className="px-3 py-1.5 border-b border-white/10 text-xs font-bold text-white">
+                            Select Quality
+                          </div>
+                          {[
+                            { id: 'hd2160', label: '2160p 4K Ultra HD' },
+                            { id: 'hd1440', label: '1440p Quad HD' },
+                            { id: 'hd1080', label: '1080p Full HD (Default)' },
+                            { id: 'hd720', label: '720p High Definition' },
+                            { id: 'medium', label: '360p Data Saver' },
+                            { id: 'auto', label: 'Auto (Adaptive)' },
+                          ].map((q) => (
+                            <button
+                              key={q.id}
+                              onClick={() => {
+                                setVideoQuality(q.id);
+                                setQualityMenuOpen(false);
+                                showToast(`Video quality set to ${q.label}`);
+                              }}
+                              className={`w-full flex items-center justify-between p-2 rounded-xl text-xs font-semibold text-left transition-colors ${
+                                videoQuality === q.id ? 'bg-red-600 text-white' : 'hover:bg-white/10 text-white/80'
+                              }`}
+                            >
+                              <span>{q.label}</span>
+                              {videoQuality === q.id && <Check className="w-3.5 h-3.5" />}
+                            </button>
+                          ))}
+                        </div>,
+                        document.body
+                      )}
+                    </div>
+
+                    {/* Theater Mode Button */}
+                    <button
+                      onClick={toggleTheaterMode}
+                      className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+                        isTheaterMode
+                          ? 'bg-red-600 text-white font-bold'
+                          : 'bg-[#272727] hover:bg-[#3f3f3f] text-white'
+                      }`}
+                      title={isTheaterMode ? "Default View (2 Columns)" : "Theater Mode (Wide Video)"}
+                    >
+                      <Expand className="w-3.5 h-3.5" />
+                      <span>{isTheaterMode ? "Standard" : "Theater"}</span>
+                    </button>
+
                     {/* Like / Dislike joined pill */}
                     <div className="flex items-center bg-[#272727] rounded-full divide-x divide-white/10">
                       <button
@@ -727,81 +802,49 @@ export const YouTubePage: React.FC = () => {
                       <ShieldCheck className="w-3.5 h-3.5" />
                       <span>{useDirectVideo ? 'Direct' : 'Bypass'}</span>
                     </button>
-
-                    {/* Video Quality Picker */}
-                    <div className="relative" ref={qualityMenuRef}>
-                      <button
-                        onClick={toggleQualityMenu}
-                        className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-[#272727] hover:bg-[#3f3f3f] text-white text-xs font-semibold whitespace-nowrap"
-                        title="Playback Quality"
-                      >
-                        <Tv className="w-3.5 h-3.5 text-red-500" />
-                        <span>{videoQuality === 'hd2160' ? '4K' : videoQuality === 'hd1440' ? '1440p' : videoQuality === 'hd720' ? '720p' : '1080p'}</span>
-                        <ChevronDown className="w-3 h-3" />
-                      </button>
-
-                      {qualityMenuOpen && dropdownPos && createPortal(
-                        <div
-                          ref={dropdownMenuRef}
-                          style={{
-                            position: 'fixed',
-                            top: `${dropdownPos.top}px`,
-                            right: `${dropdownPos.right}px`,
-                            width: `${dropdownPos.width}px`,
-                            zIndex: 99999,
-                            backgroundColor: '#212121',
-                          }}
-                          className="border border-[#383838] rounded-2xl p-2 shadow-2xl animate-fadeIn space-y-1 select-none text-white"
-                        >
-                          <div className="px-3 py-1.5 border-b border-white/10 text-xs font-bold text-white">
-                            Select Quality
-                          </div>
-                          {[
-                            { id: 'hd2160', label: '2160p 4K Ultra HD' },
-                            { id: 'hd1440', label: '1440p Quad HD' },
-                            { id: 'hd1080', label: '1080p Full HD (Default)' },
-                            { id: 'hd720', label: '720p High Definition' },
-                            { id: 'medium', label: '360p Data Saver' },
-                            { id: 'auto', label: 'Auto (Adaptive)' },
-                          ].map((q) => (
-                            <button
-                              key={q.id}
-                              onClick={() => {
-                                setVideoQuality(q.id);
-                                setQualityMenuOpen(false);
-                              }}
-                              className={`w-full flex items-center justify-between p-2 rounded-xl text-xs font-semibold text-left transition-colors ${
-                                videoQuality === q.id ? 'bg-red-600 text-white' : 'hover:bg-white/10 text-white/80'
-                              }`}
-                            >
-                              <span>{q.label}</span>
-                              {videoQuality === q.id && <Check className="w-3.5 h-3.5" />}
-                            </button>
-                          ))}
-                        </div>,
-                        document.body
-                      )}
-                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Right / Below Watch Queue ("Up Next") */}
-            <div className="lg:col-span-1 px-4 md:px-0 space-y-3 pt-2 lg:pt-0">
+            <div className={isTheaterMode ? "w-full pt-4 border-t border-white/10 space-y-4" : "lg:col-span-1 px-4 md:px-0 space-y-3 pt-2 lg:pt-0"}>
               <h3 className="text-sm font-bold text-white flex items-center gap-1.5 uppercase tracking-wider">
                 <span>Up Next</span>
               </h3>
 
-              <div className="space-y-3">
+              <div className={isTheaterMode ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" : "space-y-3"}>
                 {displayedVideos
                   .filter((v) => (v.videoId || v.id) !== activeVideo.id)
-                  .slice(0, 15)
+                  .slice(0, 16)
                   .map((video, idx) => {
                     const vidId = video.videoId || video.id;
                     const thumb = video.thumbnail || `https://i.ytimg.com/vi/${vidId}/hqdefault.jpg`;
                     const duration = video.duration || 'Video';
                     const author = video.artist || 'YouTube Official';
+
+                    if (isTheaterMode) {
+                      return (
+                        <div
+                          key={vidId || idx}
+                          onClick={() => handleSelectVideo(video)}
+                          className="group cursor-pointer select-none space-y-2"
+                        >
+                          <div className="relative aspect-video rounded-xl overflow-hidden bg-[#272727]">
+                            <img src={thumb} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                            <span className="absolute bottom-1.5 right-1.5 bg-black/80 text-white text-[10px] font-mono px-1 py-0.2 rounded font-bold">
+                              {duration}
+                            </span>
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-semibold text-white line-clamp-2 leading-snug group-hover:text-red-400 transition-colors">
+                              {video.title}
+                            </h4>
+                            <p className="text-[11px] text-[#aaaaaa] mt-0.5 truncate">{author}</p>
+                          </div>
+                        </div>
+                      );
+                    }
 
                     return (
                       <div

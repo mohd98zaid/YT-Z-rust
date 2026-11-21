@@ -8,12 +8,32 @@ interface NavigationState {
   initNavigation: () => Promise<void>;
   youtubeSelectedVideo: { id: string; title: string; artist: string } | null;
   navigateToYouTube: (video?: { id: string; title: string; artist: string }) => void;
+  isSidebarCollapsed: boolean;
+  toggleSidebarCollapse: () => void;
+  setSidebarCollapsed: (collapsed: boolean) => void;
 }
 
 const savedTab = (typeof window !== 'undefined' && (localStorage.getItem('ytz_active_tab') as TabType)) || 'home';
+const savedCollapsed = typeof window !== 'undefined' && localStorage.getItem('ytz_sidebar_collapsed') === 'true';
 
 export const useNavigationStore = create<NavigationState>((set) => ({
   activeTab: savedTab,
+  isSidebarCollapsed: savedCollapsed,
+  toggleSidebarCollapse: () => {
+    set((state) => {
+      const next = !state.isSidebarCollapsed;
+      try {
+        localStorage.setItem('ytz_sidebar_collapsed', String(next));
+      } catch {}
+      return { isSidebarCollapsed: next };
+    });
+  },
+  setSidebarCollapsed: (collapsed: boolean) => {
+    try {
+      localStorage.setItem('ytz_sidebar_collapsed', String(collapsed));
+    } catch {}
+    set({ isSidebarCollapsed: collapsed });
+  },
   setActiveTab: (tab) => {
     try {
       localStorage.setItem('ytz_active_tab', tab);

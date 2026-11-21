@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Sliders, Palette, X, Clock, Trash2 } from 'lucide-react';
+import { Search, Sliders, Palette, X, Clock, Trash2, Menu } from 'lucide-react';
 import { api } from '../services/api';
 import { useThemeStore } from '../stores/useThemeStore';
 import { usePlayerStore } from '../stores/usePlayerStore';
+import { useNavigationStore } from '../stores/useNavigationStore';
 
 interface HeaderProps {
   onSearchSubmit: (query: string) => void;
@@ -20,6 +21,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [showDropdown, setShowDropdown] = useState(false);
   const { currentTheme } = useThemeStore();
   const { toggleEqualizer, eqEnabled } = usePlayerStore();
+  const { isSidebarCollapsed, toggleSidebarCollapse } = useNavigationStore();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const loadSearchHistory = async () => {
@@ -94,6 +96,15 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="h-16 border-b border-border bg-surface/90 backdrop-blur-md px-3 sm:px-6 flex items-center justify-between relative z-30 shrink-0">
+      {/* Desktop Hamburger Sidebar Toggle */}
+      <button
+        onClick={toggleSidebarCollapse}
+        className="hidden md:flex p-2 mr-3 rounded-xl text-foreground-muted hover:text-foreground hover:bg-surface-elevated transition-colors shrink-0"
+        title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+      >
+        <Menu className="w-5 h-5" />
+      </button>
+
       {/* Mobile Branding (md:hidden) */}
       <div className="flex md:hidden items-center gap-2 mr-2 shrink-0">
         <img

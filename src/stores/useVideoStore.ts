@@ -16,6 +16,7 @@ interface VideoState {
   videoQueueIndex: number;
   isPiP: boolean;
   isFullscreen: boolean;
+  isTheaterMode: boolean;
   reloadKey: number;
   videoQuality: string; // 'hd1080', 'hd720', 'hd1440', 'hd2160', 'large', 'medium', 'auto'
   useDirectVideo: boolean;
@@ -27,6 +28,7 @@ interface VideoState {
   togglePiP: () => void;
   setPiP: (pip: boolean) => void;
   setIsFullscreen: (fs: boolean) => void;
+  toggleTheaterMode: () => void;
   setVideoQuality: (q: string) => void;
   setUseDirectVideo: (direct: boolean) => void;
   toggleDirectVideo: () => void;
@@ -40,9 +42,20 @@ export const useVideoStore = create<VideoState>((set, get) => ({
   videoQueueIndex: 0,
   isPiP: false,
   isFullscreen: false,
+  isTheaterMode: localStorage.getItem('ytz_theater_mode') === 'true',
   reloadKey: 0,
   videoQuality: localStorage.getItem('ytz_video_quality') || 'hd1080',
   useDirectVideo: false,
+
+  toggleTheaterMode: () => {
+    set((s) => {
+      const next = !s.isTheaterMode;
+      try {
+        localStorage.setItem('ytz_theater_mode', String(next));
+      } catch {}
+      return { isTheaterMode: next };
+    });
+  },
 
   setUseDirectVideo: (direct: boolean) => set({ useDirectVideo: direct }),
   toggleDirectVideo: () => set((state) => ({ useDirectVideo: !state.useDirectVideo })),

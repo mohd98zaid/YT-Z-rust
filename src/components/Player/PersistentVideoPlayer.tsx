@@ -1,14 +1,35 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { Maximize2, X, Expand, RefreshCw, PictureInPicture2, ShieldCheck, Play } from 'lucide-react';
+import { Maximize2, X, Expand, RefreshCw, PictureInPicture2, ShieldCheck, Play, Tv, ChevronDown, Check } from 'lucide-react';
 import { useVideoStore } from '../../stores/useVideoStore';
 import { usePlayerStore } from '../../stores/usePlayerStore';
 import { useNavigationStore } from '../../stores/useNavigationStore';
+
+const qualityOptions = [
+  { id: 'hd2160', label: '4K Ultra HD (2160p)' },
+  { id: 'hd1440', label: '1440p Quad HD' },
+  { id: 'hd1080', label: '1080p Full HD' },
+  { id: 'hd720', label: '720p HD' },
+  { id: 'large', label: '480p SD' },
+  { id: 'medium', label: '360p Data Saver' },
+  { id: 'auto', label: 'Auto (Adaptive)' },
+];
+
+const getQualityLabel = (q?: string) => {
+  if (q === 'hd2160') return '4K';
+  if (q === 'hd1440') return '1440p';
+  if (q === 'hd720') return '720p';
+  if (q === 'large') return '480p';
+  if (q === 'medium') return '360p';
+  if (q === 'auto') return 'Auto';
+  return '1080p';
+};
 
 export const PersistentVideoPlayer: React.FC = () => {
   const {
     activeVideo,
     isPiP,
     isFullscreen,
+    isTheaterMode,
     reloadKey,
     videoQuality,
     useDirectVideo,
@@ -17,6 +38,8 @@ export const PersistentVideoPlayer: React.FC = () => {
     closeVideo,
     togglePiP,
     setIsFullscreen,
+    toggleTheaterMode,
+    setVideoQuality,
     restoreCinema,
     reloadVideo,
   } = useVideoStore();
@@ -27,6 +50,7 @@ export const PersistentVideoPlayer: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [hasPlaybackStarted, setHasPlaybackStarted] = useState(false);
   const [showDirectPrompt, setShowDirectPrompt] = useState(false);
+  const [showPlayerQualityMenu, setShowPlayerQualityMenu] = useState(false);
 
   useEffect(() => {
     setHasPlaybackStarted(false);
@@ -283,6 +307,116 @@ export const PersistentVideoPlayer: React.FC = () => {
             } catch {}
           }}
         />
+      )}
+
+      {/* Top-Right Player Controls (Quality Picker, Theater Mode, PiP, Fullscreen, Close) */}
+      {!isDockedInSidebar && (
+        <div className="absolute top-3 right-3 z-30 flex items-center gap-1.5 pointer-events-auto select-none">
+          {/* Quality Pill Button & Dropdown */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowPlayerQualityMenu(!showPlayerQualityMenu);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/80 hover:bg-black text-white text-xs font-bold border border-white/20 shadow-lg backdrop-blur-md transition-all active:scale-95 cursor-pointer"
+              title="Change Video Quality (4K, 1080p, 720p, etc.)"
+            >
+              <Tv className="w-3.5 h-3.5 text-red-500" />
+              <span>{getQualityLabel(videoQuality)}</span>
+              <ChevronDown className="w-3 h-3 text-white/70" />
+            </button>
+
+            {showPlayerQualityMenu && (
+              <div
+                className="absolute right-0 top-9 w-52 bg-[#1f1f1f] border border-white/20 rounded-2xl p-1.5 shadow-2xl z-50 text-white space-y-0.5 animate-fadeIn"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="px-3 py-1.5 text-[10px] font-bold text-white/60 uppercase tracking-wider border-b border-white/10 mb-1">
+                  Playback Quality
+                </div>
+                {qualityOptions.map((q) => (
+                  <button
+                    key={q.id}
+                    onClick={() => {
+                      setVideoQuality(q.id);
+                      setShowPlayerQualityMenu(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
+                      (videoQuality || 'hd1080') === q.id
+                        ? 'bg-red-600 text-white font-bold'
+                        : 'hover:bg-white/10 text-white/80'
+                    }`}
+                  >
+                    <span>{q.label}</span>
+                    {(videoQuality || 'hd1080') === q.id && <Check className="w-3.5 h-3.5" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Theater Mode Button */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleTheaterMode();
+            }}
+            className={`p-1.5 rounded-full border border-white/20 backdrop-blur-md shadow-lg transition-all ${
+              isTheaterMode ? 'bg-red-600 text-white' : 'bg-black/75 hover:bg-black text-white/90'
+            }`}
+            title={isTheaterMode ? "Exit Theater Mode" : "Theater Mode (Cinema Width)"}
+          >
+            <Expand className="w-4 h-4" />
+          </button>
+
+          {/* Picture-in-Picture Button */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              togglePiP();
+            }}
+            className="p-1.5 rounded-full bg-black/75 hover:bg-black text-white/90 border border-white/20 backdrop-blur-md shadow-lg transition-all"
+            title="Picture-in-Picture (Sidebar PiP)"
+          >
+            <PictureInPicture2 className="w-4 h-4" />
+          </button>
+
+          {/* Fullscreen Button */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!document.fullscreenElement) {
+                containerRef.current?.requestFullscreen?.().catch(() => {});
+                setIsFullscreen(true);
+              } else {
+                document.exitFullscreen?.().catch(() => {});
+                setIsFullscreen(false);
+              }
+            }}
+            className="p-1.5 rounded-full bg-black/75 hover:bg-black text-white/90 border border-white/20 backdrop-blur-md shadow-lg transition-all"
+            title="Fullscreen"
+          >
+            <Maximize2 className="w-4 h-4" />
+          </button>
+
+          {/* Close Video Button */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              closeVideo();
+            }}
+            className="p-1.5 rounded-full bg-black/75 hover:bg-red-600 text-white/90 hover:text-white border border-white/20 backdrop-blur-md shadow-lg transition-all"
+            title="Close Video"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
       )}
 
       {/* Direct Video Active Badge */}
