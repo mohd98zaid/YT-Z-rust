@@ -39,20 +39,31 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
 
     const measure = () => {
       if (timelineRef.current && firstIconRef.current && lastIconRef.current) {
-        const containerRect = timelineRef.current.getBoundingClientRect();
-        const firstRect = firstIconRef.current.getBoundingClientRect();
-        const lastRect = lastIconRef.current.getBoundingClientRect();
+        // Walk offsetParent chain to get exact coordinate relative to timelineRef
+        const getOffsetTop = (el: HTMLElement, stopAt: HTMLElement): number => {
+          let top = 0;
+          let curr: HTMLElement | null = el;
+          while (curr && curr !== stopAt) {
+            top += curr.offsetTop;
+            curr = curr.offsetParent as HTMLElement | null;
+          }
+          return top;
+        };
 
-        const top = firstRect.top - containerRect.top + firstRect.height / 2;
-        const bottom = lastRect.top - containerRect.top + lastRect.height / 2;
-        const height = Math.max(0, bottom - top);
-        setLineGeometry({ top, height });
+        const firstY = getOffsetTop(firstIconRef.current, timelineRef.current) + firstIconRef.current.offsetHeight / 2;
+        const lastY = getOffsetTop(lastIconRef.current, timelineRef.current) + lastIconRef.current.offsetHeight / 2;
+        const height = Math.max(0, lastY - firstY);
+
+        if (height > 0) {
+          setLineGeometry({ top: firstY, height });
+        }
       }
     };
 
     measure();
-    const t1 = setTimeout(measure, 50);
-    const t2 = setTimeout(measure, 180);
+    const t1 = setTimeout(measure, 40);
+    const t2 = setTimeout(measure, 150);
+    const t3 = setTimeout(measure, 350);
 
     let ro: ResizeObserver | null = null;
     if (typeof ResizeObserver !== 'undefined' && timelineRef.current) {
@@ -64,6 +75,7 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
+      clearTimeout(t3);
       if (ro) ro.disconnect();
       window.removeEventListener('resize', measure);
     };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Play, Download, Music, Video, User, Disc, ListMusic, Clock, History, Trash2, X, ListPlus, Plus, Check } from 'lucide-react';
+import { Search, Play, Download, Music, Video, User, Disc, ListMusic, Clock, History, Trash2, X, ListPlus, Plus, Check, Sparkles } from 'lucide-react';
 import { api } from '../services/api';
 import { Track } from '../types';
 import { usePlayerStore } from '../stores/usePlayerStore';
@@ -165,6 +165,17 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '' }) => 
     { id: 'playlists', label: 'Playlists', icon: ListMusic },
   ];
 
+  const browseCategories = [
+    { title: 'Bollywood Hits', query: 'Bollywood hits top songs', gradient: 'from-rose-600 to-red-500' },
+    { title: 'Punjabi Bangers', query: 'Punjabi hits top tracks', gradient: 'from-amber-600 to-orange-500' },
+    { title: 'Global Pop', query: 'Top Pop music international', gradient: 'from-purple-600 to-indigo-500' },
+    { title: 'Hip-Hop & Rap', query: 'Hip-hop rap latest tracks', gradient: 'from-emerald-600 to-teal-500' },
+    { title: 'Romantic Melodies', query: 'Romantic Hindi love songs', gradient: 'from-pink-600 to-rose-500' },
+    { title: 'Chill & Lo-Fi', query: 'Chill Lo-fi beats relaxing music', gradient: 'from-cyan-600 to-blue-500' },
+    { title: 'Workout Energy', query: 'Workout motivation EDM gym music', gradient: 'from-violet-600 to-fuchsia-500' },
+    { title: 'Sufi & Acoustic', query: 'Sufi ghazal acoustic soulful songs', gradient: 'from-amber-700 to-yellow-600' },
+  ];
+
   return (
     <div className="p-4 sm:p-6 md:p-8 space-y-6 max-w-7xl mx-auto pb-40 md:pb-28">
       {/* Search Header Form */}
@@ -240,6 +251,32 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '' }) => 
         </div>
       ) : !searched ? (
         <div className="space-y-8 pt-2">
+          {/* Apple Music Style Browse Categories */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" />
+              <span>Browse Categories</span>
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {browseCategories.map((cat, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => {
+                    setQuery(cat.title);
+                    executeSearch(cat.query);
+                  }}
+                  className={`relative h-20 sm:h-24 rounded-2xl p-3.5 bg-gradient-to-br ${cat.gradient} text-white font-black text-sm flex flex-col justify-between shadow-md cursor-pointer hover:scale-[1.02] active:scale-95 transition-all overflow-hidden select-none`}
+                >
+                  <span className="leading-snug">{cat.title}</span>
+                  <span className="text-[10px] font-semibold opacity-85 flex items-center gap-1">
+                    <span>Explore</span>
+                    <span>→</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Recent Search Queries */}
           {searchHistory.length > 0 && (
             <div className="space-y-3">
