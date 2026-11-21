@@ -604,11 +604,11 @@ export const YouTubePage: React.FC = () => {
           <div className={`flex flex-col ${isTheaterMode ? 'w-full max-w-7xl mx-auto space-y-6 md:p-6 lg:p-8' : 'lg:grid lg:grid-cols-3 lg:gap-6 max-w-7xl mx-auto md:p-6 lg:p-8'}`}>
             {/* Left / Main Watch Deck */}
             <div className={isTheaterMode ? "w-full space-y-3.5" : "lg:col-span-2 space-y-3.5"}>
-              {/* Single Video Anchor (Measured by PersistentVideoPlayer) */}
+              {/* Single Video Anchor */}
               <div
                 ref={sentinelRef}
                 id="youtube-cinema-anchor"
-                className="sticky top-0 md:static z-10 relative w-full aspect-video bg-transparent overflow-hidden shadow-2xl rounded-none md:rounded-2xl max-h-[52vh]"
+                className="sticky top-0 md:static z-20 relative w-full aspect-video bg-black overflow-hidden shadow-2xl rounded-none md:rounded-2xl max-h-[52vh]"
               >
                 {isPiP && (
                   <div
