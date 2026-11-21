@@ -669,9 +669,8 @@ export const YouTubePage: React.FC = () => {
                             right: `${dropdownPos.right}px`,
                             width: `${dropdownPos.width}px`,
                             zIndex: 99999,
-                            backgroundColor: '#212121',
                           }}
-                          className="border border-[#383838] rounded-2xl p-2 shadow-2xl animate-fadeIn space-y-1 select-none text-white"
+                          className="liquid-glass-card border border-white/20 rounded-2xl p-2 shadow-[0_20px_50px_rgba(0,0,0,0.7)] animate-fadeIn space-y-1 select-none text-white"
                         >
                           <div className="px-3 py-1.5 border-b border-white/10 text-xs font-bold text-white">
                             Select Quality

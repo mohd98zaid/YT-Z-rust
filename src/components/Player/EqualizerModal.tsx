@@ -52,33 +52,32 @@ export const EqualizerModal: React.FC = () => {
 
   return (
     <div
-      className="fixed inset-0 z-[600] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md select-none animate-fadeIn"
+      className="fixed inset-0 z-[600] flex items-center justify-center p-4 bg-black/75 backdrop-blur-xl select-none animate-fadeIn"
       onClick={toggleEqualizer}
     >
       <div
-        style={{ backgroundColor: 'var(--bg-surface)' }}
-        className="bg-surface border-2 border-border/80 rounded-3xl p-4 sm:p-6 w-full max-w-3xl max-h-[92vh] overflow-y-auto shadow-[0_20px_50px_rgba(0,0,0,0.65)] relative overflow-x-hidden"
+        className="liquid-glass-card border border-white/20 rounded-3xl p-4 sm:p-6 w-full max-w-3xl max-h-[92vh] overflow-y-auto shadow-[0_25px_65px_rgba(0,0,0,0.65)] relative overflow-x-hidden text-white"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Subtle background glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-28 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-28 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
 
         {/* Modal Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-border/60 relative z-10">
+        <div className="flex items-center justify-between pb-4 border-b border-white/10 relative z-10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 text-primary flex items-center justify-center border border-primary/20 shadow-inner">
+            <div className="w-10 h-10 rounded-2xl liquid-glass-prominent text-white flex items-center justify-center shadow-md">
               <Sliders className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base md:text-lg font-bold text-foreground tracking-tight">
+                <h3 className="text-base md:text-lg font-bold text-white tracking-tight">
                   10-Band Studio Equalizer
                 </h3>
-                <span className="text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                <span className="text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30">
                   DSP Pro
                 </span>
               </div>
-              <p className="text-xs text-foreground-muted">Hardware-accelerated Web Audio signal processing</p>
+              <p className="text-xs text-white/70">Hardware-accelerated Web Audio signal processing</p>
             </div>
           </div>
 
@@ -86,10 +85,10 @@ export const EqualizerModal: React.FC = () => {
             {/* Master EQ Power Toggle */}
             <button
               onClick={toggleEq}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
                 eqEnabled
-                  ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.25)]'
-                  : 'bg-surface-elevated text-foreground-muted border-border hover:text-foreground'
+                  ? 'liquid-glass-prominent shadow-md'
+                  : 'liquid-glass-control text-white/70 hover:text-white'
               }`}
             >
               <Power className="w-3.5 h-3.5" />
@@ -99,7 +98,7 @@ export const EqualizerModal: React.FC = () => {
             {/* Close Button */}
             <button
               onClick={toggleEqualizer}
-              className="p-2 rounded-full hover:bg-surface-elevated text-foreground-muted hover:text-foreground transition-colors"
+              className="p-1.5 rounded-full liquid-glass-control text-white/70 hover:text-white"
             >
               <X className="w-5 h-5" />
             </button>
@@ -116,8 +115,8 @@ export const EqualizerModal: React.FC = () => {
                 onClick={() => setEqPreset(pName)}
                 className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all hover:scale-105 active:scale-95 ${
                   isSelected
-                    ? 'bg-primary text-white shadow-md shadow-primary/25 border border-primary/40'
-                    : 'bg-surface-elevated/80 text-foreground-muted hover:text-foreground hover:bg-surface-elevated border border-border/60'
+                    ? 'liquid-glass-prominent shadow-md'
+                    : 'liquid-glass-control text-white/70 hover:text-white'
                 }`}
               >
                 {pName}

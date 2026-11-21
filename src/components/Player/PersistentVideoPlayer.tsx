@@ -330,7 +330,7 @@ export const PersistentVideoPlayer: React.FC = () => {
 
             {showPlayerQualityMenu && (
               <div
-                className="absolute right-0 top-9 w-52 bg-[#1f1f1f] border border-white/20 rounded-2xl p-1.5 shadow-2xl z-50 text-white space-y-0.5 animate-fadeIn"
+                className="absolute right-0 top-9 w-52 liquid-glass-card rounded-2xl p-1.5 shadow-[0_20px_50px_rgba(0,0,0,0.6)] z-50 text-white space-y-0.5 animate-fadeIn border border-white/20"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="px-3 py-1.5 text-[10px] font-bold text-white/60 uppercase tracking-wider border-b border-white/10 mb-1">
@@ -343,9 +343,9 @@ export const PersistentVideoPlayer: React.FC = () => {
                       setVideoQuality(q.id);
                       setShowPlayerQualityMenu(false);
                     }}
-                    className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
+                    className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
                       (videoQuality || 'hd1080') === q.id
-                        ? 'bg-red-600 text-white font-bold'
+                        ? 'liquid-glass-prominent font-bold'
                         : 'hover:bg-white/10 text-white/80'
                     }`}
                   >
@@ -364,8 +364,8 @@ export const PersistentVideoPlayer: React.FC = () => {
               e.stopPropagation();
               toggleTheaterMode();
             }}
-            className={`p-1.5 rounded-full border border-white/20 backdrop-blur-md shadow-lg transition-all ${
-              isTheaterMode ? 'bg-red-600 text-white' : 'bg-black/75 hover:bg-black text-white/90'
+            className={`p-1.5 rounded-full transition-all ${
+              isTheaterMode ? 'liquid-glass-prominent' : 'liquid-glass-control text-white/90 hover:text-white'
             }`}
             title={isTheaterMode ? "Exit Theater Mode" : "Theater Mode (Cinema Width)"}
           >
@@ -379,7 +379,7 @@ export const PersistentVideoPlayer: React.FC = () => {
               e.stopPropagation();
               togglePiP();
             }}
-            className="p-1.5 rounded-full bg-black/75 hover:bg-black text-white/90 border border-white/20 backdrop-blur-md shadow-lg transition-all"
+            className="p-1.5 rounded-full liquid-glass-control text-white/90 hover:text-white"
             title="Picture-in-Picture (Sidebar PiP)"
           >
             <PictureInPicture2 className="w-4 h-4" />
@@ -398,7 +398,7 @@ export const PersistentVideoPlayer: React.FC = () => {
                 setIsFullscreen(false);
               }
             }}
-            className="p-1.5 rounded-full bg-black/75 hover:bg-black text-white/90 border border-white/20 backdrop-blur-md shadow-lg transition-all"
+            className="p-1.5 rounded-full liquid-glass-control text-white/90 hover:text-white"
             title="Fullscreen"
           >
             <Maximize2 className="w-4 h-4" />
@@ -411,7 +411,7 @@ export const PersistentVideoPlayer: React.FC = () => {
               e.stopPropagation();
               closeVideo();
             }}
-            className="p-1.5 rounded-full bg-black/75 hover:bg-red-600 text-white/90 hover:text-white border border-white/20 backdrop-blur-md shadow-lg transition-all"
+            className="p-1.5 rounded-full liquid-glass-control hover:bg-red-600/80 text-white/90 hover:text-white"
             title="Close Video"
           >
             <X className="w-4 h-4" />

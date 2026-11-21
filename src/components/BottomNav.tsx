@@ -62,9 +62,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, setActiveTab })
           />
 
           {/* Sheet Body */}
-          <div className="relative bg-[#14151b]/95 dark:bg-[#0c0d12]/95 backdrop-blur-2xl border-t border-x border-white/15 rounded-t-[32px] p-5 shadow-[0_-12px_48px_rgba(0,0,0,0.6)] z-10 space-y-4 animate-slideUp max-h-[85vh] overflow-y-auto pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
+          <div className="relative liquid-glass-card rounded-t-[32px] p-5 shadow-[0_-16px_56px_rgba(0,0,0,0.7)] z-10 space-y-4 animate-slideUp max-h-[85vh] overflow-y-auto pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
             {/* Grab Handle */}
-            <div className="w-10 h-1 bg-white/20 rounded-full mx-auto -mt-1 mb-2" />
+            <div className="w-10 h-1 bg-white/25 rounded-full mx-auto -mt-1 mb-2 shadow-sm" />
 
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
               <div className="flex items-center gap-2">
@@ -121,8 +121,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, setActiveTab })
         </div>
       )}
 
-      {/* BitChord Authentic Floating Liquid Glass Bottom Bar */}
-      <nav className="w-full bg-[#121318]/85 dark:bg-[#0a0a0e]/85 backdrop-blur-2xl border border-white/15 dark:border-white/10 rounded-full shadow-[0_12px_40px_rgba(0,0,0,0.55)] p-1.5 flex items-center justify-between select-none">
+      {/* Liquid Glass Floating Navigation Capsule */}
+      <nav className="w-full liquid-glass rounded-full p-1.5 flex items-center justify-between select-none">
         {primaryTabs.map((tab) => {
           const Icon = tab.icon;
           const isSelected = activeTab === tab.id;
@@ -130,10 +130,10 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, setActiveTab })
             <button
               key={tab.id}
               onClick={() => handleSelectTab(tab.id)}
-              className={`relative flex items-center justify-center gap-1.5 py-2 px-3 rounded-full transition-all duration-200 active:scale-90 ${
+              className={`relative flex items-center justify-center gap-1.5 py-2 px-3 rounded-full transition-all duration-200 active:scale-95 ${
                 isSelected
-                  ? 'bg-primary text-white shadow-md shadow-primary/35 font-bold'
-                  : 'text-white/70 hover:text-white hover:bg-white/10 font-medium'
+                  ? 'liquid-glass-prominent font-bold'
+                  : 'text-white/80 hover:text-white hover:bg-white/10 font-medium'
               }`}
             >
               <Icon className={`w-4 h-4 transition-transform duration-200 ${isSelected ? 'scale-110' : ''}`} />
@@ -147,10 +147,10 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, setActiveTab })
         {/* More Tab */}
         <button
           onClick={() => setIsMoreOpen(true)}
-          className={`relative flex items-center justify-center gap-1.5 py-2 px-3 rounded-full transition-all duration-200 active:scale-90 ${
+          className={`relative flex items-center justify-center gap-1.5 py-2 px-3 rounded-full transition-all duration-200 active:scale-95 ${
             isMoreActive
-              ? 'bg-primary text-white shadow-md shadow-primary/35 font-bold'
-              : 'text-white/70 hover:text-white hover:bg-white/10 font-medium'
+              ? 'liquid-glass-prominent font-bold'
+              : 'text-white/80 hover:text-white hover:bg-white/10 font-medium'
           }`}
         >
           <div className="relative flex items-center justify-center">

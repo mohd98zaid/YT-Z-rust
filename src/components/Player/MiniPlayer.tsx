@@ -151,7 +151,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
   if (mode === 'mobile') {
     return (
       <div 
-        className="relative w-full bg-[#14151b]/90 dark:bg-[#0c0d12]/90 backdrop-blur-2xl border border-white/15 dark:border-white/10 rounded-2xl shadow-[0_12px_36px_rgba(0,0,0,0.55)] p-2 select-none overflow-hidden active:scale-[0.99] transition-transform"
+        className="relative w-full liquid-glass rounded-2xl p-2 select-none overflow-hidden active:scale-[0.99] transition-transform shadow-2xl"
       >
         {/* Micro Progress Bar along bottom edge */}
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10 overflow-hidden rounded-b-2xl pointer-events-none">
@@ -171,7 +171,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
               <img
                 src={currentTrack.thumbnail || '/placeholder.png'}
                 alt={currentTrack.title}
-                className="w-11 h-11 rounded-xl object-cover shadow-md border border-white/10"
+                className="w-11 h-11 rounded-xl object-cover shadow-md border border-white/15"
               />
               {isPlaying && (
                 <span className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-primary flex items-center justify-center ring-2 ring-[#14151b]">
@@ -181,15 +181,15 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
             </div>
 
             <div className="min-w-0 flex-1 pr-1">
-              <h4 className="font-bold text-xs text-white truncate">{currentTrack.title}</h4>
+              <h4 className="font-bold text-xs text-white truncate drop-shadow-sm">{currentTrack.title}</h4>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <p className="text-[11px] text-white/70 truncate">{currentTrack.artist}</p>
+                <p className="text-[11px] text-white/80 truncate">{currentTrack.artist}</p>
                 {audioStats?.isLossless ? (
                   <span className="shrink-0 px-1.5 py-0.2 rounded text-[8px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono tracking-wider">
                     FLAC 24-bit
                   </span>
                 ) : (
-                  <span className="shrink-0 px-1 py-0.2 rounded text-[8px] font-mono text-white/60 bg-white/10 border border-white/15">
+                  <span className="shrink-0 px-1 py-0.2 rounded text-[8px] font-mono text-white/70 bg-white/10 border border-white/15">
                     OPUS
                   </span>
                 )}
@@ -201,7 +201,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
           <div className="flex items-center gap-1 shrink-0 pr-1">
             <button
               onClick={previous}
-              className="p-1.5 text-white/75 hover:text-white active:scale-90 transition-transform"
+              className="p-1.5 text-white/80 hover:text-white active:scale-90 transition-transform"
               title="Previous track"
             >
               <SkipBack className="w-4 h-4 fill-current" />
@@ -210,7 +210,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
             <button
               onClick={togglePlay}
               disabled={isLoading}
-              className="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center shadow-md shadow-primary/35 active:scale-90 transition-transform"
+              className="w-9 h-9 rounded-full liquid-glass-prominent flex items-center justify-center active:scale-90 transition-transform shadow-lg"
               title={isPlaying ? 'Pause' : 'Play'}
             >
               {isLoading ? (
@@ -224,7 +224,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
 
             <button
               onClick={next}
-              className="p-1.5 text-white/75 hover:text-white active:scale-90 transition-transform"
+              className="p-1.5 text-white/80 hover:text-white active:scale-90 transition-transform"
               title="Next track"
             >
               <SkipForward className="w-4 h-4 fill-current" />
@@ -237,8 +237,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
 
   return (
     <div 
-      style={{ backgroundColor: 'var(--bg-surface)' }}
-      className="hidden md:flex h-20 bg-surface border-t border-border px-4 items-center justify-between shrink-0 select-none z-30 relative shadow-2xl"
+      className="hidden md:flex h-20 liquid-glass border-t border-white/15 px-6 items-center justify-between shrink-0 select-none z-30 relative shadow-[0_-12px_48px_rgba(0,0,0,0.6)]"
     >
       {/* Top Thin Progress Bar (Clickable) */}
       <div
@@ -377,7 +376,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
           <button
             onClick={togglePlay}
             disabled={isLoading}
-            className="w-10 h-10 rounded-full bg-primary hover:bg-primary-hover text-white flex items-center justify-center shadow-lg shadow-primary/30 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
+            className="w-11 h-11 rounded-full liquid-glass-prominent flex items-center justify-center transition-all hover:scale-105 active:scale-95 disabled:opacity-50 cursor-pointer"
             title={isPlaying ? 'Pause' : 'Play'}
           >
             {isLoading ? (

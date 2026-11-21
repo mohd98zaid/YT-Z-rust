@@ -263,7 +263,7 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
 
   return (
     <div 
-      className="fixed inset-0 z-[700] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fadeIn"
+      className="fixed inset-0 z-[700] flex items-center justify-center p-4 bg-black/75 backdrop-blur-xl animate-fadeIn"
       onClick={onClose}
     >
       {/* Dynamic Keyframe Animation for Traveling Signal Pulse Dot */}
@@ -301,7 +301,7 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
       `}</style>
 
       <div 
-        className="relative w-full max-w-[390px] max-h-[88vh] bg-[#1c1c1e] border border-white/[0.08] rounded-[32px] p-6 shadow-2xl text-white flex flex-col font-sans animate-scaleUp"
+        className="relative w-full max-w-[390px] max-h-[88vh] liquid-glass-card rounded-[32px] p-6 shadow-[0_25px_65px_rgba(0,0,0,0.65)] text-white flex flex-col font-sans animate-scaleUp border border-white/20"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Drag Handle */}

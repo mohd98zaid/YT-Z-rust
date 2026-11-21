@@ -54,7 +54,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
 
   return (
     <aside
-      className={`hidden md:flex bg-surface border-r border-border flex-col justify-between shrink-0 select-none z-20 backdrop-blur-xl transition-all duration-300 ease-in-out ${
+      className={`hidden md:flex liquid-glass border-r border-white/15 flex-col justify-between shrink-0 select-none z-20 transition-all duration-300 ease-in-out ${
         isSidebarCollapsed ? 'w-16 lg:w-[72px]' : 'w-60 lg:w-64'
       }`}
     >
@@ -65,7 +65,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
           <div className="p-3 flex flex-col items-center gap-3">
             <button
               onClick={toggleSidebarCollapse}
-              className="p-2 rounded-xl text-foreground-muted hover:text-foreground hover:bg-surface-elevated transition-colors"
+              className="p-2 rounded-xl text-foreground-muted hover:text-foreground liquid-glass-control"
               title="Expand sidebar"
             >
               <Menu className="w-5 h-5" />
@@ -73,7 +73,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
             <img
               src="/app-icon.webp"
               alt="YT-Z"
-              className="w-8 h-8 rounded-lg object-cover shadow-sm border border-white/10"
+              className="w-8 h-8 rounded-lg object-cover shadow-sm border border-white/20"
             />
           </div>
         ) : (
@@ -83,7 +83,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
               <img
                 src="/app-icon.webp"
                 alt="YT-Z Logo"
-                className="w-9 h-9 rounded-xl object-cover shadow-lg shadow-primary/25 border border-white/10 shrink-0"
+                className="w-9 h-9 rounded-xl object-cover shadow-lg shadow-primary/25 border border-white/20 shrink-0"
               />
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
@@ -100,7 +100,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
 
             <button
               onClick={toggleSidebarCollapse}
-              className="p-2 rounded-xl text-foreground-muted hover:text-foreground hover:bg-surface-elevated transition-colors shrink-0"
+              className="p-2 rounded-xl text-foreground-muted hover:text-foreground liquid-glass-control shrink-0"
               title="Collapse sidebar (Mini rail mode)"
             >
               <Menu className="w-5 h-5" />
@@ -108,14 +108,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
           </div>
         )}
 
-        {/* Navigation Items (YouTube Web Style) */}
+        {/* Navigation Items (YouTube Web Style with Liquid Glass) */}
         <nav className={`mt-2 space-y-1 ${isSidebarCollapsed ? 'px-1.5' : 'px-3'}`}>
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
 
             if (isSidebarCollapsed) {
-              /* Mini Icon + Small Label Stack (Official YouTube Web mini sidebar layout) */
+              /* Mini Icon + Small Label Stack */
               return (
                 <button
                   key={item.id}
@@ -123,8 +123,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
                   title={item.label}
                   className={`w-full flex flex-col items-center justify-center py-2.5 px-1 rounded-xl transition-all duration-150 relative ${
                     isActive
-                      ? 'bg-primary text-white shadow-md shadow-primary/25 font-bold'
-                      : 'text-foreground-muted hover:text-foreground hover:bg-surface-elevated'
+                      ? 'liquid-glass-prominent font-bold'
+                      : 'text-foreground-muted hover:text-foreground hover:bg-white/10'
                   }`}
                 >
                   <Icon className={`w-5 h-5 mb-1 ${isActive ? 'text-white' : 'text-foreground-muted'}`} />
@@ -132,7 +132,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
                     {item.short}
                   </span>
                   {item.badge !== undefined && item.badge > 0 && (
-                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary ring-2 ring-surface animate-pulse" />
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary ring-2 ring-white/20 animate-pulse" />
                   )}
                 </button>
               );
@@ -145,8 +145,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
                 onClick={() => setActiveTab(item.id)}
                 className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-150 ${
                   isActive
-                    ? 'bg-primary text-white shadow-md shadow-primary/25 font-semibold'
-                    : 'text-foreground-muted hover:text-foreground hover:bg-surface-elevated'
+                    ? 'liquid-glass-prominent font-semibold'
+                    : 'text-foreground-muted hover:text-foreground hover:bg-white/10'
                 }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
@@ -176,14 +176,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
           id="sidebar-pip-anchor"
           className={`w-full transition-all duration-300 rounded-2xl ${
             activeVideo && (isPiP || activeTab !== 'youtube')
-              ? 'aspect-video bg-black/40 border border-white/10 shadow-lg'
+              ? 'aspect-video bg-black/60 border border-white/20 shadow-xl'
               : 'h-0 opacity-0 overflow-hidden'
           }`}
         />
       </div>
 
       {/* Footer Info */}
-      <div className={`border-t border-border/50 text-[11px] text-foreground-subtle transition-all ${isSidebarCollapsed ? 'p-2 flex justify-center' : 'p-4 space-y-2'}`}>
+      <div className={`border-t border-white/10 text-[11px] text-foreground-subtle transition-all ${isSidebarCollapsed ? 'p-2 flex justify-center' : 'p-4 space-y-2'}`}>
         {isSidebarCollapsed ? (
           <span
             className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"
@@ -196,7 +196,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
                 <span className="text-foreground-muted font-medium">Core Engine</span>
               </div>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface-elevated text-foreground-muted font-mono">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 border border-white/15 text-foreground-muted font-mono">
                 {typeof window !== 'undefined' && window.location.hostname ? `${window.location.hostname}:${window.location.port || '47892'}` : '127.0.0.1:47892'}
               </span>
             </div>

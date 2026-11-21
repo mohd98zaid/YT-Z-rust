@@ -545,10 +545,10 @@ export const ExpandedPlayer: React.FC = () => {
         onTouchStart={handleSheetTouchStart}
         onTouchMove={handleSheetTouchMove}
         onTouchEnd={handleSheetTouchEnd}
-        className="flex md:hidden relative z-50 flex-col px-4 pt-1.5 pb-2 border-b border-white/10 shrink-0 select-none touch-none"
+        className="flex md:hidden relative z-50 flex-col px-4 pt-1.5 pb-2 border-b border-white/10 shrink-0 select-none touch-none liquid-glass"
       >
         {/* Top Grab Handle Pill for Swipe-down gesture */}
-        <div className="w-10 h-1 bg-white/25 rounded-full mx-auto mb-2 pointer-events-none" />
+        <div className="w-10 h-1 bg-white/30 rounded-full mx-auto mb-2 pointer-events-none" />
 
         <div className="flex items-center justify-between w-full">
           {/* Left: Minimize Button */}
@@ -560,7 +560,7 @@ export const ExpandedPlayer: React.FC = () => {
                 setActiveVideoSource(null);
               }
             }}
-            className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-xl border border-white/10 flex items-center justify-center text-foreground active:scale-90 transition-transform"
+            className="w-10 h-10 rounded-full liquid-glass-control flex items-center justify-center text-foreground active:scale-90 transition-transform"
             title="Minimize player"
           >
             <ChevronDown className="w-5 h-5" />
@@ -871,15 +871,14 @@ export const ExpandedPlayer: React.FC = () => {
 
             {qualityMenuOpen && (
               <div 
-                style={{ backgroundColor: 'var(--bg-surface)' }}
-                className="absolute right-0 top-full mt-2 w-84 bg-surface border border-border/80 rounded-2xl p-3 shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 animate-fadeIn space-y-1.5 ring-1 ring-black/10 dark:ring-white/10"
+                className="absolute right-0 top-full mt-2 w-84 liquid-glass-card rounded-2xl p-3 shadow-[0_20px_50px_rgba(0,0,0,0.6)] z-50 animate-fadeIn space-y-1.5 border border-white/20"
               >
-                <div className="flex items-center justify-between pb-2 border-b border-border/60 mb-2">
+                <div className="flex items-center justify-between pb-2 border-b border-white/10 mb-2">
                   <div>
                     <p className="text-xs font-extrabold text-foreground tracking-tight">Streaming Quality</p>
                     <p className="text-[10px] text-foreground-muted">Select audio fidelity or data saver</p>
                   </div>
-                  <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30">
+                  <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded-full liquid-glass-prominent text-white">
                     {audioQuality.replace('_', ' ')}
                   </span>
                 </div>
@@ -895,10 +894,10 @@ export const ExpandedPlayer: React.FC = () => {
                           setAudioQuality(opt.id);
                           setQualityMenuOpen(false);
                         }}
-                        className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left transition-all border ${
+                        className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left transition-all ${
                           isSelected
-                            ? 'bg-primary/15 border-primary/50 text-foreground shadow-sm shadow-primary/10'
-                            : 'bg-surface-elevated/60 hover:bg-surface-elevated border-border/40 hover:border-border text-foreground-muted hover:text-foreground'
+                            ? 'liquid-glass-prominent'
+                            : 'liquid-glass-control text-foreground-muted hover:text-white'
                         }`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-2">
@@ -907,15 +906,15 @@ export const ExpandedPlayer: React.FC = () => {
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5">
-                              <span className={`text-xs font-bold truncate ${isSelected ? 'text-primary' : 'text-foreground'}`}>
+                              <span className="text-xs font-bold truncate text-white">
                                 {opt.label}
                               </span>
-                              {isSelected && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
+                              {isSelected && <Check className="w-3.5 h-3.5 text-white shrink-0" />}
                             </div>
-                            <p className="text-[10px] text-foreground-muted truncate leading-tight mt-0.5">{opt.desc}</p>
+                            <p className="text-[10px] text-white/70 truncate leading-tight mt-0.5">{opt.desc}</p>
                           </div>
                         </div>
-                        <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-md bg-surface border border-border/70 text-foreground shrink-0 shadow-xs">
+                        <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-md bg-black/40 border border-white/20 text-white shrink-0 shadow-xs">
                           {opt.badge}
                         </span>
                       </button>
@@ -1578,18 +1577,18 @@ export const ExpandedPlayer: React.FC = () => {
         {showAudioPipelineCard && (
           <button
             onClick={toggleStatsForNerds}
-            className="w-full max-w-sm flex items-center justify-between px-3.5 py-2 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/10 text-foreground transition-all active:scale-[0.98] group shadow-sm cursor-pointer"
+            className="w-full max-w-sm flex items-center justify-between px-3.5 py-2.5 rounded-2xl liquid-glass-card hover:bg-white/15 text-foreground transition-all active:scale-[0.98] group shadow-sm cursor-pointer border border-white/15"
             title="Inspect live signal path, decoder and output"
           >
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-7 h-7 rounded-full bg-primary/20 text-primary flex items-center justify-center shrink-0">
+              <div className="w-7 h-7 rounded-full liquid-glass-prominent text-white flex items-center justify-center shrink-0">
                 <Activity className="w-3.5 h-3.5" />
               </div>
               <div className="text-left truncate">
-                <div className="text-xs font-semibold text-foreground dark:text-white group-hover:text-primary transition-colors">
+                <div className="text-xs font-semibold text-white group-hover:text-primary transition-colors">
                   Audio Pipeline
                 </div>
-                <div className="text-[10px] text-foreground-muted dark:text-white/60 truncate">
+                <div className="text-[10px] text-white/70 truncate">
                   {isVideoMode
                     ? '16-bit AAC Sync · 44.1 kHz'
                     : audioStats?.isLossless
@@ -1598,19 +1597,19 @@ export const ExpandedPlayer: React.FC = () => {
                 </div>
               </div>
             </div>
-            <ChevronRight className="w-4 h-4 text-foreground-muted group-hover:text-foreground transition-colors shrink-0" />
+            <ChevronRight className="w-4 h-4 text-white/50 group-hover:text-white transition-colors shrink-0" />
           </button>
         )}
 
         {/* Apple Music Bottom Action Bar: Lyrics, EQ, Pipeline, Queue, Download */}
-        <div className="flex items-center justify-between w-full max-w-sm px-2 pt-1 border-t border-white/5">
+        <div className="flex items-center justify-between w-full max-w-sm px-2 pt-1 border-t border-white/10">
           <button
             onClick={() => setMobileView(mobileView === 'lyrics' ? 'artwork' : 'lyrics')}
             title="Synced Lyrics"
             className={`w-10 h-10 flex items-center justify-center rounded-full transition-all active:scale-90 ${
               mobileView === 'lyrics'
-                ? 'bg-primary text-white shadow-md shadow-primary/35 ring-2 ring-primary/40'
-                : 'text-foreground-muted hover:text-foreground hover:bg-white/10'
+                ? 'liquid-glass-prominent shadow-md'
+                : 'liquid-glass-control text-white/70 hover:text-white'
             }`}
           >
             <Mic2 className="w-5 h-5" />
@@ -1621,8 +1620,8 @@ export const ExpandedPlayer: React.FC = () => {
             title="Graphic Equalizer"
             className={`w-10 h-10 flex items-center justify-center rounded-full transition-all active:scale-90 ${
               isEqualizerOpen
-                ? 'bg-primary text-white shadow-md shadow-primary/35'
-                : 'text-foreground-muted hover:text-foreground hover:bg-white/10'
+                ? 'liquid-glass-prominent shadow-md'
+                : 'liquid-glass-control text-white/70 hover:text-white'
             }`}
           >
             <Sliders className="w-5 h-5" />
@@ -1631,7 +1630,7 @@ export const ExpandedPlayer: React.FC = () => {
           <button
             onClick={toggleStatsForNerds}
             title="Inspect Audio Pipeline"
-            className="w-10 h-10 flex items-center justify-center rounded-full text-foreground-muted hover:text-foreground hover:bg-white/10 transition-all active:scale-90"
+            className="w-10 h-10 flex items-center justify-center rounded-full liquid-glass-control text-white/70 hover:text-white transition-all active:scale-90"
           >
             <Activity className="w-5 h-5" />
           </button>
@@ -1641,13 +1640,13 @@ export const ExpandedPlayer: React.FC = () => {
             title="Up Next Queue"
             className={`w-10 h-10 flex items-center justify-center rounded-full transition-all active:scale-90 relative ${
               mobileView === 'queue'
-                ? 'bg-primary text-white shadow-md shadow-primary/35 ring-2 ring-primary/40'
-                : 'text-foreground-muted hover:text-foreground hover:bg-white/10'
+                ? 'liquid-glass-prominent shadow-md'
+                : 'liquid-glass-control text-white/70 hover:text-white'
             }`}
           >
             <ListMusic className="w-5 h-5" />
             {queue.length > 0 && (
-              <span className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-mono flex items-center justify-center font-bold">
+              <span className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-mono flex items-center justify-center font-bold shadow-sm">
                 {queue.length > 99 ? '99+' : queue.length}
               </span>
             )}
@@ -1656,12 +1655,12 @@ export const ExpandedPlayer: React.FC = () => {
           <button
             onClick={handleDownloadCurrent}
             title="Download lossless audio"
-            className={`w-10 h-10 flex items-center justify-center rounded-full border transition-all active:scale-90 ${
+            className={`w-10 h-10 flex items-center justify-center rounded-full transition-all active:scale-90 ${
               downloadQueued
-                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
                 : audioStats?.isLossless
-                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                : 'text-foreground-muted border-transparent hover:text-foreground hover:bg-white/10'
+                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                : 'liquid-glass-control text-white/70 hover:text-white'
             }`}
           >
             <Download className="w-5 h-5" />
@@ -1671,8 +1670,7 @@ export const ExpandedPlayer: React.FC = () => {
 
       {/* Desktop Bottom Expanded Controls Bar (hidden md:flex) */}
       <footer 
-        style={{ backgroundColor: 'var(--bg-surface)' }}
-        className="hidden md:flex relative z-10 px-6 py-2.5 sm:py-3 bg-surface border-t border-border flex-col items-center gap-2 shrink-0"
+        className="hidden md:flex relative z-10 px-6 py-2.5 sm:py-3 liquid-glass border-t border-white/15 flex-col items-center gap-2 shrink-0 shadow-[0_-12px_36px_rgba(0,0,0,0.5)]"
       >
         {/* Progress Bar with Timers & Touch-Scrubbing */}
         <div className="w-full max-w-2xl flex items-center gap-3">
@@ -1883,18 +1881,18 @@ export const ExpandedPlayer: React.FC = () => {
           {showAudioPipelineCard && (
             <button
               onClick={toggleStatsForNerds}
-              className="w-full flex items-center justify-between p-3 rounded-2xl bg-surface/90 hover:bg-surface-elevated border border-border text-foreground transition-all active:scale-[0.99] group shadow-sm cursor-pointer"
+              className="w-full flex items-center justify-between p-3 rounded-2xl liquid-glass-card hover:bg-white/15 border border-white/15 text-foreground transition-all active:scale-[0.99] group shadow-sm cursor-pointer"
               title="Inspect live signal path, decoder and output"
             >
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-8 h-8 rounded-full bg-primary/15 text-primary flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-full liquid-glass-prominent text-white flex items-center justify-center shrink-0">
                   <Activity className="w-4 h-4" />
                 </div>
                 <div className="text-left truncate">
-                  <div className="text-[13px] font-semibold text-foreground group-hover:text-primary transition-colors">
+                  <div className="text-[13px] font-semibold text-white group-hover:text-primary transition-colors">
                     Audio Pipeline
                   </div>
-                  <div className="text-[11px] text-foreground-muted truncate">
+                  <div className="text-[11px] text-white/70 truncate">
                     {isVideoMode
                       ? '16-bit AAC Sync · 44.1 kHz'
                       : audioStats?.isLossless
@@ -1903,7 +1901,7 @@ export const ExpandedPlayer: React.FC = () => {
                   </div>
                 </div>
               </div>
-              <ChevronRight className="w-4 h-4 text-foreground-muted group-hover:text-foreground transition-colors shrink-0" />
+              <ChevronRight className="w-4 h-4 text-white/50 group-hover:text-white transition-colors shrink-0" />
             </button>
           )}
         </div>
@@ -1913,11 +1911,11 @@ export const ExpandedPlayer: React.FC = () => {
       {isMoreMenuOpen && (
         <div className="fixed inset-0 z-[700] md:hidden flex flex-col justify-end">
           <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fadeIn"
+            className="absolute inset-0 bg-black/70 backdrop-blur-md animate-fadeIn"
             onClick={() => setIsMoreMenuOpen(false)}
           />
-          <div className="relative bg-[#14151b]/95 backdrop-blur-2xl border-t border-white/15 rounded-t-[32px] p-5 shadow-2xl z-10 space-y-4 animate-slideUp pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
-            <div className="w-10 h-1 bg-white/20 rounded-full mx-auto -mt-1 mb-2" />
+          <div className="relative liquid-glass-card border-t border-white/20 rounded-t-[32px] p-5 shadow-2xl z-10 space-y-4 animate-slideUp pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
+            <div className="w-10 h-1 bg-white/30 rounded-full mx-auto -mt-1 mb-2" />
             <div className="flex items-center gap-3 pb-3 border-b border-white/10">
               <img
                 src={currentTrack.thumbnail || '/placeholder.png'}
