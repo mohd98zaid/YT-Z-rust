@@ -225,7 +225,7 @@ export const PersistentVideoPlayer: React.FC = () => {
       left: `${coords.left}px`,
       width: `${coords.width}px`,
       height: `${coords.height}px`,
-      zIndex: isCinemaMode ? 20 : 35,
+      zIndex: isCinemaMode ? 35 : 45,
       transition: 'top 0.35s cubic-bezier(0.16, 1, 0.3, 1), left 0.35s cubic-bezier(0.16, 1, 0.3, 1), width 0.35s cubic-bezier(0.16, 1, 0.3, 1), height 0.35s cubic-bezier(0.16, 1, 0.3, 1), border-radius 0.35s ease',
     };
   } else if (isCinemaMode) {

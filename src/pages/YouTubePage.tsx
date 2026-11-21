@@ -412,97 +412,99 @@ export const YouTubePage: React.FC = () => {
       {/* ========================================================================= */}
       {/* 📱 TOP BAR (MOBILE VIEW < 768px - AS SEEN IN SAMSUNG S24 SCREENSHOT 1) */}
       {/* ========================================================================= */}
-      <div className="block md:hidden sticky top-0 z-40 bg-[#0f0f0f]/95 backdrop-blur-md border-b border-white/10">
-        <div className="px-4 py-2.5 flex items-center justify-between">
-          <div
-            onClick={() => {
-              setSearchResults([]);
-              setSearchQuery('');
-              loadTrending('All');
-            }}
-          >
-            <YouTubeLogo />
-          </div>
-
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => showToast('Cast to TV device search initiated')}
-              className="p-2 rounded-full hover:bg-white/10 text-white active:scale-95 transition-all"
-              title="Cast to Device"
+      {!activeVideo && (
+        <div className="block md:hidden sticky top-0 z-30 bg-[#0f0f0f]/95 backdrop-blur-md border-b border-white/10">
+          <div className="px-4 py-2.5 flex items-center justify-between">
+            <div
+              onClick={() => {
+                setSearchResults([]);
+                setSearchQuery('');
+                loadTrending('All');
+              }}
             >
-              <Cast className="w-5 h-5 text-white/90" />
-            </button>
-            <button
-              onClick={() => showToast('No new notifications')}
-              className="p-2 rounded-full hover:bg-white/10 text-white active:scale-95 transition-all relative"
-              title="Notifications"
-            >
-              <Bell className="w-5 h-5 text-white/90" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-600" />
-            </button>
-            <button
-              onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
-              className="p-2 rounded-full hover:bg-white/10 text-white active:scale-95 transition-all"
-              title="Search"
-            >
-              <Search className="w-5 h-5 text-white/90" />
-            </button>
-            <button
-              onClick={handlePaste}
-              className="p-2 rounded-full hover:bg-white/10 text-white active:scale-95 transition-all"
-              title="Paste YouTube link"
-            >
-              <Clipboard className="w-5 h-5 text-white/90" />
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Search Expandable Input */}
-        {mobileSearchOpen && (
-          <form onSubmit={handleSearch} className="px-3 pb-3 flex gap-2 animate-fadeIn">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search YouTube"
-                className="w-full bg-[#222222] text-white placeholder:text-white/40 text-xs rounded-full pl-9 pr-3 py-2 outline-none focus:ring-1 focus:ring-red-500"
-                autoFocus
-              />
+              <YouTubeLogo />
             </div>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-[#ff0000] text-white text-xs font-bold rounded-full shrink-0"
-            >
-              Search
-            </button>
-          </form>
-        )}
 
-        {/* Mobile Category Filter Pills Bar */}
-        <div className="px-4 py-2 flex items-center gap-2 overflow-x-auto scrollbar-none border-t border-white/5">
-          {categoryPills.map((cat) => {
-            const isSelected = trendingCategory === cat && searchResults.length === 0;
-            return (
+            <div className="flex items-center gap-1">
               <button
-                key={cat}
-                onClick={() => {
-                  setSearchResults([]);
-                  loadTrending(cat);
-                }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
-                  isSelected
-                    ? 'bg-white text-black font-bold shadow-sm'
-                    : 'bg-[#272727] text-white hover:bg-[#3f3f3f]'
-                }`}
+                onClick={() => showToast('Cast to TV device search initiated')}
+                className="p-2 rounded-full hover:bg-white/10 text-white active:scale-95 transition-all"
+                title="Cast to Device"
               >
-                {cat}
+                <Cast className="w-5 h-5 text-white/90" />
               </button>
-            );
-          })}
+              <button
+                onClick={() => showToast('No new notifications')}
+                className="p-2 rounded-full hover:bg-white/10 text-white active:scale-95 transition-all relative"
+                title="Notifications"
+              >
+                <Bell className="w-5 h-5 text-white/90" />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-600" />
+              </button>
+              <button
+                onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
+                className="p-2 rounded-full hover:bg-white/10 text-white active:scale-95 transition-all"
+                title="Search"
+              >
+                <Search className="w-5 h-5 text-white/90" />
+              </button>
+              <button
+                onClick={handlePaste}
+                className="p-2 rounded-full hover:bg-white/10 text-white active:scale-95 transition-all"
+                title="Paste YouTube link"
+              >
+                <Clipboard className="w-5 h-5 text-white/90" />
+              </button>
+            </div>
+          </div>
+
+          {/* Mobile Search Expandable Input */}
+          {mobileSearchOpen && (
+            <form onSubmit={handleSearch} className="px-3 pb-3 flex gap-2 animate-fadeIn">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search YouTube"
+                  className="w-full bg-[#222222] text-white placeholder:text-white/40 text-xs rounded-full pl-9 pr-3 py-2 outline-none focus:ring-1 focus:ring-red-500"
+                  autoFocus
+                />
+              </div>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-[#ff0000] text-white text-xs font-bold rounded-full shrink-0"
+              >
+                Search
+              </button>
+            </form>
+          )}
+
+          {/* Mobile Category Filter Pills Bar */}
+          <div className="px-4 py-2 flex items-center gap-2 overflow-x-auto scrollbar-none border-t border-white/5">
+            {categoryPills.map((cat) => {
+              const isSelected = trendingCategory === cat && searchResults.length === 0;
+              return (
+                <button
+                  key={cat}
+                  onClick={() => {
+                    setSearchResults([]);
+                    loadTrending(cat);
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+                    isSelected
+                      ? 'bg-white text-black font-bold shadow-sm'
+                      : 'bg-[#272727] text-white hover:bg-[#3f3f3f]'
+                  }`}
+                >
+                  {cat}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ========================================================================= */}
       {/* 💻 TOP BAR (DESKTOP VIEW >= 768px - AS SEEN IN YOUTUBE WEB SCREENSHOT 2)  */}
@@ -606,7 +608,7 @@ export const YouTubePage: React.FC = () => {
               <div
                 ref={sentinelRef}
                 id="youtube-cinema-anchor"
-                className="sticky top-0 md:static z-40 relative w-full aspect-video bg-black overflow-hidden shadow-2xl rounded-none md:rounded-2xl max-h-[52vh]"
+                className="sticky top-0 md:static z-10 relative w-full aspect-video bg-transparent overflow-hidden shadow-2xl rounded-none md:rounded-2xl max-h-[52vh]"
               >
                 {isPiP && (
                   <div
