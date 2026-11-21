@@ -24,6 +24,7 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
     eqPreset,
     volume,
     volumeNormalization,
+    twoSongCache,
   } = usePlayerStore();
 
   const [deviceLabel, setDeviceLabel] = useState<string>('');
@@ -389,6 +390,16 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
                   <div>
                     <span className="font-semibold text-white/95">Channels: </span>
                     <span className="text-zinc-300 font-normal">Stereo</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-white/95">2-Song RAM Cache: </span>
+                    <span className="text-zinc-300 font-normal">
+                      {twoSongCache?.currentLoaded ? 'Playing [100% Buffered]' : `Buffering (${twoSongCache?.currentBufferPercent || 0}%)`}
+                      {' • '}
+                      <span className={twoSongCache?.nextReady ? 'text-emerald-400 font-medium' : 'text-zinc-400'}>
+                        {twoSongCache?.nextReady ? 'Next Track Ready in Cache' : 'Next Track Standby'}
+                      </span>
+                    </span>
                   </div>
                 </div>
               </div>

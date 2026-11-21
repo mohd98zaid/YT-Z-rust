@@ -91,6 +91,10 @@ export const api = {
     }>(
       `${API_BASE}/api/stream/${videoId}?title=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist)}&duration=${duration}&quality=${quality}`
     ),
+  preloadTrack: (videoId: string, title = '', artist = '', duration = 0, quality = 'auto') =>
+    fetchJson<{ status: string; videoId: string }>(
+      `${API_BASE}/api/stream/${encodeURIComponent(videoId)}/preload?title=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist)}&duration=${duration}&quality=${quality}`
+    ).catch(() => ({ status: 'skipped', videoId })),
   getSkipSegments: (videoId: string) => fetchJson<SponsorBlockSegment[]>(`${API_BASE}/api/stream/${videoId}/segments`),
   getVideoStreamInfo: (videoId: string) =>
     fetchJson<{

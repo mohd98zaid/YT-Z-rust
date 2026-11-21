@@ -99,6 +99,7 @@ export const ExpandedPlayer: React.FC = () => {
     showAudiophileSpecs,
     showAudioQualityBadge,
     showAudioPipelineCard,
+    twoSongCache,
   } = usePlayerStore();
 
   const { queueDownload } = useDownloadStore();
@@ -1457,8 +1458,15 @@ export const ExpandedPlayer: React.FC = () => {
           >
             {/* Scrubber Track */}
             <div className="w-full h-1.5 bg-white/20 rounded-full overflow-hidden relative pointer-events-none">
+              {/* Two-Song Cache Slot 1 Buffer Progress */}
               <div
-                className="h-full bg-gradient-to-r from-primary to-accent rounded-full transition-none"
+                className="absolute top-0 left-0 h-full bg-white/30 rounded-full transition-all duration-300 pointer-events-none"
+                style={{
+                  width: `${twoSongCache?.currentLoaded ? 100 : (twoSongCache?.currentBufferPercent || 0)}%`,
+                }}
+              />
+              <div
+                className="h-full bg-gradient-to-r from-primary to-accent rounded-full transition-none relative z-10"
                 style={{
                   width: `${
                     duration > 0
@@ -1694,8 +1702,15 @@ export const ExpandedPlayer: React.FC = () => {
             className="flex-1 h-6 flex items-center cursor-pointer relative touch-none select-none group"
           >
             <div className="w-full h-2 bg-surface-elevated rounded-full overflow-hidden relative pointer-events-none">
+              {/* Two-Song Cache Slot 1 Buffer Progress */}
               <div
-                className="h-full bg-gradient-to-r from-primary to-accent rounded-full transition-none"
+                className="absolute top-0 left-0 h-full bg-white/20 rounded-full transition-all duration-300 pointer-events-none"
+                style={{
+                  width: `${twoSongCache?.currentLoaded ? 100 : (twoSongCache?.currentBufferPercent || 0)}%`,
+                }}
+              />
+              <div
+                className="h-full bg-gradient-to-r from-primary to-accent rounded-full transition-none relative z-10"
                 style={{
                   width: `${
                     duration > 0

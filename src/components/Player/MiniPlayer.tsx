@@ -53,6 +53,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
     lastSkippedNotice,
     audioStats,
     showMiniPlayerCodecBadge,
+    twoSongCache,
     activeVideoSource,
     sleepTimerRemaining,
     sleepTimerStopAfterTrack,
@@ -155,8 +156,13 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
       >
         {/* Micro Progress Bar along bottom edge */}
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10 overflow-hidden rounded-b-2xl pointer-events-none">
+          {/* Two-Song Cache Slot 1 Buffer Progress */}
           <div
-            className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-200"
+            className="absolute top-0 left-0 h-full bg-white/25 rounded-full transition-all duration-300 pointer-events-none"
+            style={{ width: `${twoSongCache?.currentLoaded ? 100 : (twoSongCache?.currentBufferPercent || 0)}%` }}
+          />
+          <div
+            className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-200 relative z-10"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
@@ -241,15 +247,20 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
     >
       {/* Top Thin Progress Bar (Clickable) */}
       <div
-        className="absolute top-0 left-0 right-0 h-1 bg-border/60 cursor-pointer group hover:h-1.5 transition-all"
+        className="absolute top-0 left-0 right-0 h-1 bg-border/60 cursor-pointer group hover:h-1.5 transition-all overflow-hidden"
         onClick={(e) => {
           const rect = e.currentTarget.getBoundingClientRect();
           const clickPos = (e.clientX - rect.left) / rect.width;
           seek(clickPos * duration);
         }}
       >
+        {/* Two-Song Cache Slot 1 Buffer Progress */}
         <div
-          className="h-full bg-gradient-to-r from-primary to-accent relative transition-all"
+          className="absolute top-0 left-0 h-full bg-white/20 transition-all duration-300 pointer-events-none"
+          style={{ width: `${twoSongCache?.currentLoaded ? 100 : (twoSongCache?.currentBufferPercent || 0)}%` }}
+        />
+        <div
+          className="h-full bg-gradient-to-r from-primary to-accent relative transition-all z-10"
           style={{ width: `${progressPercent}%` }}
         >
           <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white shadow-md opacity-0 group-hover:opacity-100 transition-opacity" />
