@@ -21,7 +21,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [showDropdown, setShowDropdown] = useState(false);
   const { currentTheme } = useThemeStore();
   const { toggleEqualizer, eqEnabled } = usePlayerStore();
-  const { isSidebarCollapsed, toggleSidebarCollapse } = useNavigationStore();
+  const { activeTab, isSidebarCollapsed, toggleSidebarCollapse, setYouTubeSearchQuery } = useNavigationStore();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const loadSearchHistory = async () => {
@@ -64,7 +64,11 @@ export const Header: React.FC<HeaderProps> = ({
     if (!q) return;
     setShowDropdown(false);
     api.saveSearchQuery(q).then(() => loadSearchHistory()).catch(() => {});
-    onSearchSubmit(q);
+    if (activeTab === 'youtube') {
+      setYouTubeSearchQuery(q);
+    } else {
+      onSearchSubmit(q);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -133,7 +137,13 @@ export const Header: React.FC<HeaderProps> = ({
               loadSearchHistory();
             }}
             onKeyDown={handleKeyDown}
-            placeholder="Search music, artists or links..."
+            placeholder={
+              activeTab === 'youtube'
+                ? 'Search YouTube videos or paste video link...'
+                : activeTab === 'downloader'
+                ? 'Search music or paste media link to download...'
+                : 'Search music, artists or links...'
+            }
             className="w-full bg-white/10 hover:bg-white/15 focus:bg-white/15 border border-white/20 focus:border-primary/50 text-foreground placeholder:text-foreground-subtle text-xs sm:text-sm rounded-full pl-9 sm:pl-10 pr-9 py-2 outline-none transition-all duration-200 focus:ring-2 focus:ring-primary/30 placeholder:truncate shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_2px_8px_rgba(0,0,0,0.2)] backdrop-blur-xl"
           />
           {searchQuery && (

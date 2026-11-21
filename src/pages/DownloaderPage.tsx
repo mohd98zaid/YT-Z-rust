@@ -133,25 +133,25 @@ export const DownloaderPage: React.FC = () => {
   return (
     <div className="p-4 sm:p-6 md:p-8 space-y-6 md:space-y-8 max-w-7xl mx-auto pb-40 md:pb-28">
       {/* Downloader Header Banner */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-6 border-b border-border">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 border-b border-white/10">
         <div>
-          <h1 className="text-3xl font-black text-foreground tracking-tight flex items-center gap-3">
-            <Download className="w-8 h-8 text-primary" />
+          <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight flex items-center gap-3">
+            <Download className="w-7 h-7 sm:w-8 sm:h-8 text-primary" />
             <span>Industrial Downloader</span>
           </h1>
-          <p className="text-sm text-foreground-muted mt-1">
+          <p className="text-xs sm:text-sm text-foreground-muted mt-1">
             Concurrent queue powered by yt-dlp. Download YouTube & YT Music audio (320k MP3, FLAC) & video up to 4K.
           </p>
         </div>
 
         {/* Quick Type Switcher: Audio vs Video */}
-        <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-surface border border-border">
+        <div className="flex items-center gap-1.5 p-1 rounded-full liquid-glass">
           <button
             onClick={() => setDownloadType('audio')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs transition-all ${
               downloadType === 'audio'
-                ? 'bg-primary text-white shadow-md shadow-primary/25'
-                : 'text-foreground-muted hover:text-foreground'
+                ? 'liquid-glass-pill-active'
+                : 'liquid-glass-pill-inactive'
             }`}
           >
             <FileAudio className="w-4 h-4" />
@@ -159,10 +159,10 @@ export const DownloaderPage: React.FC = () => {
           </button>
           <button
             onClick={() => setDownloadType('video')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs transition-all ${
               downloadType === 'video'
-                ? 'bg-primary text-white shadow-md shadow-primary/25'
-                : 'text-foreground-muted hover:text-foreground'
+                ? 'liquid-glass-pill-active'
+                : 'liquid-glass-pill-inactive'
             }`}
           >
             <FileVideo className="w-4 h-4" />
@@ -172,7 +172,7 @@ export const DownloaderPage: React.FC = () => {
       </div>
 
       {/* Main Input Workstation Box */}
-      <div className="bg-surface border border-border rounded-3xl p-6 shadow-xl space-y-6">
+      <div className="liquid-glass-card rounded-3xl p-6 shadow-xl space-y-6 border border-white/12">
         <div className="flex flex-col sm:flex-row gap-3">
           <input
             type="text"
@@ -180,20 +180,20 @@ export const DownloaderPage: React.FC = () => {
             onChange={(e) => setInputUrl(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleInspect()}
             placeholder="Paste YouTube, YouTube Music, or Playlist link (e.g. https://www.youtube.com/watch?v=...)"
-            className="flex-1 bg-surface-elevated border border-border focus:border-primary text-foreground placeholder:text-foreground-subtle text-sm rounded-2xl px-4 py-3.5 outline-none transition-all shadow-inner focus:ring-2 focus:ring-primary/20"
+            className="flex-1 liquid-glass-input text-sm rounded-xl px-4 py-3 outline-none"
           />
           <div className="flex gap-2 shrink-0">
             <button
               onClick={handleInspect}
               disabled={inspecting || !inputUrl.trim()}
-              className="px-5 py-3.5 rounded-2xl bg-surface-elevated hover:bg-surface-elevated/80 border border-border text-foreground font-bold text-sm disabled:opacity-50 transition-all"
+              className="px-5 py-3 rounded-xl liquid-glass-control text-foreground font-bold text-sm disabled:opacity-50 transition-all"
             >
               {inspecting ? 'Inspecting...' : 'Inspect URL'}
             </button>
             <button
               onClick={handleStartDownload}
               disabled={!inputUrl.trim()}
-              className="px-6 py-3.5 rounded-2xl bg-primary hover:bg-primary-hover text-white font-bold text-sm shadow-lg shadow-primary/25 disabled:opacity-50 transition-all hover:scale-105 active:scale-95"
+              className="px-6 py-3 rounded-xl liquid-glass-prominent font-bold text-sm disabled:opacity-50 transition-all hover:scale-105 active:scale-95"
             >
               Start Download
             </button>
@@ -201,7 +201,7 @@ export const DownloaderPage: React.FC = () => {
         </div>
 
         {/* Options Row */}
-        <div className="flex flex-wrap items-center gap-6 pt-2 border-t border-border/50 text-xs">
+        <div className="flex flex-wrap items-center gap-6 pt-2 border-t border-white/10 text-xs">
           {downloadType === 'audio' ? (
             <>
               {/* Audio Format */}
@@ -211,10 +211,10 @@ export const DownloaderPage: React.FC = () => {
                   <button
                     key={fmt}
                     onClick={() => setAudioFormat(fmt)}
-                    className={`px-3 py-1.5 rounded-xl uppercase font-bold text-[11px] transition-all ${
+                    className={`px-3 py-1 rounded-full uppercase font-bold text-[11px] transition-all ${
                       audioFormat === fmt
-                        ? 'bg-primary text-white shadow-sm'
-                        : 'bg-surface-elevated text-foreground-muted hover:text-foreground'
+                        ? 'liquid-glass-pill-active'
+                        : 'liquid-glass-pill-inactive'
                     }`}
                   >
                     {fmt}
@@ -230,10 +230,10 @@ export const DownloaderPage: React.FC = () => {
                     <button
                       key={q}
                       onClick={() => setAudioQuality(q)}
-                      className={`px-3 py-1.5 rounded-xl font-bold text-[11px] transition-all ${
+                      className={`px-3 py-1 rounded-full font-bold text-[11px] transition-all ${
                         audioQuality === q
-                          ? 'bg-primary text-white shadow-sm'
-                          : 'bg-surface-elevated text-foreground-muted hover:text-foreground'
+                          ? 'liquid-glass-pill-active'
+                          : 'liquid-glass-pill-inactive'
                       }`}
                     >
                       {q}k
@@ -251,10 +251,10 @@ export const DownloaderPage: React.FC = () => {
                   <button
                     key={vq}
                     onClick={() => setVideoQuality(vq)}
-                    className={`px-3 py-1.5 rounded-xl font-bold text-[11px] transition-all ${
+                    className={`px-3 py-1 rounded-full font-bold text-[11px] transition-all ${
                       videoQuality === vq
-                        ? 'bg-primary text-white shadow-sm'
-                        : 'bg-surface-elevated text-foreground-muted hover:text-foreground'
+                        ? 'liquid-glass-pill-active'
+                        : 'liquid-glass-pill-inactive'
                     }`}
                   >
                     {vq}
@@ -354,7 +354,7 @@ export const DownloaderPage: React.FC = () => {
         </h2>
 
         {queue.length === 0 ? (
-          <div className="bg-surface border border-border rounded-2xl p-8 text-center text-foreground-muted space-y-1">
+          <div className="liquid-glass-card rounded-2xl p-8 text-center text-foreground-muted space-y-1">
             <Download className="w-8 h-8 opacity-30 text-primary mx-auto mb-2" />
             <p className="text-sm font-semibold">Queue is empty</p>
             <p className="text-xs text-foreground-subtle">Enter a URL above to start downloading.</p>
@@ -364,7 +364,7 @@ export const DownloaderPage: React.FC = () => {
             {queue.map((item) => (
               <div
                 key={item.id}
-                className="bg-surface border border-border rounded-2xl p-4 shadow-md space-y-3"
+                className="liquid-glass-card rounded-2xl p-4 shadow-md space-y-3 border border-white/10"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3 min-w-0">

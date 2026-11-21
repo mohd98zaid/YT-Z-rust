@@ -55,17 +55,17 @@ export const HomePage: React.FC = () => {
   return (
     <div className="p-4 sm:p-6 md:p-8 space-y-8 md:space-y-10 max-w-7xl mx-auto pb-40 md:pb-28">
       {/* Hero Welcome Banner */}
-      <div className="relative rounded-3xl overflow-hidden p-5 sm:p-8 border border-border bg-gradient-to-r from-surface-elevated via-surface to-surface-elevated/70 shadow-2xl flex items-center justify-between">
+      <div className="relative rounded-3xl overflow-hidden p-5 sm:p-8 liquid-glass-card shadow-2xl flex items-center justify-between border border-white/15">
         <div className="relative z-1 max-w-xl space-y-3">
           <div className="flex items-center gap-2 flex-wrap">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-extrabold border border-primary/30">
+            <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-primary/20 text-primary text-xs font-black border border-primary/30 tracking-wider shadow-sm">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>YT-Z STREAMING & DOWNLOADER</span>
+              <span>YT-Z AUDIOPHILE</span>
             </div>
             <button
               onClick={() => loadHome(true)}
               disabled={isRefreshing}
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-elevated hover:bg-surface border border-border text-foreground text-xs font-bold transition-all active:scale-95 shadow-sm"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full liquid-glass-control text-xs font-bold transition-all active:scale-95 shadow-sm"
               title="Refresh Home Feed from YouTube Music"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-primary' : 'text-primary'}`} />
@@ -73,26 +73,25 @@ export const HomePage: React.FC = () => {
             </button>
           </div>
 
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-foreground tracking-tight">
-            High-Fidelity Audio & Studio Downloader
+          <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+            Hi-Res Lossless Audio & Cinema
           </h1>
-          <p className="text-sm text-foreground-muted leading-relaxed">
-            Uncapped direct streaming, Apple-style word-synced lyrics, 30+ visual themes,
-            and industrial-grade 4K & 320k MP3 concurrent downloading.
+          <p className="text-sm text-zinc-300 leading-relaxed font-normal">
+            Bit-perfect 24-bit / 96kHz FLAC streaming, frame-locked YouTube Cinema player, Apple Music fluid lyrics, and uncapped 4K media downloads.
           </p>
         </div>
 
         <div className="hidden md:flex relative z-1 shrink-0 mr-4">
           <div className="relative group">
-            <div className="absolute inset-0 bg-primary/30 rounded-3xl blur-2xl group-hover:blur-3xl transition-all" />
+            <div className="absolute inset-0 bg-primary/25 rounded-3xl blur-2xl group-hover:blur-3xl transition-all" />
             <img
               src="/app-icon.webp"
               alt="YT-Z Logo"
-              className="relative w-28 h-28 lg:w-32 lg:h-32 rounded-3xl object-cover shadow-2xl border border-white/15 ring-1 ring-primary/30 transform group-hover:scale-105 transition-transform duration-300"
+              className="relative w-28 h-28 lg:w-32 lg:h-32 rounded-3xl object-cover shadow-2xl border border-white/20 ring-1 ring-primary/40 transform group-hover:scale-105 transition-transform duration-300"
             />
           </div>
         </div>
-        <div className="absolute -right-8 -bottom-8 w-64 h-64 bg-primary/20 rounded-full filter blur-3xl pointer-events-none" />
+        <div className="absolute -right-8 -bottom-8 w-64 h-64 bg-primary/15 rounded-full filter blur-3xl pointer-events-none" />
       </div>
 
       {/* Dynamic Sections from YouTube Music */}
@@ -114,7 +113,7 @@ export const HomePage: React.FC = () => {
               {isQuickPicks && (
                 <div className="flex items-center gap-2 flex-wrap">
                   {/* Mood Filter Pills for Quick Picks */}
-                  <div className="flex items-center gap-1 p-1 bg-surface-elevated/70 border border-border/80 rounded-xl">
+                  <div className="flex items-center gap-1.5 p-1 liquid-glass rounded-full">
                     {[
                       { id: 'all', label: 'All' },
                       { id: 'trending', label: 'Trending' },
@@ -128,10 +127,10 @@ export const HomePage: React.FC = () => {
                           setQuickPicksMood(m.id);
                           handleRefreshQuickPicks(m.id);
                         }}
-                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                        className={`px-3.5 py-1 rounded-full text-xs transition-all ${
                           quickPicksMood === m.id
-                            ? 'bg-primary text-white shadow-sm shadow-primary/25'
-                            : 'text-foreground-muted hover:text-foreground'
+                            ? 'liquid-glass-pill-active'
+                            : 'liquid-glass-pill-inactive'
                         }`}
                       >
                         {m.label}
@@ -143,7 +142,7 @@ export const HomePage: React.FC = () => {
                   <button
                     onClick={() => handleRefreshQuickPicks(quickPicksMood)}
                     disabled={isRefreshing}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface border border-border hover:border-primary/50 text-xs font-bold text-foreground hover:bg-surface-elevated shadow-sm transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
+                    className="flex items-center gap-1.5 px-3.5 py-1 rounded-full liquid-glass-control text-xs font-bold text-foreground shadow-sm transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
                     title="Refresh Quick picks with new fresh tracks"
                   >
                     <RefreshCw
@@ -187,25 +186,25 @@ export const HomePage: React.FC = () => {
                       }
                     }
                   }}
-                  className="group relative bg-surface border border-border hover:border-primary/40 rounded-2xl p-3.5 flex flex-col justify-between cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-xl"
+                  className="group relative liquid-glass-card hover:border-white/30 rounded-2xl p-3 flex flex-col justify-between cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl"
                 >
                   {/* Artwork Container */}
-                  <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-surface-elevated mb-3 shadow-md">
+                  <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-black/40 mb-2.5 shadow-md">
                     <img
                       src={item.thumbnail || '/placeholder.png'}
                       alt={item.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                     {/* Hover Overlay Play & Download Buttons */}
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                      <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-transform">
+                    <div className="absolute inset-0 bg-black/45 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      <div className="w-10 h-10 rounded-full liquid-glass-prominent flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-transform">
                         <Play className="w-5 h-5 fill-current ml-0.5" />
                       </div>
                       {isSong && (
                         <button
                           onClick={(e) => handleDownload(e, item)}
                           title="Download 320k MP3"
-                          className="w-9 h-9 rounded-full bg-surface-elevated/90 hover:bg-surface-elevated text-white flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-transform border border-white/20"
+                          className="w-9 h-9 rounded-full liquid-glass-control flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-transform"
                         >
                           <Download className="w-4 h-4" />
                         </button>
@@ -214,7 +213,7 @@ export const HomePage: React.FC = () => {
                   </div>
 
                   {/* Metadata */}
-                  <div className="space-y-1">
+                  <div className="space-y-0.5">
                     <h3 className="font-semibold text-sm text-foreground truncate group-hover:text-primary transition-colors">
                       {item.title}
                     </h3>

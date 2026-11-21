@@ -144,16 +144,17 @@ export const PluginsPage: React.FC = () => {
   return (
     <div className="p-4 sm:p-6 md:p-8 space-y-6 md:space-y-8 max-w-7xl mx-auto pb-40 md:pb-28">
       {/* Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-border">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-white/10">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-extrabold border border-primary/30 mb-2">
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-primary/20 text-primary text-xs font-black border border-primary/30 mb-2 tracking-wider">
             <Zap className="w-3.5 h-3.5" />
             <span>AUDIO ENGINE EXTENSIONS</span>
           </div>
-          <h1 className="text-3xl font-black text-foreground tracking-tight">
-            Pluggable Module Sources & Extensions
+          <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight flex items-center gap-3">
+            <Puzzle className="w-7 h-7 sm:w-8 sm:h-8 text-primary" />
+            <span>Pluggable Module Sources & Extensions</span>
           </h1>
-          <p className="text-sm text-foreground-muted mt-1 max-w-2xl">
+          <p className="text-xs sm:text-sm text-foreground-muted mt-1 max-w-2xl">
             Configure external Hi-Res FLAC lossless modules, multi-provider lyrics engines,
             Discord Rich Presence, Last.fm scrobblers, and smart audio DSP filters.
           </p>
@@ -166,14 +167,14 @@ export const PluginsPage: React.FC = () => {
               loadPlugins();
             }}
             disabled={loading}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-surface border border-border hover:bg-surface-elevated text-xs font-bold text-foreground transition-all hover:scale-105 active:scale-95"
+            className="flex items-center gap-2 px-4 py-2 rounded-full liquid-glass-control text-xs font-bold text-foreground transition-all active:scale-95 shadow-sm"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-primary' : 'text-primary'}`} />
             <span>Refresh Status</span>
           </button>
           <button
             onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-primary hover:bg-primary-hover text-white text-xs font-bold shadow-lg shadow-primary/25 transition-all hover:scale-105 active:scale-95"
+            className="flex items-center gap-2 px-5 py-2 rounded-full liquid-glass-prominent text-xs font-bold transition-all hover:scale-105 active:scale-95 shadow-lg"
           >
             <Plus className="w-4 h-4 stroke-[3]" />
             <span>Add Module Source</span>
@@ -182,7 +183,7 @@ export const PluginsPage: React.FC = () => {
       </div>
 
       {/* Hi-Res Lossless Audio Architecture Banner */}
-      <div className="p-5 rounded-3xl bg-gradient-to-r from-amber-500/10 via-surface to-primary/10 border border-amber-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
+      <div className="p-5 rounded-3xl liquid-glass-card border border-amber-500/35 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/10">
             <Sparkles className="w-6 h-6 text-amber-400" />
@@ -201,7 +202,7 @@ export const PluginsPage: React.FC = () => {
         </div>
 
         {/* Quality Preference Pill Switcher */}
-        <div className="flex items-center gap-1.5 p-1 bg-surface-elevated/80 border border-border rounded-2xl shrink-0">
+        <div className="flex items-center gap-1.5 p-1 liquid-glass rounded-full shrink-0">
           {[
             { id: 'lossless', label: 'Lossless FLAC' },
             { id: 'high', label: 'High (320k)' },
@@ -210,7 +211,7 @@ export const PluginsPage: React.FC = () => {
             <button
               key={mode.id}
               onClick={() => setAudioQuality(mode.id as any)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
                 audioQuality === mode.id
                   ? 'bg-amber-500 text-black shadow-md shadow-amber-500/30 font-black'
                   : 'text-foreground-muted hover:text-foreground'
@@ -236,10 +237,10 @@ export const PluginsPage: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setFilterType(tab.id)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              className={`px-4 py-1.5 rounded-full text-xs transition-all ${
                 filterType === tab.id
-                  ? 'bg-primary text-white shadow-md shadow-primary/20'
-                  : 'bg-surface border border-border text-foreground-muted hover:text-foreground hover:bg-surface-elevated'
+                  ? 'liquid-glass-pill-active'
+                  : 'liquid-glass-pill-inactive'
               }`}
             >
               {tab.label}
@@ -254,7 +255,7 @@ export const PluginsPage: React.FC = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search modules..."
-            className="w-full bg-surface border border-border focus:border-primary text-foreground placeholder:text-foreground-subtle text-xs rounded-xl pl-9 pr-3 py-2 outline-none transition-all"
+            className="w-full liquid-glass-input text-xs pl-9 pr-3 py-2 outline-none"
           />
         </div>
       </div>
@@ -278,10 +279,10 @@ export const PluginsPage: React.FC = () => {
             return (
               <div
                 key={plugin.id}
-                className={`p-5 rounded-3xl border transition-all relative flex flex-col justify-between ${
+                className={`p-5 rounded-3xl border transition-all relative flex flex-col justify-between liquid-glass-card ${
                   isEnabled
-                    ? 'bg-surface border-border hover:border-primary/40 shadow-lg'
-                    : 'bg-surface/50 border-border/40 opacity-70'
+                    ? 'border-white/15 hover:border-primary/40 shadow-lg'
+                    : 'border-white/5 opacity-60'
                 }`}
               >
                 <div>

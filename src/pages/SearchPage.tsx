@@ -58,6 +58,13 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '' }) => 
     loadHistoryData();
   }, []);
 
+  useEffect(() => {
+    if (initialQuery && initialQuery.trim() && initialQuery !== query) {
+      setQuery(initialQuery);
+      executeSearch(initialQuery);
+    }
+  }, [initialQuery]);
+
   const executeSearch = async (searchQuery: string, searchFilter?: string) => {
     const q = searchQuery.trim();
     if (!q) return;
@@ -180,7 +187,18 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '' }) => 
     <div className="p-4 sm:p-6 md:p-8 space-y-6 max-w-7xl mx-auto pb-40 md:pb-28">
       {/* Search Header Form */}
       <div className="space-y-4">
-        <h1 className="text-3xl font-black text-foreground tracking-tight">Search & Discover</h1>
+        <div className="flex items-center justify-between pb-2 border-b border-white/10">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight flex items-center gap-3">
+              <Search className="w-7 h-7 sm:w-8 sm:h-8 text-primary" />
+              <span>Search & Discover</span>
+            </h1>
+            <p className="text-xs sm:text-sm text-foreground-muted mt-1">
+              Search across YouTube Music, Spotify catalogue, playlists, and artists.
+            </p>
+          </div>
+        </div>
+
         <div className="flex gap-3">
           <div className="relative flex-1">
             <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-foreground-muted pointer-events-none" />
@@ -190,21 +208,21 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '' }) => 
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && executeSearch(query)}
               placeholder="Search artists, tracks, podcasts, albums..."
-              className="w-full bg-surface border border-border focus:border-primary text-foreground placeholder:text-foreground-subtle text-base rounded-2xl pl-12 pr-4 py-3.5 outline-none transition-all shadow-inner focus:ring-2 focus:ring-primary/20"
+              className="w-full liquid-glass-input text-foreground placeholder:text-foreground-subtle text-sm sm:text-base pl-12 pr-4 py-3 outline-none"
             />
           </div>
           <button
             onClick={() => executeSearch(query)}
             aria-label="Submit search"
             disabled={loading || !query.trim()}
-            className="px-6 py-3.5 rounded-2xl bg-primary hover:bg-primary-hover text-white font-bold text-sm shadow-lg shadow-primary/25 disabled:opacity-50 transition-all hover:scale-105 active:scale-95"
+            className="px-6 py-3 rounded-xl liquid-glass-prominent font-bold text-sm disabled:opacity-50 transition-all hover:scale-105 active:scale-95"
           >
             {loading ? 'Searching...' : 'Search'}
           </button>
         </div>
 
         {/* Filter Tabs */}
-        <div className="flex flex-wrap gap-2 pt-2">
+        <div className="flex flex-wrap gap-2 pt-1">
           {filterTabs.map((tab) => {
             const isSelected = filter === tab.id;
             const Icon = tab.icon;
@@ -212,10 +230,10 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '' }) => 
               <button
                 key={tab.id}
                 onClick={() => handleFilterClick(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs transition-all ${
                   isSelected
-                    ? 'bg-primary text-white shadow-md shadow-primary/20'
-                    : 'bg-surface border border-border text-foreground-muted hover:text-foreground hover:bg-surface-elevated'
+                    ? 'liquid-glass-pill-active'
+                    : 'liquid-glass-pill-inactive'
                 }`}
               >
                 {Icon && <Icon className="w-3.5 h-3.5" />}
@@ -390,7 +408,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '' }) => 
               <div
                 key={item.id || item.videoId || item.browseId || idx}
                 onClick={() => handleItemClick(item)}
-                className="flex items-center justify-between p-3.5 rounded-2xl bg-surface border border-border hover:border-primary/40 hover:bg-surface-elevated cursor-pointer group transition-all"
+                className="liquid-glass-row liquid-glass-card flex items-center justify-between p-3 rounded-2xl cursor-pointer group transition-all"
               >
                 <div className="flex items-center gap-4 min-w-0">
                   <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-surface-elevated shrink-0 shadow-md">

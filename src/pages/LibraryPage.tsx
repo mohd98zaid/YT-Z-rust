@@ -237,13 +237,13 @@ export const LibraryPage: React.FC = () => {
   return (
     <div className="p-4 sm:p-6 md:p-8 space-y-6 md:space-y-8 max-w-7xl mx-auto pb-40 md:pb-28">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-border">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
         <div>
-          <h1 className="text-3xl font-black text-foreground tracking-tight flex items-center gap-3">
-            <FolderHeart className="w-8 h-8 text-primary" />
+          <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight flex items-center gap-3">
+            <FolderHeart className="w-7 h-7 sm:w-8 sm:h-8 text-primary" />
             <span>My Music Library</span>
           </h1>
-          <p className="text-sm text-foreground-muted mt-1">
+          <p className="text-xs sm:text-sm text-foreground-muted mt-1">
             Access offline downloads, custom playlists, scanned local folders, and listening history.
           </p>
         </div>
@@ -251,25 +251,25 @@ export const LibraryPage: React.FC = () => {
         <button
           onClick={loadData}
           disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-surface border border-border text-xs font-semibold text-foreground hover:bg-surface-elevated transition-all"
+          className="flex items-center gap-2 px-4 py-2 rounded-full liquid-glass-control text-xs font-bold text-foreground transition-all active:scale-95 shadow-sm"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-primary' : 'text-primary'}`} />
           <span>Refresh Library</span>
         </button>
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center justify-between border-b border-border/50 pb-2">
+      <div className="flex items-center justify-between border-b border-white/10 pb-2">
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-none max-w-full pb-1">
           <button
             onClick={() => {
               setActiveSubTab('favorites');
               setSelectedPlaylist(null);
             }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs transition-all shrink-0 ${
               activeSubTab === 'favorites'
-                ? 'bg-primary text-white shadow-md shadow-primary/20'
-                : 'text-foreground-muted hover:text-foreground hover:bg-surface-elevated'
+                ? 'liquid-glass-pill-active'
+                : 'liquid-glass-pill-inactive'
             }`}
           >
             <Heart className="w-3.5 h-3.5 fill-current" />
@@ -278,10 +278,10 @@ export const LibraryPage: React.FC = () => {
 
           <button
             onClick={() => setActiveSubTab('playlists')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs transition-all shrink-0 ${
               activeSubTab === 'playlists'
-                ? 'bg-primary text-white shadow-md shadow-primary/20'
-                : 'text-foreground-muted hover:text-foreground hover:bg-surface-elevated'
+                ? 'liquid-glass-pill-active'
+                : 'liquid-glass-pill-inactive'
             }`}
           >
             <ListPlus className="w-3.5 h-3.5" />
@@ -293,10 +293,10 @@ export const LibraryPage: React.FC = () => {
               setActiveSubTab('local');
               setSelectedPlaylist(null);
             }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs transition-all shrink-0 ${
               activeSubTab === 'local'
-                ? 'bg-primary text-white shadow-md shadow-primary/20'
-                : 'text-foreground-muted hover:text-foreground hover:bg-surface-elevated'
+                ? 'liquid-glass-pill-active'
+                : 'liquid-glass-pill-inactive'
             }`}
           >
             <HardDrive className="w-3.5 h-3.5" />
@@ -308,10 +308,10 @@ export const LibraryPage: React.FC = () => {
               setActiveSubTab('history');
               setSelectedPlaylist(null);
             }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs transition-all shrink-0 ${
               activeSubTab === 'history'
-                ? 'bg-primary text-white shadow-md shadow-primary/20'
-                : 'text-foreground-muted hover:text-foreground hover:bg-surface-elevated'
+                ? 'liquid-glass-pill-active'
+                : 'liquid-glass-pill-inactive'
             }`}
           >
             <History className="w-3.5 h-3.5" />
@@ -322,7 +322,7 @@ export const LibraryPage: React.FC = () => {
         {activeSubTab === 'history' && historyTracks.length > 0 && (
           <button
             onClick={handleClearHistory}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-foreground-muted hover:text-primary hover:bg-surface border border-border/60 transition-all"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold liquid-glass-control text-foreground-muted hover:text-rose-400 transition-all"
           >
             <Trash2 className="w-3.5 h-3.5" />
             <span>Clear History</span>
@@ -348,7 +348,7 @@ export const LibraryPage: React.FC = () => {
         </div>
       ) : activeSubTab === 'favorites' ? (
         favorites.length === 0 ? (
-          <div className="bg-surface border border-border rounded-3xl p-12 text-center text-foreground-muted space-y-2">
+          <div className="liquid-glass-card rounded-3xl p-12 text-center text-foreground-muted space-y-2">
             <Heart className="w-10 h-10 opacity-30 text-primary mx-auto mb-2" />
             <p className="text-base font-bold text-foreground">No favorites yet</p>
             <p className="text-xs text-foreground-subtle">
@@ -361,7 +361,7 @@ export const LibraryPage: React.FC = () => {
               <div
                 key={track.id}
                 onClick={() => playTrack(track, favorites)}
-                className="flex items-center justify-between p-3.5 rounded-2xl bg-surface border border-border hover:border-primary/40 hover:bg-surface-elevated cursor-pointer group transition-all"
+                className="liquid-glass-row liquid-glass-card flex items-center justify-between p-3 rounded-2xl cursor-pointer group transition-all"
               >
                 <div className="flex items-center gap-3.5 min-w-0">
                   <img
@@ -392,11 +392,11 @@ export const LibraryPage: React.FC = () => {
           /* Single Playlist View */
           <div className="space-y-6">
             {/* Playlist Hero Banner */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 p-6 rounded-3xl bg-surface border border-border/80 relative overflow-hidden shadow-xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 p-6 rounded-3xl liquid-glass-card relative overflow-hidden shadow-xl">
               {/* Playlist Cover Art with Change Cover Overlay */}
               <div
                 onClick={() => handleStartEditPlaylist(selectedPlaylist)}
-                className="relative w-36 h-36 sm:w-44 sm:h-44 rounded-2xl bg-surface-elevated overflow-hidden border border-white/10 shrink-0 shadow-2xl cursor-pointer group"
+                className="relative w-36 h-36 sm:w-44 sm:h-44 rounded-2xl bg-black/40 overflow-hidden border border-white/10 shrink-0 shadow-2xl cursor-pointer group"
                 title="Click to change playlist cover art"
               >
                 <PlaylistCoverImage
@@ -443,7 +443,7 @@ export const LibraryPage: React.FC = () => {
                   {selectedPlaylist.tracks && selectedPlaylist.tracks.length > 0 && (
                     <button
                       onClick={() => playTrack(selectedPlaylist.tracks[0], selectedPlaylist.tracks)}
-                      className="flex items-center gap-2 px-6 py-2.5 rounded-2xl bg-primary text-white font-bold text-xs shadow-lg shadow-primary/30 hover:bg-primary-hover hover:scale-105 active:scale-95 transition-all"
+                      className="flex items-center gap-2 px-6 py-2.5 rounded-full liquid-glass-prominent text-white font-bold text-xs shadow-lg transition-all hover:scale-105 active:scale-95"
                     >
                       <Play className="w-4 h-4 fill-current" />
                       <span>Play All</span>

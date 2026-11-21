@@ -108,6 +108,19 @@ export const YouTubePage: React.FC = () => {
     restoreCinema,
   } = useVideoStore();
 
+  const { youtubeSearchQuery } = useNavigationStore();
+
+  useEffect(() => {
+    if (youtubeSearchQuery && youtubeSearchQuery.trim()) {
+      setSearchQuery(youtubeSearchQuery);
+      setSearchLoading(true);
+      api.search(youtubeSearchQuery, 'videos').then((res) => {
+        setSearchResults(res || []);
+        setSearchLoading(false);
+      }).catch(() => setSearchLoading(false));
+    }
+  }, [youtubeSearchQuery]);
+
   const [qualityMenuOpen, setQualityMenuOpen] = useState(false);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number; width: number } | null>(null);
   const qualityMenuRef = useRef<HTMLDivElement | null>(null);
@@ -492,7 +505,7 @@ export const YouTubePage: React.FC = () => {
                     setSearchResults([]);
                     loadTrending(cat);
                   }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
                     isSelected
                       ? 'bg-white text-black font-bold shadow-sm'
                       : 'bg-[#272727] text-white hover:bg-[#3f3f3f]'
@@ -582,7 +595,7 @@ export const YouTubePage: React.FC = () => {
                     setSearchResults([]);
                     loadTrending(cat);
                   }}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap transition-all ${
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
                     isSelected
                       ? 'bg-white text-black font-bold shadow-sm'
                       : 'bg-[#272727] text-white hover:bg-[#3f3f3f]'

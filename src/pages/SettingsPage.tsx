@@ -110,10 +110,13 @@ export const SettingsPage: React.FC = () => {
   return (
     <div className="p-4 sm:p-6 md:p-8 space-y-8 md:space-y-10 max-w-7xl mx-auto pb-40 md:pb-28">
       {/* Header */}
-      <div className="flex items-center justify-between pb-6 border-b border-border">
+      <div className="flex items-center justify-between pb-4 border-b border-white/10">
         <div>
-          <h1 className="text-3xl font-black text-foreground tracking-tight">Settings & Customization</h1>
-          <p className="text-sm text-foreground-muted mt-1">
+          <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight flex items-center gap-3">
+            <Sliders className="w-7 h-7 sm:w-8 sm:h-8 text-primary" />
+            <span>Settings & Customization</span>
+          </h1>
+          <p className="text-xs sm:text-sm text-foreground-muted mt-1">
             Configure preset themes, audio DSP, SponsorBlock, and downloader paths.
           </p>
         </div>
@@ -145,7 +148,7 @@ export const SettingsPage: React.FC = () => {
               {/* Collapsible Header Card */}
               <div
                 onClick={() => setIsThemesCollapsed(!isThemesCollapsed)}
-                className="flex items-center justify-between p-4 sm:p-5 rounded-3xl bg-surface border border-border hover:border-primary/40 cursor-pointer shadow-xl transition-all group select-none"
+                className="flex items-center justify-between p-4 sm:p-5 rounded-3xl liquid-glass-card border border-white/12 hover:border-primary/40 cursor-pointer shadow-xl transition-all group select-none"
               >
                 <div className="flex items-center gap-3.5 min-w-0">
                   <div className="w-11 h-11 rounded-2xl bg-surface-elevated flex items-center justify-center border border-border text-primary group-hover:scale-105 transition-transform shrink-0 shadow-inner">
@@ -196,7 +199,7 @@ export const SettingsPage: React.FC = () => {
               {!isThemesCollapsed && (
                 <div className="space-y-4 pt-2">
                   {/* Category Filter Pills & Search */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-2xl bg-surface border border-border/80">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-2xl liquid-glass border border-white/10">
                     <div className="flex flex-wrap gap-1.5">
                       {[
                         { id: 'all', label: 'All (30+)' },
@@ -209,10 +212,10 @@ export const SettingsPage: React.FC = () => {
                         <button
                           key={cat.id}
                           onClick={() => setThemeFilter(cat.id)}
-                          className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
+                          className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
                             themeFilter === cat.id
-                              ? 'bg-primary text-white shadow-sm shadow-primary/20'
-                              : 'bg-surface-elevated text-foreground-muted hover:text-foreground border border-border/60'
+                              ? 'liquid-glass-pill-active'
+                              : 'liquid-glass-pill-inactive'
                           }`}
                         >
                           {cat.label}
@@ -227,7 +230,7 @@ export const SettingsPage: React.FC = () => {
                         value={themeSearch}
                         onChange={(e) => setThemeSearch(e.target.value)}
                         placeholder="Search themes..."
-                        className="w-full bg-surface-elevated border border-border focus:border-primary text-foreground placeholder:text-foreground-subtle text-xs rounded-xl pl-8 pr-3 py-1.5 outline-none transition-all"
+                        className="w-full liquid-glass-input text-xs pl-8 pr-3 py-1.5 outline-none"
                       />
                     </div>
                   </div>

@@ -55,19 +55,21 @@ export const SpotifyImporterPage: React.FC = () => {
   return (
     <div className="p-4 sm:p-6 md:p-8 space-y-6 md:space-y-8 max-w-7xl mx-auto pb-40 md:pb-28">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-black text-foreground tracking-tight flex items-center gap-3">
-          <ListMusic className="w-8 h-8 text-primary" />
-          <span>Spotify Playlist Importer</span>
-        </h1>
-        <p className="text-sm text-foreground-muted mt-1">
-          Seamlessly migrate your Spotify playlists, albums, and liked songs to YouTube Music.
-          Stream or download all tracks in one click.
-        </p>
+      <div className="flex items-center justify-between pb-4 border-b border-white/10">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight flex items-center gap-3">
+            <ListMusic className="w-7 h-7 sm:w-8 sm:h-8 text-primary" />
+            <span>Spotify Playlist Importer</span>
+          </h1>
+          <p className="text-xs sm:text-sm text-foreground-muted mt-1">
+            Seamlessly migrate your Spotify playlists, albums, and liked songs to YouTube Music.
+            Stream or download all tracks in one click.
+          </p>
+        </div>
       </div>
 
       {/* Input Box */}
-      <div className="bg-surface border border-border rounded-3xl p-6 shadow-xl space-y-4">
+      <div className="liquid-glass-card rounded-3xl p-6 shadow-xl space-y-4 border border-white/12">
         <label className="text-xs font-bold text-foreground-muted uppercase tracking-wider block">
           Spotify Link (Playlist, Album, or Track)
         </label>
@@ -78,12 +80,12 @@ export const SpotifyImporterPage: React.FC = () => {
             onChange={(e) => setSpotifyUrl(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleImport()}
             placeholder="e.g. https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M"
-            className="flex-1 bg-surface-elevated border border-border focus:border-primary text-foreground placeholder:text-foreground-subtle text-sm rounded-2xl px-4 py-3.5 outline-none transition-all shadow-inner focus:ring-2 focus:ring-primary/20"
+            className="flex-1 liquid-glass-input text-sm rounded-xl px-4 py-3 outline-none"
           />
           <button
             onClick={handleImport}
             disabled={loading || !spotifyUrl.trim()}
-            className="px-6 py-3.5 rounded-2xl bg-primary hover:bg-primary-hover text-white font-bold text-sm shadow-lg shadow-primary/25 disabled:opacity-50 transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
+            className="px-6 py-3 rounded-xl liquid-glass-prominent font-bold text-sm disabled:opacity-50 transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
           >
             {loading ? (
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -97,7 +99,7 @@ export const SpotifyImporterPage: React.FC = () => {
 
       {/* Imported Result View */}
       {importedData && (
-        <div className="bg-surface border border-border rounded-3xl p-6 shadow-xl space-y-6 animate-fadeIn">
+        <div className="liquid-glass-card rounded-3xl p-6 shadow-xl space-y-6 border border-white/12 animate-fadeIn">
           {/* Saved to Library Status Banner */}
           {importedData.savedToLibrary && (
             <div className="flex items-center justify-between p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-xs font-bold">

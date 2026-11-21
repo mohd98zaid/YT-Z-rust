@@ -7,6 +7,8 @@ interface NavigationState {
   setActiveTab: (tab: TabType) => void;
   initNavigation: () => Promise<void>;
   youtubeSelectedVideo: { id: string; title: string; artist: string } | null;
+  youtubeSearchQuery: string;
+  setYouTubeSearchQuery: (q: string) => void;
   navigateToYouTube: (video?: { id: string; title: string; artist: string }) => void;
   isSidebarCollapsed: boolean;
   toggleSidebarCollapse: () => void;
@@ -56,6 +58,8 @@ export const useNavigationStore = create<NavigationState>((set) => ({
     }
   },
   youtubeSelectedVideo: null,
+  youtubeSearchQuery: '',
+  setYouTubeSearchQuery: (q: string) => set({ youtubeSearchQuery: q }),
   navigateToYouTube: (video) => {
     try {
       localStorage.setItem('ytz_active_tab', 'youtube');

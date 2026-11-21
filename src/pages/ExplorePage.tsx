@@ -65,26 +65,39 @@ export const ExplorePage: React.FC = () => {
 
   return (
     <div className="p-4 sm:p-6 md:p-8 space-y-8 md:space-y-10 max-w-7xl mx-auto pb-40 md:pb-28">
+      {/* Page Header */}
+      <div className="flex items-center justify-between pb-4 border-b border-white/10">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight flex items-center gap-3">
+            <Compass className="w-7 h-7 sm:w-8 sm:h-8 text-primary" />
+            <span>Explore & Charts</span>
+          </h1>
+          <p className="text-xs sm:text-sm text-foreground-muted mt-1">
+            Global charts, trending music videos, top artists, and curated moods.
+          </p>
+        </div>
+      </div>
+
       {/* Top Charts Section */}
       <section className="space-y-4">
         <div className="flex items-center gap-2">
-          <Trophy className="w-6 h-6 text-primary" />
-          <h2 className="text-2xl font-black text-foreground tracking-tight">Top Charts</h2>
+          <Trophy className="w-5 h-5 text-primary" />
+          <h2 className="text-xl sm:text-2xl font-black text-foreground tracking-tight">Top Charts</h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Top Songs */}
-          <div className="bg-surface border border-border rounded-3xl p-5 shadow-xl flex flex-col">
+          <div className="liquid-glass-card rounded-3xl p-5 sm:p-6 shadow-xl border border-white/12 flex flex-col">
             <h3 className="font-extrabold text-base text-foreground mb-4 flex items-center justify-between">
               <span>Top Songs</span>
               <span className="text-xs text-primary font-semibold">US / Global</span>
             </h3>
-            <div className="space-y-2 flex-1 overflow-y-auto max-h-96 pr-1">
+            <div className="space-y-1.5 flex-1 overflow-y-auto max-h-96 pr-1">
               {charts.songs.slice(0, 10).map((song, idx) => (
                 <div
                   key={song.id || idx}
                   onClick={() => playTrack(song, charts.songs)}
-                  className="flex items-center justify-between p-2.5 rounded-2xl hover:bg-surface-elevated cursor-pointer group transition-all"
+                  className="liquid-glass-row flex items-center justify-between p-2 rounded-xl cursor-pointer group transition-all"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <span className="text-sm font-bold font-mono text-foreground-subtle w-4 text-center group-hover:text-primary">
@@ -105,7 +118,7 @@ export const ExplorePage: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={(e) => handleDownload(e, song)}
-                      className="p-1.5 rounded-full hover:bg-surface text-foreground-muted hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="p-1.5 rounded-full hover:bg-white/10 text-foreground-muted hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
                       title="Download 320k"
                     >
                       <Download className="w-4 h-4" />
@@ -118,12 +131,12 @@ export const ExplorePage: React.FC = () => {
           </div>
 
           {/* Top Music Videos */}
-          <div className="bg-surface border border-border rounded-3xl p-5 shadow-xl flex flex-col">
+          <div className="liquid-glass-card rounded-3xl p-5 sm:p-6 shadow-xl border border-white/12 flex flex-col">
             <h3 className="font-extrabold text-base text-foreground mb-4 flex items-center justify-between">
               <span>Top Music Videos</span>
               <span className="text-xs text-primary font-semibold">Trending</span>
             </h3>
-            <div className="space-y-2 flex-1 overflow-y-auto max-h-96 pr-1">
+            <div className="space-y-1.5 flex-1 overflow-y-auto max-h-96 pr-1">
               {charts.videos.slice(0, 10).map((video, idx) => (
                 <div
                   key={video.id || idx}
@@ -134,7 +147,7 @@ export const ExplorePage: React.FC = () => {
                       artist: video.artist || 'YouTube',
                     });
                   }}
-                  className="flex items-center justify-between p-2.5 rounded-2xl hover:bg-surface-elevated cursor-pointer group transition-all"
+                  className="liquid-glass-row flex items-center justify-between p-2 rounded-xl cursor-pointer group transition-all"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <span className="text-sm font-bold font-mono text-foreground-subtle w-4 text-center group-hover:text-primary">
@@ -167,14 +180,14 @@ export const ExplorePage: React.FC = () => {
                           artist: video.artist || 'YouTube',
                         });
                       }}
-                      className="p-1.5 rounded-full hover:bg-surface text-foreground-muted hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="p-1.5 rounded-full hover:bg-white/10 text-foreground-muted hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
                       title="Watch Video"
                     >
                       <Video className="w-4 h-4" />
                     </button>
                     <button
                       onClick={(e) => handleDownload(e, video)}
-                      className="p-1.5 rounded-full hover:bg-surface text-foreground-muted hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="p-1.5 rounded-full hover:bg-white/10 text-foreground-muted hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
                       title="Download 320k"
                     >
                       <Download className="w-4 h-4" />
@@ -187,16 +200,16 @@ export const ExplorePage: React.FC = () => {
           </div>
 
           {/* Top Artists */}
-          <div className="bg-surface border border-border rounded-3xl p-5 shadow-xl flex flex-col">
+          <div className="liquid-glass-card rounded-3xl p-5 sm:p-6 shadow-xl border border-white/12 flex flex-col">
             <h3 className="font-extrabold text-base text-foreground mb-4 flex items-center justify-between">
               <span>Top Artists</span>
               <span className="text-xs text-primary font-semibold">Rankings</span>
             </h3>
-            <div className="space-y-2 flex-1 overflow-y-auto max-h-96 pr-1">
+            <div className="space-y-1.5 flex-1 overflow-y-auto max-h-96 pr-1">
               {charts.artists.slice(0, 10).map((artist, idx) => (
                 <div
                   key={artist.id || idx}
-                  className="flex items-center justify-between p-2.5 rounded-2xl hover:bg-surface-elevated group transition-all"
+                  className="liquid-glass-row flex items-center justify-between p-2 rounded-xl group transition-all"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <span className="text-sm font-bold font-mono text-foreground-subtle w-4 text-center group-hover:text-primary">
@@ -205,7 +218,7 @@ export const ExplorePage: React.FC = () => {
                     <img
                       src={artist.thumbnail}
                       alt=""
-                      className="w-11 h-11 rounded-full object-cover shrink-0 shadow-md border border-border"
+                      className="w-11 h-11 rounded-full object-cover shrink-0 shadow-md border border-white/15"
                     />
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-foreground truncate">{artist.name}</p>
@@ -224,26 +237,26 @@ export const ExplorePage: React.FC = () => {
       {/* Moods & Genres Section */}
       <section className="space-y-4">
         <div className="flex items-center gap-2">
-          <Flame className="w-6 h-6 text-primary" />
-          <h2 className="text-2xl font-black text-foreground tracking-tight">Moods & Genres</h2>
+          <Flame className="w-5 h-5 text-primary" />
+          <h2 className="text-xl sm:text-2xl font-black text-foreground tracking-tight">Moods & Genres</h2>
         </div>
 
         {/* Mood Chips */}
         <div className="space-y-6">
           {Object.entries(moodCategories).map(([categoryName, items]) => (
             <div key={categoryName} className="space-y-3">
-              <h4 className="text-xs font-extrabold text-foreground-muted uppercase tracking-wider">
+              <h4 className="text-xs font-black text-foreground-muted uppercase tracking-wider">
                 {categoryName}
               </h4>
-              <div className="flex flex-wrap gap-2.5">
+              <div className="flex flex-wrap gap-2">
                 {items.map((item: any, idx: number) => (
                   <button
                     key={idx}
                     onClick={() => handleSelectMood(item.title, item.params)}
-                    className={`px-4 py-2 rounded-2xl text-xs font-bold transition-all ${
+                    className={`px-4 py-1.5 rounded-full text-xs transition-all ${
                       activeMoodTitle === item.title
-                        ? 'bg-primary text-white shadow-lg shadow-primary/25 scale-105'
-                        : 'bg-surface border border-border hover:border-primary/40 text-foreground hover:bg-surface-elevated'
+                        ? 'liquid-glass-pill-active scale-105'
+                        : 'liquid-glass-pill-inactive'
                     }`}
                   >
                     {item.title}
@@ -280,16 +293,16 @@ export const ExplorePage: React.FC = () => {
                       }
                     }
                   }}
-                  className="bg-surface border border-border rounded-2xl p-3.5 flex flex-col justify-between hover:border-primary/40 hover:-translate-y-1 transition-all shadow-md group cursor-pointer"
+                  className="liquid-glass-card rounded-2xl p-3 flex flex-col justify-between hover:border-white/30 hover:-translate-y-1 transition-all shadow-md group cursor-pointer"
                 >
-                  <div className="relative aspect-square w-full rounded-xl overflow-hidden mb-3">
+                  <div className="relative aspect-square w-full rounded-xl overflow-hidden mb-2.5 bg-black/40">
                     <img
                       src={pl.thumbnail}
                       alt=""
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                     />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                      <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white shadow-lg">
+                      <div className="w-10 h-10 rounded-full liquid-glass-prominent flex items-center justify-center text-white shadow-lg">
                         <Play className="w-5 h-5 fill-current ml-0.5" />
                       </div>
                     </div>
