@@ -28,8 +28,19 @@ const getWsProtocol = () => {
   return 'ws:';
 };
 
-export const API_BASE = `${getProtocol()}//${getHost()}:${getPort()}`;
-export const WS_BASE = `${getWsProtocol()}//${getHost()}:${getPort()}/ws`;
+const isNativeApp =
+  typeof window !== 'undefined' &&
+  (window.location.hostname === 'tauri.localhost' ||
+    window.location.hostname.endsWith('.localhost') ||
+    window.location.protocol === 'tauri:' ||
+    '__TAURI_INTERNALS__' in window);
+
+export const API_BASE = isNativeApp
+  ? 'http://127.0.0.1:47892'
+  : `${getProtocol()}//${getHost()}:${getPort()}`;
+export const WS_BASE = isNativeApp
+  ? 'ws://127.0.0.1:47892/ws'
+  : `${getWsProtocol()}//${getHost()}:${getPort()}/ws`;
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const resp = await fetch(url, options);

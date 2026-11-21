@@ -318,6 +318,12 @@ impl DatabaseManager {
         }
     }
 
+    pub fn remove_favorite(&self, video_id: &str) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute("DELETE FROM favorites WHERE video_id = ? OR id = ?", params![video_id, video_id])?;
+        Ok(())
+    }
+
     // --- Custom Playlists ---
     pub fn get_playlists(&self) -> Result<Vec<PlaylistItem>> {
         let conn = self.conn.lock().unwrap();

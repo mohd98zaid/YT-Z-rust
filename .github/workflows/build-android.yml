@@ -42,6 +42,16 @@ jobs:
       - name: Initialize Android Project
         run: npx tauri android init
 
+      - name: Allow localhost HTTP traffic
+        run: |
+          MANIFEST=src-tauri/gen/android/app/src/main/AndroidManifest.xml
+          if grep -q 'android:usesCleartextTraffic' "$MANIFEST"; then
+            sed -i 's/android:usesCleartextTraffic="false"/android:usesCleartextTraffic="true"/' "$MANIFEST"
+          else
+            sed -i 's/<application/<application android:usesCleartextTraffic="true"/' "$MANIFEST"
+          fi
+          grep -n 'usesCleartextTraffic' "$MANIFEST"
+
       - name: Setup signing key
         run: |
           keytool -genkeypair -keystore "$GITHUB_WORKSPACE/ytz.keystore" -alias ytz -keyalg RSA -keysize 2048 -validity 10000 -storepass ytz123456 -keypass ytz123456 -dname "CN=YT-Z, O=YT-Z, C=IN"

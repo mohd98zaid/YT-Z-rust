@@ -114,23 +114,40 @@ pub fn create_router(state: AppState) -> Router {
         // Downloader
         .route("/api/downloader/queue", get(handle_get_queue).post(handle_enqueue))
         .route("/api/downloader/history", get(handle_get_download_history))
-        // Library: Favorites
+        // Library: Favorites & Legacy Aliases
         .route("/api/library/favorites", get(handle_get_favorites))
         .route("/api/library/favorites/:id", post(handle_toggle_favorite))
-        // Library: Search History
+        .route("/api/favorites", get(handle_get_favorites).post(handle_add_favorite_legacy))
+        .route("/api/favorites/:id", delete(handle_remove_favorite_legacy))
+        // Library: Search History & Aliases
         .route(
             "/api/library/search-history",
             get(handle_get_search_history)
                 .post(handle_save_search_query)
                 .delete(handle_delete_search_history),
         )
-        // Library: Playback History
+        .route(
+            "/api/history/searches",
+            get(handle_get_search_history)
+                .post(handle_save_search_query)
+                .delete(handle_delete_search_history),
+        )
+        // Library: Playback History & Aliases
         .route(
             "/api/library/playback-history",
             get(handle_get_playback_history)
                 .post(handle_record_playback)
                 .delete(handle_clear_playback_history),
         )
+        .route(
+            "/api/history/playback",
+            get(handle_get_playback_history)
+                .post(handle_record_playback)
+                .delete(handle_clear_playback_history),
+        )
+        // Config & Session
+        .route("/api/config", get(handle_get_config).post(handle_set_config))
+        .route("/api/session", get(handle_get_session).post(handle_set_session))
         // Library: Custom Playlists
         .route(
             "/api/library/playlists",
@@ -160,7 +177,9 @@ pub fn create_router(state: AppState) -> Router {
         )
         // System / Storage / Cache
         .route("/api/system/storage", get(handle_get_storage))
+        .route("/api/storage/info", get(handle_get_storage))
         .route("/api/system/cache", delete(handle_purge_cache))
+        .route("/api/storage/clear-cache", post(handle_purge_cache))
         // WebSocket
         .route("/ws", get(handle_ws))
         .layer(cors)
@@ -469,6 +488,38 @@ async fn handle_purge_cache(State(state): State<AppState>) -> impl IntoResponse 
         }
     }
     Json(json!({ "status": "purged", "message": "Cache successfully cleared" })).into_response()
+}
+
+async fn handle_add_favorite_legacy(
+    State(state): State<AppState>,
+    Json(track): Json<TrackItem>,
+) -> impl IntoResponse {
+    let _ = state.db.toggle_favorite(&track);
+    Json(json!({ "status": "success" })).into_response()
+}
+
+async fn handle_remove_favorite_legacy(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    let _ = state.db.remove_favorite(&id);
+    Json(json!({ "status": "success" })).into_response()
+}
+
+async fn handle_get_config() -> impl IntoResponse {
+    Json(json!({ "status": "success", "audio_quality": "high", "volume": 1.0 })).into_response()
+}
+
+async fn handle_set_config() -> impl IntoResponse {
+    Json(json!({ "status": "success" })).into_response()
+}
+
+async fn handle_get_session() -> impl IntoResponse {
+    Json(json!({ "status": "success", "active": true })).into_response()
+}
+
+async fn handle_set_session() -> impl IntoResponse {
+    Json(json!({ "status": "success" })).into_response()
 }
 
 async fn handle_ws(ws: WebSocketUpgrade) -> impl IntoResponse {
