@@ -18,10 +18,14 @@ import {
   ShieldCheck,
   MoreVertical,
   ThumbsUp,
+  ThumbsDown,
   Share2,
   Music,
   CheckCircle2,
+  Cast,
+  Bell,
   Sparkles,
+  CheckCircle,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { Track } from '../types';
@@ -30,10 +34,23 @@ import { useDownloadStore } from '../stores/useDownloadStore';
 import { useNavigationStore } from '../stores/useNavigationStore';
 import { useVideoStore } from '../stores/useVideoStore';
 
-// Authentic YouTube Play Icon
-const YouTubeIcon: React.FC<{ className?: string }> = ({ className = 'w-6 h-6' }) => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
-    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+// Authentic YouTube Wordmark Logo
+const YouTubeLogo: React.FC<{ className?: string }> = ({ className = 'h-5' }) => (
+  <div className="flex items-center gap-1.5 select-none cursor-pointer">
+    <div className="w-7 h-5 rounded-[6px] bg-[#ff0000] flex items-center justify-center shadow-sm">
+      <svg viewBox="0 0 24 24" fill="white" className="w-3.5 h-3.5 ml-0.5">
+        <path d="M8 5v14l11-7z" />
+      </svg>
+    </div>
+    <span className="text-[18px] font-black tracking-[-0.05em] text-white font-sans">YouTube</span>
+    <span className="text-[10px] text-[#aaaaaa] font-semibold -mt-2.5 ml-0.5">IN</span>
+  </div>
+);
+
+// Authentic YouTube Shorts Logo
+const ShortsIcon: React.FC<{ className?: string }> = ({ className = 'w-5 h-5' }) => (
+  <svg viewBox="0 0 24 24" fill="#ff0000" className={className}>
+    <path d="M17.77 10.32l-1.2-.5a3.48 3.48 0 0 0-4.6-1.57l-.54.26a3.5 3.5 0 0 0-1.74 3.03v.2a3.49 3.49 0 0 0 1.57 2.92l.54.26-1.2.5A3.49 3.49 0 0 0 8.7 19.1l.54.26a3.5 3.5 0 0 0 4.6 1.57l.54-.26a3.5 3.5 0 0 0 1.74-3.03v-.2a3.49 3.49 0 0 0-1.57-2.92l-.54-.26 1.2-.5a3.49 3.49 0 0 0 2.56-4.63zm-7.77 4.18v-5l4.5 2.5-4.5 2.5z" />
   </svg>
 );
 
@@ -57,12 +74,19 @@ export const YouTubePage: React.FC = () => {
   const [searchResults, setSearchResults] = useState<Track[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
-  const [copiedToast, setCopiedToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [mobileMenuVideo, setMobileMenuVideo] = useState<Track | null>(null);
   const [likedVideos, setLikedVideos] = useState<Record<string, boolean>>({});
+  const [dislikedVideos, setDislikedVideos] = useState<Record<string, boolean>>({});
   const [subscribedChannels, setSubscribedChannels] = useState<Record<string, boolean>>({});
+  const [trendingCategory, setTrendingCategory] = useState<string>('All');
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 2500);
+  };
 
   const {
     activeVideo,
@@ -176,14 +200,12 @@ export const YouTubePage: React.FC = () => {
     }
   }, [youtubeSelectedVideo, playVideo]);
 
-  const [trendingCategory, setTrendingCategory] = useState<'IN' | 'bollywood' | 'punjabi' | 'US'>('IN');
-
-  // Load Trending YouTube Videos (Default: India / Hindi)
-  const loadTrending = async (category: 'IN' | 'bollywood' | 'punjabi' | 'US' = 'IN') => {
+  // Load Trending YouTube Videos
+  const loadTrending = async (category: string = 'All') => {
     setLoading(true);
     setTrendingCategory(category);
     try {
-      if (category === 'IN') {
+      if (category === 'All' || category === 'IN') {
         const charts = await api.getCharts('IN');
         if (charts && charts.videos && charts.videos.length > 0) {
           setTrendingVideos(charts.videos);
@@ -193,11 +215,23 @@ export const YouTubePage: React.FC = () => {
         if (charts && charts.videos && charts.videos.length > 0) {
           setTrendingVideos(charts.videos);
         }
-      } else if (category === 'bollywood') {
-        const results = await api.searchYouTubeVideos('Hindi Bollywood official video new song', 16);
+      } else if (category === 'Bollywood') {
+        const results = await api.searchYouTubeVideos('Hindi Bollywood official video new song', 20);
         setTrendingVideos(results || []);
-      } else if (category === 'punjabi') {
-        const results = await api.searchYouTubeVideos('Punjabi official video new song', 16);
+      } else if (category === 'Punjabi') {
+        const results = await api.searchYouTubeVideos('Punjabi official video new song', 20);
+        setTrendingVideos(results || []);
+      } else if (category === 'Gaming') {
+        const results = await api.searchYouTubeVideos('Trending Gaming gameplay highlights', 20);
+        setTrendingVideos(results || []);
+      } else if (category === 'Podcasts') {
+        const results = await api.searchYouTubeVideos('Popular podcast episodes full interview', 20);
+        setTrendingVideos(results || []);
+      } else if (category === 'Live') {
+        const results = await api.searchYouTubeVideos('Live music concert stream 4K', 20);
+        setTrendingVideos(results || []);
+      } else {
+        const results = await api.searchYouTubeVideos(`${category} official video trending`, 20);
         setTrendingVideos(results || []);
       }
     } catch (err) {
@@ -208,7 +242,7 @@ export const YouTubePage: React.FC = () => {
   };
 
   useEffect(() => {
-    loadTrending('IN');
+    loadTrending('All');
   }, []);
 
   const handlePlayUrl = (e?: React.FormEvent) => {
@@ -221,8 +255,9 @@ export const YouTubePage: React.FC = () => {
         artist: 'YouTube',
       });
       setUrlInput('');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
-      alert('Please enter a valid YouTube video URL or 11-character video ID.');
+      showToast('Please enter a valid YouTube video link');
     }
   };
 
@@ -238,12 +273,12 @@ export const YouTubePage: React.FC = () => {
             title: `YouTube Video (${id})`,
             artist: 'YouTube',
           });
-          setCopiedToast(true);
-          setTimeout(() => setCopiedToast(false), 2000);
+          showToast('Loaded YouTube Video from clipboard!');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         }
       }
     } catch {
-      // Fallback
+      showToast('Clipboard access unavailable');
     }
   };
 
@@ -292,6 +327,7 @@ export const YouTubePage: React.FC = () => {
       title: title || 'YouTube Video',
       artist: author || 'YouTube',
     });
+    showToast(isAudio ? 'Added to MP3 audio download queue!' : 'Added to 1080p MP4 download queue!');
   };
 
   const handleListenAsAudio = (track?: { id: string; title: string; artist: string; thumbnail?: string }) => {
@@ -307,879 +343,867 @@ export const YouTubePage: React.FC = () => {
       duration: '0:00',
       durationSeconds: 0,
     });
+    showToast('Playing in Background Audio Mode');
   };
 
   const handleShareVideo = (id: string) => {
     const url = `https://www.youtube.com/watch?v=${id}`;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(url).then(() => {
-        setCopiedToast(true);
-        setTimeout(() => setCopiedToast(false), 2000);
+        showToast('YouTube link copied to clipboard!');
       });
     }
   };
 
   const displayedVideos = searchResults.length > 0 ? searchResults : trendingVideos;
 
+  // Shorts shelf items extracted from trending videos
+  const shortsItems = displayedVideos.slice(0, 6).map((item, i) => ({
+    ...item,
+    mockViews: `${(1.2 + (i * 0.7)).toFixed(1)}M views`,
+  }));
+
+  const categoryPills = [
+    'All',
+    'Music',
+    'Bollywood',
+    'Punjabi',
+    'Live',
+    'Gaming',
+    'Podcasts',
+    'Mixes',
+  ];
+
   return (
-    <div className="min-h-screen text-foreground pb-44 md:pb-32">
+    <div className="min-h-screen bg-[#0f0f0f] text-white selection:bg-red-600 selection:text-white pb-48 md:pb-36">
       {/* Toast Notification */}
-      {copiedToast && (
-        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[9999] px-4 py-2 bg-red-600 text-white text-xs font-bold rounded-full shadow-2xl flex items-center gap-2 animate-bounce">
-          <CheckCircle2 className="w-4 h-4" />
-          <span>Link copied to clipboard!</span>
+      {toastMessage && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[9999] px-4 py-2 bg-[#212121] text-white text-xs font-semibold rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.8)] border border-white/10 flex items-center gap-2 animate-fadeIn">
+          <CheckCircle2 className="w-4 h-4 text-red-500" />
+          <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* ========================================================== */}
-      {/* 📱 MOBILE VIEW (< 768px): AUTHENTIC YOUTUBE APP EXPERIENCE */}
-      {/* ========================================================== */}
-      <div className="block md:hidden">
-        {/* Mobile YouTube Top App Bar (When no video is sticky or when browsing) */}
-        <header className="sticky top-0 z-40 bg-[#0f0f0f]/95 backdrop-blur-md border-b border-white/10 px-4 py-2.5 flex items-center justify-between">
-          <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => { setSearchResults([]); setSearchQuery(''); }}>
-            <div className="w-7 h-7 rounded-lg bg-red-600 text-white flex items-center justify-center shadow-md">
-              <YouTubeIcon className="w-4 h-4" />
-            </div>
-            <span className="text-[17px] font-black tracking-tighter text-white">YouTube</span>
+      {/* ========================================================================= */}
+      {/* 📱 TOP BAR (MOBILE VIEW < 768px - AS SEEN IN SAMSUNG S24 SCREENSHOT 1) */}
+      {/* ========================================================================= */}
+      <div className="block md:hidden sticky top-0 z-40 bg-[#0f0f0f]/95 backdrop-blur-md border-b border-white/10">
+        <div className="px-4 py-2.5 flex items-center justify-between">
+          <div
+            onClick={() => {
+              setSearchResults([]);
+              setSearchQuery('');
+              loadTrending('All');
+            }}
+          >
+            <YouTubeLogo />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => showToast('Cast to TV device search initiated')}
+              className="p-2 rounded-full hover:bg-white/10 text-white active:scale-95 transition-all"
+              title="Cast to Device"
+            >
+              <Cast className="w-5 h-5 text-white/90" />
+            </button>
+            <button
+              onClick={() => showToast('No new notifications')}
+              className="p-2 rounded-full hover:bg-white/10 text-white active:scale-95 transition-all relative"
+              title="Notifications"
+            >
+              <Bell className="w-5 h-5 text-white/90" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-600" />
+            </button>
             <button
               onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
-              className="p-2 rounded-full hover:bg-white/10 text-white/90 active:scale-95 transition-all"
+              className="p-2 rounded-full hover:bg-white/10 text-white active:scale-95 transition-all"
               title="Search"
             >
-              <Search className="w-5 h-5" />
+              <Search className="w-5 h-5 text-white/90" />
             </button>
             <button
               onClick={handlePaste}
-              className="p-2 rounded-full hover:bg-white/10 text-white/90 active:scale-95 transition-all"
+              className="p-2 rounded-full hover:bg-white/10 text-white active:scale-95 transition-all"
               title="Paste YouTube link"
             >
-              <Clipboard className="w-5 h-5" />
+              <Clipboard className="w-5 h-5 text-white/90" />
             </button>
           </div>
-        </header>
+        </div>
 
-        {/* Mobile Expandable Search Bar */}
+        {/* Mobile Search Expandable Input */}
         {mobileSearchOpen && (
-          <form onSubmit={handleSearch} className="p-3 bg-[#18181b] border-b border-white/10 flex gap-2 animate-fadeIn">
+          <form onSubmit={handleSearch} className="px-3 pb-3 flex gap-2 animate-fadeIn">
             <div className="relative flex-1">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/50" />
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search YouTube videos, songs..."
-                className="w-full bg-[#27272a] text-white placeholder:text-white/40 text-xs rounded-full pl-9 pr-3 py-2 outline-none focus:ring-1 focus:ring-red-500"
+                placeholder="Search YouTube"
+                className="w-full bg-[#222222] text-white placeholder:text-white/40 text-xs rounded-full pl-9 pr-3 py-2 outline-none focus:ring-1 focus:ring-red-500"
                 autoFocus
               />
             </div>
             <button
               type="submit"
-              className="px-4 py-2 bg-red-600 text-white text-xs font-bold rounded-full shrink-0"
+              className="px-4 py-2 bg-[#ff0000] text-white text-xs font-bold rounded-full shrink-0"
             >
               Search
             </button>
           </form>
         )}
 
-        {/* Mobile Horizontal Category Filter Chips */}
-        <div className="px-4 py-2.5 flex items-center gap-2 overflow-x-auto scrollbar-none bg-[#0f0f0f] border-b border-white/5">
-          {[
-            { id: 'IN', label: 'All / India' },
-            { id: 'bollywood', label: 'Bollywood' },
-            { id: 'punjabi', label: 'Punjabi' },
-            { id: 'US', label: 'Global Hits' },
-          ].map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => {
-                setSearchResults([]);
-                loadTrending(cat.id as any);
-              }}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
-                trendingCategory === cat.id && searchResults.length === 0
-                  ? 'bg-white text-black font-bold shadow-sm'
-                  : 'bg-white/10 text-white/80 hover:bg-white/15'
-              }`}
-            >
-              {cat.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Mobile Active Video Watch Deck (Sticky at Top) */}
-        {activeVideo && (
-          <div className="sticky top-0 z-50 bg-[#0f0f0f] shadow-2xl border-b border-white/10">
-            {/* 16:9 Sticky Video Anchor */}
-            <div
-              ref={sentinelRef}
-              id="youtube-cinema-anchor"
-              className="relative w-full aspect-video bg-black overflow-hidden"
-            >
-              {isPiP && (
-                <div
-                  onClick={restoreCinema}
-                  className="w-full h-full flex flex-col items-center justify-center bg-black/80 text-white gap-2 cursor-pointer"
-                >
-                  <PictureInPicture2 className="w-8 h-8 text-red-500 animate-pulse" />
-                  <span className="text-xs font-bold">Tap to Restore Full Video</span>
-                </div>
-              )}
-            </div>
-
-            {/* Mobile Video Info & Actions */}
-            <div className="p-3.5 space-y-3 bg-[#0f0f0f]">
-              {/* Title & Close */}
-              <div className="flex items-start justify-between gap-3">
-                <h2 className="text-[15px] font-bold text-white line-clamp-2 leading-snug">
-                  {activeVideo.title}
-                </h2>
-                <button
-                  onClick={closeVideo}
-                  className="p-1 rounded-full text-white/70 hover:text-white hover:bg-white/10 shrink-0"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Channel Row & Subscribe Button */}
-              <div className="flex items-center justify-between pt-1">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-red-600 to-red-400 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-md">
-                    {activeVideo.artist ? activeVideo.artist.charAt(0).toUpperCase() : 'Y'}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-white truncate">{activeVideo.artist || 'YouTube Official'}</p>
-                    <p className="text-[10px] text-white/60">Official Artist Channel</p>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() =>
-                    setSubscribedChannels((prev) => ({
-                      ...prev,
-                      [activeVideo.artist]: !prev[activeVideo.artist],
-                    }))
-                  }
-                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
-                    subscribedChannels[activeVideo.artist]
-                      ? 'bg-white/15 text-white'
-                      : 'bg-white text-black hover:bg-white/90 active:scale-95'
-                  }`}
-                >
-                  {subscribedChannels[activeVideo.artist] ? 'Subscribed' : 'Subscribe'}
-                </button>
-              </div>
-
-              {/* YouTube Native Horizontal Action Pills */}
-              <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pt-1 pb-1">
-                {/* Like Button */}
-                <button
-                  onClick={() =>
-                    setLikedVideos((prev) => ({ ...prev, [activeVideo.id]: !prev[activeVideo.id] }))
-                  }
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
-                    likedVideos[activeVideo.id]
-                      ? 'bg-white text-black font-bold'
-                      : 'bg-white/10 text-white hover:bg-white/20'
-                  }`}
-                >
-                  <ThumbsUp className={`w-3.5 h-3.5 ${likedVideos[activeVideo.id] ? 'fill-current' : ''}`} />
-                  <span>{likedVideos[activeVideo.id] ? 'Liked' : 'Like'}</span>
-                </button>
-
-                {/* Share Button */}
-                <button
-                  onClick={() => handleShareVideo(activeVideo.id)}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-semibold whitespace-nowrap"
-                >
-                  <Share2 className="w-3.5 h-3.5" />
-                  <span>Share</span>
-                </button>
-
-                {/* Listen as Audio */}
-                <button
-                  onClick={() => handleListenAsAudio()}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-primary/20 text-primary border border-primary/30 text-xs font-semibold whitespace-nowrap"
-                >
-                  <Music className="w-3.5 h-3.5" />
-                  <span>Listen Audio</span>
-                </button>
-
-                {/* Download Video */}
-                <button
-                  onClick={() =>
-                    handleDownloadVideo(activeVideo.id, activeVideo.title, activeVideo.artist, false)
-                  }
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-semibold whitespace-nowrap"
-                >
-                  <Download className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Download MP4</span>
-                </button>
-
-                {/* Download MP3 */}
-                <button
-                  onClick={() =>
-                    handleDownloadVideo(activeVideo.id, activeVideo.title, activeVideo.artist, true)
-                  }
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-semibold whitespace-nowrap"
-                >
-                  <Download className="w-3.5 h-3.5 text-pink-400" />
-                  <span>Download MP3</span>
-                </button>
-
-                {/* Direct Video Bypass Toggle */}
-                <button
-                  onClick={toggleDirectVideo}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border ${
-                    useDirectVideo
-                      ? 'bg-emerald-600 text-white border-emerald-500'
-                      : 'bg-white/10 text-white border-transparent'
-                  }`}
-                >
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>{useDirectVideo ? 'Direct Active' : 'Bypass Error'}</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Mobile Native Video Feed (Full Width 16:9 Edge-to-Edge Cards) */}
-        <div className="divide-y divide-white/5">
-          {displayedVideos.map((video, idx) => {
-            const vidId = video.videoId || video.id;
-            const thumb = video.thumbnail || `https://i.ytimg.com/vi/${vidId}/hqdefault.jpg`;
-            const duration = video.duration || 'Video';
-            const channelName = video.artist || (video as any).uploader || 'YouTube Official';
-
+        {/* Mobile Category Filter Pills Bar */}
+        <div className="px-4 py-2 flex items-center gap-2 overflow-x-auto scrollbar-none border-t border-white/5">
+          {categoryPills.map((cat) => {
+            const isSelected = trendingCategory === cat && searchResults.length === 0;
             return (
-              <div key={vidId || idx} className="pb-4 pt-2">
-                {/* 16:9 Full Bleed Thumbnail */}
-                <div
-                  className="relative aspect-video w-full bg-[#18181b] overflow-hidden cursor-pointer"
-                  onClick={() => handleSelectVideo(video)}
-                >
-                  <img
-                    src={thumb}
-                    alt=""
-                    loading="lazy"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-bold font-mono px-1.5 py-0.5 rounded shadow">
-                    {duration}
-                  </div>
-                </div>
-
-                {/* Metadata Row below Thumbnail (Avatar + Title + Channel + 3-Dot Menu) */}
-                <div className="px-3.5 pt-3 flex items-start gap-3">
-                  {/* Channel Avatar */}
-                  <div
-                    className="w-9 h-9 rounded-full bg-gradient-to-tr from-zinc-700 to-zinc-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow mt-0.5"
-                    onClick={() => handleSelectVideo(video)}
-                  >
-                    {channelName.charAt(0).toUpperCase()}
-                  </div>
-
-                  {/* Title & Info */}
-                  <div className="flex-1 min-w-0 cursor-pointer" onClick={() => handleSelectVideo(video)}>
-                    <h3 className="text-[14px] font-semibold text-white line-clamp-2 leading-snug tracking-tight">
-                      {video.title}
-                    </h3>
-                    <p className="text-[12px] text-zinc-400 mt-0.5 truncate">
-                      {channelName} · {duration}
-                    </p>
-                  </div>
-
-                  {/* 3-Dot Action Menu Button */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setMobileMenuVideo(video);
-                    }}
-                    className="p-2 -mr-1 text-zinc-400 hover:text-white active:scale-90 transition-all shrink-0"
-                    title="Options"
-                  >
-                    <MoreVertical className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
+              <button
+                key={cat}
+                onClick={() => {
+                  setSearchResults([]);
+                  loadTrending(cat);
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+                  isSelected
+                    ? 'bg-white text-black font-bold shadow-sm'
+                    : 'bg-[#272727] text-white hover:bg-[#3f3f3f]'
+                }`}
+              >
+                {cat}
+              </button>
             );
           })}
         </div>
-
-        {/* Mobile 3-Dot Action Bottom Sheet */}
-        {mobileMenuVideo && (
-          <div className="fixed inset-0 z-[600] flex flex-col justify-end">
-            <div
-              className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-fadeIn"
-              onClick={() => setMobileMenuVideo(null)}
-            />
-            <div className="relative bg-[#1c1c1e] border-t border-white/15 rounded-t-[28px] p-5 shadow-2xl z-10 space-y-3 animate-slideUp max-h-[80vh] overflow-y-auto">
-              <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-2" />
-
-              {/* Video Preview */}
-              <div className="flex items-center gap-3 pb-3 border-b border-white/10">
-                <img
-                  src={
-                    mobileMenuVideo.thumbnail ||
-                    `https://i.ytimg.com/vi/${mobileMenuVideo.videoId || mobileMenuVideo.id}/hqdefault.jpg`
-                  }
-                  alt=""
-                  className="w-16 h-10 object-cover rounded-lg shrink-0"
-                />
-                <div className="min-w-0">
-                  <h4 className="text-xs font-bold text-white line-clamp-1">{mobileMenuVideo.title}</h4>
-                  <p className="text-[11px] text-zinc-400 truncate mt-0.5">{mobileMenuVideo.artist || 'YouTube'}</p>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="space-y-1 text-sm font-semibold">
-                <button
-                  onClick={() => {
-                    handleSelectVideo(mobileMenuVideo);
-                    setMobileMenuVideo(null);
-                  }}
-                  className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-white/10 text-white transition-colors"
-                >
-                  <Play className="w-4 h-4 text-red-500 fill-current" />
-                  <span>Play Video Now</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    handleListenAsAudio(mobileMenuVideo);
-                    setMobileMenuVideo(null);
-                  }}
-                  className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-white/10 text-white transition-colors"
-                >
-                  <Music className="w-4 h-4 text-primary" />
-                  <span>Listen as Audio (Music Mode)</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    handleDownloadVideo(
-                      mobileMenuVideo.videoId || mobileMenuVideo.id,
-                      mobileMenuVideo.title,
-                      mobileMenuVideo.artist,
-                      false
-                    );
-                    setMobileMenuVideo(null);
-                  }}
-                  className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-white/10 text-white transition-colors"
-                >
-                  <Download className="w-4 h-4 text-emerald-400" />
-                  <span>Download Video (1080p MP4)</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    handleDownloadVideo(
-                      mobileMenuVideo.videoId || mobileMenuVideo.id,
-                      mobileMenuVideo.title,
-                      mobileMenuVideo.artist,
-                      true
-                    );
-                    setMobileMenuVideo(null);
-                  }}
-                  className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-white/10 text-white transition-colors"
-                >
-                  <Download className="w-4 h-4 text-pink-400" />
-                  <span>Download Audio (320k MP3)</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    handleShareVideo(mobileMenuVideo.videoId || mobileMenuVideo.id);
-                    setMobileMenuVideo(null);
-                  }}
-                  className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-white/10 text-white transition-colors"
-                >
-                  <Share2 className="w-4 h-4 text-zinc-300" />
-                  <span>Copy YouTube Link</span>
-                </button>
-              </div>
-
-              <button
-                onClick={() => setMobileMenuVideo(null)}
-                className="w-full py-3 mt-2 rounded-2xl bg-white/10 text-white font-bold text-xs"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* ========================================================== */}
-      {/* 💻 DESKTOP VIEW (>= 768px): FULL YOUTUBE WEB CINEMA LAYOUT */}
-      {/* ========================================================== */}
-      <div className="hidden md:block p-6 md:p-8 space-y-6 md:space-y-8 max-w-7xl mx-auto">
-        {/* Header Banner */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-border">
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-red-600/20 text-red-500 border border-red-500/30 flex items-center justify-center shadow-lg shadow-red-500/10">
-              <YouTubeIcon className="w-7 h-7" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-black tracking-tight text-foreground">
-                  YouTube Videos & Music
-                </h1>
-                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-red-600/20 text-red-500 border border-red-500/30 uppercase">
-                  4K Cinema
-                </span>
-              </div>
-              <p className="text-xs text-foreground-muted mt-0.5">
-                Watch ad-free videos, float in Sidebar PiP, or seamlessly convert to audio & download
-              </p>
-            </div>
+      {/* ========================================================================= */}
+      {/* 💻 TOP BAR (DESKTOP VIEW >= 768px - AS SEEN IN YOUTUBE WEB SCREENSHOT 2)  */}
+      {/* ========================================================================= */}
+      <div className="hidden md:block sticky top-0 z-40 bg-[#0f0f0f]/95 backdrop-blur-md border-b border-[#272727] px-6 py-3">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-6">
+          {/* Left: YouTube Logo */}
+          <div
+            onClick={() => {
+              setSearchResults([]);
+              setSearchQuery('');
+              loadTrending('All');
+            }}
+          >
+            <YouTubeLogo />
           </div>
 
-          {/* Quick URL Bar */}
-          <form onSubmit={handlePlayUrl} className="flex items-center gap-2 max-w-md w-full">
-            <div className="relative flex-1">
+          {/* Center: Authentic YouTube Web Pill Search Bar */}
+          <form onSubmit={handleSearch} className="flex items-center flex-1 max-w-2xl">
+            <div className="flex items-center flex-1 bg-[#121212] border border-[#303030] focus-within:border-[#1c62b9] rounded-l-full px-4 py-2 shadow-inner transition-colors">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search"
+                className="w-full bg-transparent text-white text-sm outline-none placeholder-[#888888]"
+              />
+            </div>
+            <button
+              type="submit"
+              className="bg-[#222222] hover:bg-[#272727] border border-l-0 border-[#303030] rounded-r-full px-6 py-2 text-[#f1f1f1] transition-colors"
+              title="Search"
+            >
+              <Search className="w-5 h-5 text-[#f1f1f1]" />
+            </button>
+          </form>
+
+          {/* Right: Quick Paste Link Bar */}
+          <form onSubmit={handlePlayUrl} className="flex items-center gap-2">
+            <div className="relative">
               <input
                 type="text"
                 value={urlInput}
                 onChange={(e) => setUrlInput(e.target.value)}
-                placeholder="Paste any YouTube URL or Video ID..."
-                className="w-full bg-surface border border-border focus:border-red-500 text-foreground placeholder:text-foreground-subtle text-xs rounded-2xl pl-4 pr-10 py-3 outline-none transition-all shadow-inner"
+                placeholder="Paste YouTube Link or ID..."
+                className="bg-[#222222] border border-[#303030] focus:border-red-500 text-white placeholder-[#888888] text-xs rounded-full pl-4 pr-9 py-2 outline-none w-56 transition-all"
               />
               <button
                 type="button"
                 onClick={handlePaste}
                 title="Paste from Clipboard"
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 rounded-xl hover:bg-surface-elevated text-foreground-muted hover:text-foreground transition-colors"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-[#888888] hover:text-white"
               >
                 <Clipboard className="w-3.5 h-3.5" />
               </button>
             </div>
             <button
               type="submit"
-              className="px-5 py-3 rounded-2xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs shadow-lg shadow-red-600/25 transition-all hover:scale-105 active:scale-95 shrink-0 flex items-center gap-1.5"
+              className="px-4 py-2 rounded-full bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-all shrink-0"
             >
-              <Play className="w-3.5 h-3.5 fill-current" />
-              <span>Play Video</span>
+              Play
             </button>
           </form>
         </div>
 
-        {/* Main Theater Player Section (Desktop) */}
-        {activeVideo ? (
-          <div className="bg-surface border border-border rounded-3xl p-5 shadow-2xl space-y-4 animate-fadeIn relative">
-            <div className="flex items-center justify-between pb-1">
-              <span className="text-xs font-bold text-red-500 flex items-center gap-1.5 uppercase tracking-wider">
-                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                Now Playing
-              </span>
-              <div className="flex items-center gap-2">
-                {/* Video Quality Dropdown */}
-                <div className="relative z-30" ref={qualityMenuRef}>
-                  <button
-                    type="button"
-                    onClick={toggleQualityMenu}
-                    className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-xl transition-all border ${
-                      qualityMenuOpen
-                        ? 'bg-red-600 text-white border-red-500 shadow-md shadow-red-600/30'
-                        : 'bg-red-600/15 text-red-500 border-red-500/30 hover:bg-red-600/25'
-                    }`}
-                    title="Select Video Playback Quality (Default: 1080p Full HD)"
+        {/* Desktop Filter Pills Row */}
+        <div className="max-w-7xl mx-auto flex items-center gap-2.5 overflow-x-auto scrollbar-none pt-3">
+          {categoryPills.map((cat) => {
+            const isSelected = trendingCategory === cat && searchResults.length === 0;
+            return (
+              <button
+                key={cat}
+                onClick={() => {
+                  setSearchResults([]);
+                  loadTrending(cat);
+                }}
+                className={`px-3 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap transition-all ${
+                  isSelected
+                    ? 'bg-white text-black font-bold shadow-sm'
+                    : 'bg-[#272727] text-white hover:bg-[#3f3f3f]'
+                }`}
+              >
+                {cat}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 🎬 ACTIVE WATCH PAGE (SHARED RESPONSIVE: STICKY MOBILE + 2-COL DESKTOP)    */}
+      {/* ========================================================================= */}
+      {activeVideo && (
+        <div className="w-full bg-[#0f0f0f] border-b border-white/10 md:border-none pb-6">
+          <div className="flex flex-col lg:grid lg:grid-cols-3 lg:gap-6 max-w-7xl mx-auto md:p-6 lg:p-8">
+            {/* Left / Main Watch Deck (Span 2 on Desktop) */}
+            <div className="lg:col-span-2 space-y-3.5">
+              {/* Single Video Anchor (Measured by PersistentVideoPlayer) */}
+              <div
+                ref={sentinelRef}
+                id="youtube-cinema-anchor"
+                className="sticky top-0 md:static z-40 relative w-full aspect-video bg-black overflow-hidden shadow-2xl rounded-none md:rounded-2xl max-h-[75vh]"
+              >
+                {isPiP && (
+                  <div
+                    onClick={restoreCinema}
+                    className="w-full h-full flex flex-col items-center justify-center bg-black/85 text-white gap-2 cursor-pointer select-none"
                   >
-                    <Tv className="w-3.5 h-3.5 text-red-500" />
-                    <span>
-                      {videoQuality === 'hd2160'
-                        ? '4K Ultra HD'
-                        : videoQuality === 'hd1440'
-                        ? '1440p QHD'
-                        : videoQuality === 'hd720'
-                        ? '720p HD'
-                        : videoQuality === 'large'
-                        ? '480p SD'
-                        : videoQuality === 'medium'
-                        ? '360p Data Saver'
-                        : videoQuality === 'auto'
-                        ? 'Auto Quality'
-                        : '1080p Full HD'}
-                    </span>
-                    <ChevronDown className={`w-3 h-3 transition-transform ${qualityMenuOpen ? 'rotate-180' : ''}`} />
+                    <PictureInPicture2 className="w-8 h-8 text-red-500 animate-pulse" />
+                    <span className="text-xs font-bold">Video playing in Sidebar PiP · Click to restore</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Title & Metadata */}
+              <div className="px-4 md:px-0 space-y-2">
+                <div className="flex items-start justify-between gap-3">
+                  <h1 className="text-base sm:text-lg md:text-xl font-bold text-white leading-snug line-clamp-2">
+                    {activeVideo.title}
+                  </h1>
+                  <button
+                    onClick={closeVideo}
+                    className="p-1.5 rounded-full hover:bg-white/10 text-white/70 hover:text-white shrink-0"
+                    title="Close Video"
+                  >
+                    <X className="w-5 h-5" />
                   </button>
+                </div>
 
-                  {qualityMenuOpen && dropdownPos && createPortal(
-                    <div
-                      ref={dropdownMenuRef}
-                      style={{
-                        position: 'fixed',
-                        top: `${dropdownPos.top}px`,
-                        right: `${dropdownPos.right}px`,
-                        width: `${dropdownPos.width}px`,
-                        zIndex: 99999,
-                        backgroundColor: 'var(--bg-surface)',
-                      }}
-                      className="bg-surface border-2 border-border/90 rounded-2xl p-2 shadow-[0_20px_50px_rgba(0,0,0,0.65)] animate-fadeIn space-y-1 select-none"
-                    >
-                      <div className="px-3 py-2 border-b border-border/40 mb-1">
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs font-bold text-foreground">Playback Quality</p>
-                          <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-red-600/20 text-red-400 border border-red-500/30">
-                            {videoQuality === 'hd2160' ? '4K' : videoQuality === 'hd1440' ? '1440p' : videoQuality === 'hd720' ? '720p' : videoQuality === 'large' ? '480p' : videoQuality === 'medium' ? '360p' : videoQuality === 'auto' ? 'Auto' : '1080p'}
-                          </span>
-                        </div>
-                        <p className="text-[10px] text-foreground-muted">Default playback resolution</p>
+                {/* Channel Row & Action Bar */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 border-b border-white/10 pb-3">
+                  {/* Channel Details */}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-red-600 to-amber-500 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-md">
+                      {activeVideo.artist ? activeVideo.artist.charAt(0).toUpperCase() : 'Y'}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-sm font-bold text-white truncate">{activeVideo.artist || 'YouTube Official'}</p>
+                        <CheckCircle className="w-3.5 h-3.5 text-[#aaaaaa] shrink-0" />
                       </div>
+                      <p className="text-xs text-[#aaaaaa]">14.2M subscribers</p>
+                    </div>
 
-                      <div className="space-y-0.5">
-                        {[
-                          { id: 'hd1080', label: '1080p Full HD', badge: 'Default', desc: 'Crisp 1080p high definition' },
-                          { id: 'hd2160', label: '4K Ultra HD', badge: '2160p', desc: 'Highest 4K cinema resolution' },
-                          { id: 'hd1440', label: '1440p Quad HD', badge: '2K', desc: 'Premium quad definition' },
-                          { id: 'hd720', label: '720p HD', badge: '720p', desc: 'Smooth high definition' },
-                          { id: 'large', label: '480p SD', badge: '480p', desc: 'Standard definition' },
-                          { id: 'medium', label: '360p Data Saver', badge: 'Saver', desc: 'Lowest data usage' },
-                          { id: 'auto', label: 'Auto (Adaptive)', badge: 'Auto', desc: 'Automatically matches network' },
-                        ].map((q) => {
-                          const isSelected = (videoQuality || 'hd1080') === q.id;
-                          return (
+                    <button
+                      onClick={() => {
+                        const channel = activeVideo.artist || 'YouTube';
+                        setSubscribedChannels((prev) => {
+                          const state = !prev[channel];
+                          showToast(state ? `Subscribed to ${channel}` : `Unsubscribed from ${channel}`);
+                          return { ...prev, [channel]: state };
+                        });
+                      }}
+                      className={`ml-2 px-4 py-2 rounded-full text-xs font-bold transition-all shrink-0 ${
+                        subscribedChannels[activeVideo.artist || 'YouTube']
+                          ? 'bg-[#272727] text-white hover:bg-[#3f3f3f]'
+                          : 'bg-white text-black hover:bg-white/90 active:scale-95'
+                      }`}
+                    >
+                      {subscribedChannels[activeVideo.artist || 'YouTube'] ? 'Subscribed' : 'Subscribe'}
+                    </button>
+                  </div>
+
+                  {/* YouTube Action Buttons (Like/Dislike, Share, Audio, Download, Bypass, Quality) */}
+                  <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-1">
+                    {/* Like / Dislike joined pill */}
+                    <div className="flex items-center bg-[#272727] rounded-full divide-x divide-white/10">
+                      <button
+                        onClick={() => {
+                          setLikedVideos((prev) => {
+                            const cur = !prev[activeVideo.id];
+                            if (cur) setDislikedVideos((d) => ({ ...d, [activeVideo.id]: false }));
+                            return { ...prev, [activeVideo.id]: cur };
+                          });
+                        }}
+                        className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-l-full hover:bg-white/10 transition-colors ${
+                          likedVideos[activeVideo.id] ? 'text-white font-bold' : 'text-white/80'
+                        }`}
+                      >
+                        <ThumbsUp className={`w-3.5 h-3.5 ${likedVideos[activeVideo.id] ? 'fill-current text-white' : ''}`} />
+                        <span>{likedVideos[activeVideo.id] ? '142K' : '141K'}</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setDislikedVideos((prev) => {
+                            const cur = !prev[activeVideo.id];
+                            if (cur) setLikedVideos((l) => ({ ...l, [activeVideo.id]: false }));
+                            return { ...prev, [activeVideo.id]: cur };
+                          });
+                        }}
+                        className="px-3 py-1.5 text-xs text-white/80 rounded-r-full hover:bg-white/10 transition-colors"
+                        title="Dislike"
+                      >
+                        <ThumbsDown className={`w-3.5 h-3.5 ${dislikedVideos[activeVideo.id] ? 'fill-current text-white' : ''}`} />
+                      </button>
+                    </div>
+
+                    {/* Share */}
+                    <button
+                      onClick={() => handleShareVideo(activeVideo.id)}
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#272727] hover:bg-[#3f3f3f] text-white text-xs font-semibold whitespace-nowrap transition-colors"
+                    >
+                      <Share2 className="w-3.5 h-3.5" />
+                      <span>Share</span>
+                    </button>
+
+                    {/* Listen as Audio */}
+                    <button
+                      onClick={() => handleListenAsAudio()}
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 text-xs font-semibold whitespace-nowrap transition-colors"
+                      title="Convert directly to audio and play in background"
+                    >
+                      <Music className="w-3.5 h-3.5" />
+                      <span>Audio Mode</span>
+                    </button>
+
+                    {/* Download MP4 */}
+                    <button
+                      onClick={() => handleDownloadVideo(activeVideo.id, activeVideo.title, activeVideo.artist, false)}
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#272727] hover:bg-[#3f3f3f] text-white text-xs font-semibold whitespace-nowrap transition-colors"
+                      title="Download full 1080p MP4 Video"
+                    >
+                      <Download className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Download</span>
+                    </button>
+
+                    {/* Download MP3 */}
+                    <button
+                      onClick={() => handleDownloadVideo(activeVideo.id, activeVideo.title, activeVideo.artist, true)}
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#272727] hover:bg-[#3f3f3f] text-white text-xs font-semibold whitespace-nowrap transition-colors"
+                      title="Download 320k Audio MP3"
+                    >
+                      <Download className="w-3.5 h-3.5 text-pink-400" />
+                      <span>MP3</span>
+                    </button>
+
+                    {/* Direct Video Bypass Toggle */}
+                    <button
+                      onClick={toggleDirectVideo}
+                      className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border transition-colors ${
+                        useDirectVideo
+                          ? 'bg-emerald-600 text-white border-emerald-500'
+                          : 'bg-[#272727] text-white border-transparent hover:bg-[#3f3f3f]'
+                      }`}
+                      title={useDirectVideo ? 'Direct HTML5 Video bypass active' : 'Switch to Direct Video bypass'}
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span>{useDirectVideo ? 'Direct' : 'Bypass'}</span>
+                    </button>
+
+                    {/* Video Quality Picker */}
+                    <div className="relative" ref={qualityMenuRef}>
+                      <button
+                        onClick={toggleQualityMenu}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-[#272727] hover:bg-[#3f3f3f] text-white text-xs font-semibold whitespace-nowrap"
+                        title="Playback Quality"
+                      >
+                        <Tv className="w-3.5 h-3.5 text-red-500" />
+                        <span>{videoQuality === 'hd2160' ? '4K' : videoQuality === 'hd1440' ? '1440p' : videoQuality === 'hd720' ? '720p' : '1080p'}</span>
+                        <ChevronDown className="w-3 h-3" />
+                      </button>
+
+                      {qualityMenuOpen && dropdownPos && createPortal(
+                        <div
+                          ref={dropdownMenuRef}
+                          style={{
+                            position: 'fixed',
+                            top: `${dropdownPos.top}px`,
+                            right: `${dropdownPos.right}px`,
+                            width: `${dropdownPos.width}px`,
+                            zIndex: 99999,
+                            backgroundColor: '#212121',
+                          }}
+                          className="border border-[#383838] rounded-2xl p-2 shadow-2xl animate-fadeIn space-y-1 select-none text-white"
+                        >
+                          <div className="px-3 py-1.5 border-b border-white/10 text-xs font-bold text-white">
+                            Select Quality
+                          </div>
+                          {[
+                            { id: 'hd2160', label: '2160p 4K Ultra HD' },
+                            { id: 'hd1440', label: '1440p Quad HD' },
+                            { id: 'hd1080', label: '1080p Full HD (Default)' },
+                            { id: 'hd720', label: '720p High Definition' },
+                            { id: 'medium', label: '360p Data Saver' },
+                            { id: 'auto', label: 'Auto (Adaptive)' },
+                          ].map((q) => (
                             <button
                               key={q.id}
-                              type="button"
                               onClick={() => {
                                 setVideoQuality(q.id);
                                 setQualityMenuOpen(false);
                               }}
-                              className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-all ${
-                                isSelected
-                                  ? 'bg-red-600/20 text-red-400 font-bold border border-red-500/40'
-                                  : 'hover:bg-surface-elevated text-foreground-muted hover:text-foreground border border-transparent'
+                              className={`w-full flex items-center justify-between p-2 rounded-xl text-xs font-semibold text-left transition-colors ${
+                                videoQuality === q.id ? 'bg-red-600 text-white' : 'hover:bg-white/10 text-white/80'
                               }`}
                             >
-                              <div>
-                                <div className="text-xs font-semibold">{q.label}</div>
-                                <div className="text-[10px] text-foreground-subtle leading-tight">{q.desc}</div>
-                              </div>
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-surface-elevated text-foreground-subtle border border-border/40">
-                                  {q.badge}
-                                </span>
-                                {isSelected && <Check className="w-3.5 h-3.5 text-red-500 shrink-0" />}
-                              </div>
+                              <span>{q.label}</span>
+                              {videoQuality === q.id && <Check className="w-3.5 h-3.5" />}
                             </button>
-                          );
-                        })}
-                      </div>
-                    </div>,
-                    document.body
-                  )}
-                </div>
-
-                {/* Direct Video Bypass Toggle Button */}
-                <button
-                  type="button"
-                  onClick={toggleDirectVideo}
-                  className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-xl transition-all border ${
-                    useDirectVideo
-                      ? 'bg-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-600/30'
-                      : 'text-foreground-muted hover:text-foreground hover:bg-surface-elevated border-border/50'
-                  }`}
-                  title={useDirectVideo ? 'Direct HTML5 Video Player Active (Bypasses Blocks)' : 'Switch to Direct Video Player (bypasses YouTube Error 150/152)'}
-                >
-                  <ShieldCheck className={`w-3.5 h-3.5 ${useDirectVideo ? 'text-white' : 'text-emerald-400'}`} />
-                  <span>{useDirectVideo ? 'Direct Active' : 'Bypass Blocks'}</span>
-                </button>
-
-                {/* Picture-in-Picture Toggle Button */}
-                <button
-                  type="button"
-                  onClick={togglePiP}
-                  className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-xl transition-all border ${
-                    isPiP
-                      ? 'bg-red-600/20 text-red-500 border-red-500/40 shadow-sm shadow-red-500/20'
-                      : 'text-foreground-muted hover:text-foreground hover:bg-surface-elevated border-border/50'
-                  }`}
-                  title={isPiP ? 'Restore full cinema screen' : 'Dock video into Sidebar PiP'}
-                >
-                  <PictureInPicture2 className="w-3.5 h-3.5 text-red-500" />
-                  <span>{isPiP ? 'Exit PiP' : 'Sidebar PiP'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleToggleFullscreen}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-foreground-muted hover:text-foreground hover:bg-surface-elevated px-2.5 py-1 rounded-xl transition-colors border border-border/50"
-                  title={isFullscreen ? 'Exit Fullscreen (Esc)' : 'Enter Fullscreen (F)'}
-                >
-                  <Maximize2 className="w-3.5 h-3.5 text-red-500" />
-                  <span>{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={reloadVideo}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-foreground-muted hover:text-foreground hover:bg-surface-elevated px-2.5 py-1 rounded-xl transition-colors border border-border/50"
-                  title="Reload / Retry Video Player"
-                >
-                  <RotateCcw className="w-3.5 h-3.5 text-foreground-muted" />
-                  <span>Retry</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={closeVideo}
-                  className="flex items-center gap-1 text-xs font-semibold text-foreground-muted hover:text-foreground hover:bg-surface-elevated px-2.5 py-1 rounded-xl transition-colors border border-border/50"
-                >
-                  <X className="w-3.5 h-3.5" />
-                  <span>Close Video</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Cinema Screen Anchor for Persistent Video Player */}
-            <div
-              ref={sentinelRef}
-              id="youtube-cinema-anchor"
-              className="relative w-full aspect-video rounded-2xl max-h-[65vh] bg-black/40 overflow-hidden"
-            >
-              {isPiP && (
-                <div
-                  onClick={restoreCinema}
-                  className="w-full h-full rounded-2xl border-2 border-dashed border-red-500/30 bg-surface-elevated/40 hover:bg-surface-elevated/70 transition-all flex flex-col items-center justify-center gap-3 cursor-pointer group p-6 shadow-inner animate-fadeIn select-none"
-                >
-                  <div className="w-12 h-12 rounded-2xl bg-red-600/15 border border-red-500/30 text-red-500 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                    <PictureInPicture2 className="w-6 h-6 animate-pulse" />
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm font-bold text-foreground flex items-center justify-center gap-2">
-                      <span>Video Playing in Sidebar PiP</span>
-                      <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
-                    </p>
-                    <p className="text-xs text-foreground-muted mt-1">
-                      Click anywhere here or in the left sidebar to restore full cinema screen
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Under-Video Details & Quick Actions Bar */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
-              <div className="min-w-0">
-                <h2 className="text-xl font-bold text-foreground truncate">{activeVideo.title}</h2>
-                <p className="text-xs text-foreground-muted truncate mt-0.5">{activeVideo.artist}</p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => handleListenAsAudio()}
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface-elevated hover:bg-border/60 text-xs font-bold text-foreground transition-all hover:scale-105 active:scale-95"
-                >
-                  <ListPlus className="w-3.5 h-3.5 text-primary" />
-                  <span>Listen as Audio</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleDownloadVideo(activeVideo.id, activeVideo.title, activeVideo.artist, false)
-                  }
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface-elevated hover:bg-border/60 text-xs font-bold text-foreground transition-all hover:scale-105 active:scale-95"
-                >
-                  <Download className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Download Video</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleDownloadVideo(activeVideo.id, activeVideo.title, activeVideo.artist, true)
-                  }
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface-elevated hover:bg-border/60 text-xs font-bold text-foreground transition-all hover:scale-105 active:scale-95"
-                >
-                  <Download className="w-3.5 h-3.5 text-pink-400" />
-                  <span>Download MP3</span>
-                </button>
-
-                <a
-                  href={`https://www.youtube.com/watch?v=${activeVideo.id}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface-elevated hover:bg-border/60 text-xs font-bold text-foreground-muted hover:text-foreground transition-all hover:scale-105 active:scale-95"
-                  title="Open in YouTube"
-                >
-                  <ExternalLink className="w-3.5 h-3.5 text-red-500" />
-                  <span>Watch on YouTube</span>
-                </a>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="bg-gradient-to-r from-surface via-surface-elevated/40 to-surface border border-border rounded-3xl p-8 shadow-xl text-center flex flex-col items-center justify-center gap-3 animate-fadeIn">
-            <div className="w-14 h-14 rounded-3xl bg-red-600/10 text-red-500 border border-red-500/20 flex items-center justify-center shadow-lg">
-              <YouTubeIcon className="w-8 h-8" />
-            </div>
-            <h2 className="text-xl font-bold text-foreground">Ready to Watch</h2>
-            <p className="text-xs text-foreground-muted max-w-md">
-              Paste any YouTube video link in the bar above, search for any video below, or click any video card to start playing.
-            </p>
-          </div>
-        )}
-
-        {/* Search Any YouTube Video Section (Desktop) */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Search className="w-5 h-5 text-red-500" />
-              <h3 className="text-xl font-bold text-foreground">Search Any YouTube Video</h3>
-            </div>
-          </div>
-
-          <form onSubmit={handleSearch} className="flex gap-3">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-foreground-muted" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search tutorials, live streams, music videos, podcasts..."
-                className="w-full bg-surface border border-border focus:border-red-500 text-foreground placeholder:text-foreground-subtle text-xs rounded-2xl pl-11 pr-4 py-3 outline-none transition-all shadow-inner"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={searchLoading || !searchQuery.trim()}
-              className="px-6 py-3 rounded-2xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs shadow-lg shadow-red-600/25 disabled:opacity-50 transition-all hover:scale-105 active:scale-95"
-            >
-              {searchLoading ? 'Searching...' : 'Search Videos'}
-            </button>
-          </form>
-
-          {/* Search Results Grid (Desktop) */}
-          {searchResults.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pt-2">
-              {searchResults.map((video, idx) => (
-                <div
-                  key={video.id || idx}
-                  onClick={() => handleSelectVideo(video)}
-                  className="bg-surface border border-border hover:border-red-500/50 rounded-2xl p-3 cursor-pointer group transition-all hover:-translate-y-1 shadow-md flex flex-col justify-between"
-                >
-                  <div className="relative aspect-video rounded-xl overflow-hidden bg-surface-elevated mb-2.5">
-                    <img
-                      src={video.thumbnail || `https://i.ytimg.com/vi/${video.videoId || video.id}/hqdefault.jpg`}
-                      alt=""
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                    />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                      <div className="w-10 h-10 rounded-full bg-red-600 text-white flex items-center justify-center shadow-lg">
-                        <Play className="w-5 h-5 fill-current ml-0.5" />
-                      </div>
-                    </div>
-                    {video.duration && (
-                      <span className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-mono font-bold px-1.5 py-0.5 rounded">
-                        {video.duration}
-                      </span>
-                    )}
-                  </div>
-
-                  <div>
-                    <h4 className="font-bold text-xs text-foreground line-clamp-2 group-hover:text-red-500 transition-colors">
-                      {video.title}
-                    </h4>
-                    <div className="flex items-center justify-between mt-1 text-[11px] text-foreground-muted">
-                      <span className="truncate">{video.artist || (video as any).uploader || 'YouTube Video'}</span>
-                      {(video as any).views && (
-                        <span className="shrink-0 font-medium text-foreground-subtle ml-1">
-                          {(video as any).views}
-                        </span>
+                          ))}
+                        </div>,
+                        document.body
                       )}
                     </div>
                   </div>
                 </div>
-              ))}
+              </div>
             </div>
-          )}
+
+            {/* Right / Below Watch Queue ("Up Next") */}
+            <div className="lg:col-span-1 px-4 md:px-0 space-y-3 pt-2 lg:pt-0">
+              <h3 className="text-sm font-bold text-white flex items-center gap-1.5 uppercase tracking-wider">
+                <span>Up Next</span>
+              </h3>
+
+              <div className="space-y-3">
+                {displayedVideos
+                  .filter((v) => (v.videoId || v.id) !== activeVideo.id)
+                  .slice(0, 15)
+                  .map((video, idx) => {
+                    const vidId = video.videoId || video.id;
+                    const thumb = video.thumbnail || `https://i.ytimg.com/vi/${vidId}/hqdefault.jpg`;
+                    const duration = video.duration || 'Video';
+                    const author = video.artist || 'YouTube Official';
+
+                    return (
+                      <div
+                        key={vidId || idx}
+                        onClick={() => handleSelectVideo(video)}
+                        className="flex gap-2.5 group cursor-pointer hover:bg-white/5 p-1 rounded-xl transition-colors"
+                      >
+                        {/* Compact 16:9 Thumbnail */}
+                        <div className="relative w-40 aspect-video rounded-lg overflow-hidden bg-[#272727] shrink-0">
+                          <img
+                            src={thumb}
+                            alt=""
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                            loading="lazy"
+                          />
+                          <span className="absolute bottom-1 right-1 bg-black/80 text-white text-[10px] font-mono font-semibold px-1 py-0.2 rounded">
+                            {duration}
+                          </span>
+                        </div>
+
+                        {/* Text info */}
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-xs font-semibold text-white line-clamp-2 leading-snug group-hover:text-red-400 transition-colors">
+                            {video.title}
+                          </h4>
+                          <p className="text-[11px] text-[#aaaaaa] mt-1 truncate">{author}</p>
+                          <p className="text-[10px] text-[#888888]">420K views</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          </div>
         </div>
+      )}
 
-        {/* Trending YouTube Videos Section (Desktop) */}
-        <div className="space-y-4 pt-2">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* ========================================================================= */}
+      {/* 📱 MOBILE FEED (SCREENSHOT 1: 16:9 FULL-BLEED CARDS + SHORTS SHELF)        */}
+      {/* ========================================================================= */}
+      <div className="block md:hidden">
+        {/* First 2 Full-Bleed Video Cards */}
+        {displayedVideos.slice(0, 2).map((video, idx) => (
+          <MobileVideoCard
+            key={video.id || idx}
+            video={video}
+            onSelect={() => handleSelectVideo(video)}
+            onOpenMenu={() => setMobileMenuVideo(video)}
+          />
+        ))}
+
+        {/* Authentic Mobile Shorts Shelf (As seen in Screenshot 1!) */}
+        <div className="py-4 border-y border-white/10 bg-[#0f0f0f] space-y-3">
+          <div className="px-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Flame className="w-5 h-5 text-red-500" />
-              <h3 className="text-xl font-bold text-foreground">Trending YouTube Videos</h3>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-600/15 text-red-500 border border-red-500/30">
-                India (Hindi) Default
-              </span>
-            </div>
-
-            {/* Region & Language Filter Chips */}
-            <div className="flex items-center gap-1 p-1 bg-surface-elevated/70 border border-border/80 rounded-xl overflow-x-auto">
-              {[
-                { id: 'IN', label: '🇮🇳 India (Hindi)' },
-                { id: 'bollywood', label: 'Bollywood & Hindi Pop' },
-                { id: 'punjabi', label: 'Punjabi Hits' },
-                { id: 'US', label: 'Global / US' },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => loadTrending(tab.id as any)}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all shrink-0 ${
-                    trendingCategory === tab.id
-                      ? 'bg-red-600 text-white shadow-sm shadow-red-600/30'
-                      : 'text-foreground-muted hover:text-foreground'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+              <ShortsIcon className="w-5 h-5" />
+              <span className="text-[17px] font-bold text-white tracking-tight">Shorts</span>
             </div>
           </div>
 
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-16 gap-3 text-foreground-muted">
-              <div className="w-8 h-8 border-3 border-red-500 border-t-transparent rounded-full animate-spin" />
-              <span className="text-xs font-semibold">Loading trending videos...</span>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {trendingVideos.map((video, idx) => (
+          <div className="px-4 flex items-center gap-3 overflow-x-auto scrollbar-none">
+            {shortsItems.map((short, i) => {
+              const sId = short.videoId || short.id;
+              const sThumb = short.thumbnail || `https://i.ytimg.com/vi/${sId}/hqdefault.jpg`;
+              return (
                 <div
-                  key={video.id || idx}
-                  onClick={() => handleSelectVideo(video)}
-                  className="bg-surface border border-border hover:border-red-500/50 rounded-2xl p-3 cursor-pointer group transition-all hover:-translate-y-1 shadow-md flex flex-col justify-between"
+                  key={sId || i}
+                  onClick={() => handleSelectVideo(short)}
+                  className="relative w-36 aspect-[9/16] rounded-xl overflow-hidden bg-[#272727] shrink-0 cursor-pointer shadow-lg group active:scale-95 transition-all"
                 >
-                  <div className="relative aspect-video rounded-xl overflow-hidden bg-surface-elevated mb-2.5">
+                  <img
+                    src={sThumb}
+                    alt=""
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" />
+                  <div className="absolute bottom-2 left-2 right-2 space-y-0.5">
+                    <p className="text-xs font-semibold text-white line-clamp-2 leading-snug drop-shadow-md">
+                      {short.title}
+                    </p>
+                    <p className="text-[10px] text-white/70 font-medium">
+                      {short.mockViews}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Remaining Full-Bleed Video Cards */}
+        {displayedVideos.slice(2).map((video, idx) => (
+          <MobileVideoCard
+            key={video.id || idx}
+            video={video}
+            onSelect={() => handleSelectVideo(video)}
+            onOpenMenu={() => setMobileMenuVideo(video)}
+          />
+        ))}
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 💻 DESKTOP FEED (SCREENSHOT 2: 4-COLUMN RESPONSIVE YOUTUBE WEB GRID)       */}
+      {/* ========================================================================= */}
+      <div className="hidden md:block max-w-7xl mx-auto p-6 lg:p-8 space-y-8">
+        {/* Results / Category Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Flame className="w-5 h-5 text-red-500" />
+            <h2 className="text-xl font-bold text-white tracking-tight">
+              {searchResults.length > 0 ? `Results for "${searchQuery}"` : `${trendingCategory} Videos`}
+            </h2>
+          </div>
+        </div>
+
+        {/* Loading Spinner */}
+        {loading || searchLoading ? (
+          <div className="flex flex-col items-center justify-center py-24 gap-3 text-[#aaaaaa]">
+            <div className="w-8 h-8 border-3 border-red-600 border-t-transparent rounded-full animate-spin" />
+            <span className="text-xs font-semibold">Loading YouTube videos...</span>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-y-8 gap-x-4">
+            {displayedVideos.map((video, idx) => {
+              const vidId = video.videoId || video.id;
+              const thumb = video.thumbnail || `https://i.ytimg.com/vi/${vidId}/hqdefault.jpg`;
+              const duration = video.duration || '12:45';
+              const channelName = video.artist || (video as any).uploader || 'YouTube Official';
+
+              return (
+                <div
+                  key={vidId || idx}
+                  className="group flex flex-col cursor-pointer select-none"
+                  onClick={() => handleSelectVideo(video)}
+                >
+                  {/* 16:9 Thumbnail with Rounded Corners & Duration Badge */}
+                  <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-[#272727] mb-3">
                     <img
-                      src={video.thumbnail}
+                      src={thumb}
                       alt=""
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                      loading="lazy"
                     />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                      <div className="w-10 h-10 rounded-full bg-red-600 text-white flex items-center justify-center shadow-lg">
+                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <div className="w-12 h-12 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-lg">
                         <Play className="w-5 h-5 fill-current ml-0.5" />
                       </div>
                     </div>
-                    {video.duration && (
-                      <span className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-mono font-bold px-1.5 py-0.5 rounded">
-                        {video.duration}
-                      </span>
-                    )}
+                    <span className="absolute bottom-2 right-2 bg-black/80 text-white text-xs font-semibold px-1.5 py-0.5 rounded font-mono shadow">
+                      {duration}
+                    </span>
                   </div>
 
-                  <div>
-                    <h4 className="font-bold text-xs text-foreground line-clamp-2 group-hover:text-red-500 transition-colors">
-                      {video.title}
-                    </h4>
-                    <p className="text-[11px] text-foreground-muted truncate mt-1">{video.artist}</p>
+                  {/* Metadata Row: 36px Avatar on Left, Details on Right */}
+                  <div className="flex gap-3 items-start">
+                    {/* Channel Avatar */}
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-zinc-700 to-zinc-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                      {channelName.charAt(0).toUpperCase()}
+                    </div>
+
+                    {/* Details Column */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-[15px] font-semibold text-white line-clamp-2 leading-snug group-hover:text-white transition-colors">
+                        {video.title}
+                      </h3>
+                      <div className="mt-1">
+                        <p className="text-[13px] text-[#aaaaaa] hover:text-white transition-colors truncate">
+                          {channelName}
+                        </p>
+                        <p className="text-[13px] text-[#aaaaaa] truncate mt-0.5">
+                          2.4M views • 3 days ago
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* 3-Dot Overflow Menu */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setMobileMenuVideo(video);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 p-1 text-[#aaaaaa] hover:text-white transition-all shrink-0"
+                      title="Options"
+                    >
+                      <MoreVertical className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+              );
+            })}
+          </div>
+        )}
+
+        {/* Desktop Shorts Shelf (As in YouTube Web) */}
+        <div className="pt-8 border-t border-[#272727] space-y-4">
+          <div className="flex items-center gap-2">
+            <ShortsIcon className="w-6 h-6" />
+            <span className="text-xl font-bold text-white tracking-tight">Shorts</span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {shortsItems.map((short, idx) => {
+              const sId = short.videoId || short.id;
+              const sThumb = short.thumbnail || `https://i.ytimg.com/vi/${sId}/hqdefault.jpg`;
+              return (
+                <div
+                  key={sId || idx}
+                  onClick={() => handleSelectVideo(short)}
+                  className="relative aspect-[9/16] rounded-2xl overflow-hidden bg-[#272727] cursor-pointer shadow-lg group hover:scale-[1.03] transition-all"
+                >
+                  <img
+                    src={sThumb}
+                    alt=""
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/20" />
+                  <div className="absolute bottom-3 left-3 right-3 space-y-1">
+                    <p className="text-xs font-semibold text-white line-clamp-2 leading-snug drop-shadow-md">
+                      {short.title}
+                    </p>
+                    <p className="text-[11px] text-white/70 font-medium">
+                      {short.mockViews}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 📋 MOBILE 3-DOT ACTION BOTTOM SHEET                                       */}
+      {/* ========================================================================= */}
+      {mobileMenuVideo && (
+        <div className="fixed inset-0 z-[600] flex flex-col justify-end">
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-fadeIn"
+            onClick={() => setMobileMenuVideo(null)}
+          />
+          <div className="relative bg-[#1c1c1e] border-t border-white/15 rounded-t-[28px] p-5 shadow-2xl z-10 space-y-3 animate-slideUp max-h-[80vh] overflow-y-auto">
+            <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-2" />
+
+            {/* Video Preview */}
+            <div className="flex items-center gap-3 pb-3 border-b border-white/10">
+              <img
+                src={
+                  mobileMenuVideo.thumbnail ||
+                  `https://i.ytimg.com/vi/${mobileMenuVideo.videoId || mobileMenuVideo.id}/hqdefault.jpg`
+                }
+                alt=""
+                className="w-16 h-10 object-cover rounded-lg shrink-0"
+              />
+              <div className="min-w-0">
+                <h4 className="text-xs font-bold text-white line-clamp-1">{mobileMenuVideo.title}</h4>
+                <p className="text-[11px] text-zinc-400 truncate mt-0.5">{mobileMenuVideo.artist || 'YouTube'}</p>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-1 text-sm font-semibold">
+              <button
+                onClick={() => {
+                  handleSelectVideo(mobileMenuVideo);
+                  setMobileMenuVideo(null);
+                }}
+                className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-white/10 text-white transition-colors"
+              >
+                <Play className="w-4 h-4 text-red-500 fill-current" />
+                <span>Play Video Now</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  handleListenAsAudio(mobileMenuVideo);
+                  setMobileMenuVideo(null);
+                }}
+                className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-white/10 text-white transition-colors"
+              >
+                <Music className="w-4 h-4 text-primary" />
+                <span>Listen as Audio (Music Mode)</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  handleDownloadVideo(
+                    mobileMenuVideo.videoId || mobileMenuVideo.id,
+                    mobileMenuVideo.title,
+                    mobileMenuVideo.artist,
+                    false
+                  );
+                  setMobileMenuVideo(null);
+                }}
+                className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-white/10 text-white transition-colors"
+              >
+                <Download className="w-4 h-4 text-emerald-400" />
+                <span>Download Video (1080p MP4)</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  handleDownloadVideo(
+                    mobileMenuVideo.videoId || mobileMenuVideo.id,
+                    mobileMenuVideo.title,
+                    mobileMenuVideo.artist,
+                    true
+                  );
+                  setMobileMenuVideo(null);
+                }}
+                className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-white/10 text-white transition-colors"
+              >
+                <Download className="w-4 h-4 text-pink-400" />
+                <span>Download Audio (320k MP3)</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  handleShareVideo(mobileMenuVideo.videoId || mobileMenuVideo.id);
+                  setMobileMenuVideo(null);
+                }}
+                className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-white/10 text-white transition-colors"
+              >
+                <Share2 className="w-4 h-4 text-zinc-300" />
+                <span>Copy YouTube Link</span>
+              </button>
+            </div>
+
+            <button
+              onClick={() => setMobileMenuVideo(null)}
+              className="w-full py-3 mt-2 rounded-2xl bg-white/10 text-white font-bold text-xs"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Sub-component for Mobile Video Cards (Screenshot 1 Authentic Design)
+const MobileVideoCard: React.FC<{
+  video: Track;
+  onSelect: () => void;
+  onOpenMenu: () => void;
+}> = ({ video, onSelect, onOpenMenu }) => {
+  const vidId = video.videoId || video.id;
+  const thumb = video.thumbnail || `https://i.ytimg.com/vi/${vidId}/hqdefault.jpg`;
+  const duration = video.duration || '12:45';
+  const channelName = video.artist || (video as any).uploader || 'YouTube Official';
+
+  return (
+    <div className="pb-4 pt-1">
+      {/* 16:9 Full-Bleed Thumbnail */}
+      <div
+        className="relative aspect-video w-full bg-[#18181b] overflow-hidden cursor-pointer"
+        onClick={onSelect}
+      >
+        <img
+          src={thumb}
+          alt=""
+          loading="lazy"
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-bold font-mono px-1.5 py-0.5 rounded shadow">
+          {duration}
+        </div>
+      </div>
+
+      {/* Metadata Row: 36px Avatar + 2-line Title + Channel Name · Views · Time + 3-Dot */}
+      <div className="px-3.5 pt-3 flex items-start gap-3">
+        {/* Channel Avatar */}
+        <div
+          className="w-9 h-9 rounded-full bg-gradient-to-tr from-zinc-700 to-zinc-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow mt-0.5 cursor-pointer"
+          onClick={onSelect}
+        >
+          {channelName.charAt(0).toUpperCase()}
+        </div>
+
+        {/* Video Title & Meta */}
+        <div className="flex-1 min-w-0 cursor-pointer" onClick={onSelect}>
+          <h3 className="text-[14px] font-semibold text-white line-clamp-2 leading-snug tracking-tight">
+            {video.title}
+          </h3>
+          <p className="text-[12px] text-zinc-400 mt-0.5 truncate">
+            {channelName} · 3.1M views · 2 days ago
+          </p>
+        </div>
+
+        {/* 3-Dot Menu */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenMenu();
+          }}
+          className="p-2 -mr-1 text-zinc-400 hover:text-white active:scale-90 transition-all shrink-0"
+          title="Options"
+        >
+          <MoreVertical className="w-4 h-4" />
+        </button>
       </div>
     </div>
   );
