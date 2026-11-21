@@ -54,44 +54,25 @@ export const HomePage: React.FC = () => {
 
   return (
     <div className="p-4 sm:p-6 md:p-8 space-y-8 md:space-y-10 max-w-7xl mx-auto pb-40 md:pb-28">
-      {/* Hero Welcome Banner */}
-      <div className="relative rounded-3xl overflow-hidden p-5 sm:p-8 liquid-glass-card shadow-2xl flex items-center justify-between border border-white/15">
-        <div className="relative z-1 max-w-xl space-y-3">
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-primary/20 text-primary text-xs font-black border border-primary/30 tracking-wider shadow-sm">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>YT-Z AUDIOPHILE</span>
-            </div>
-            <button
-              onClick={() => loadHome(true)}
-              disabled={isRefreshing}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full liquid-glass-control text-xs font-bold transition-all active:scale-95 shadow-sm"
-              title="Refresh Home Feed from YouTube Music"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-primary' : 'text-primary'}`} />
-              <span>{isRefreshing ? 'Refreshing Feed...' : 'Refresh Feed'}</span>
-            </button>
-          </div>
-
-          <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-            Hi-Res Lossless Audio & Cinema
+      {/* Top Header Row with Listen Now & Refresh Button */}
+      <div className="flex items-center justify-between pb-2 border-b border-white/10">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
+            Listen Now
           </h1>
-          <p className="text-sm text-zinc-300 leading-relaxed font-normal">
-            Bit-perfect 24-bit / 96kHz FLAC streaming, frame-locked YouTube Cinema player, Apple Music fluid lyrics, and uncapped 4K media downloads.
+          <p className="text-xs text-foreground-muted mt-0.5">
+            Your personalized recommendations & quick picks
           </p>
         </div>
-
-        <div className="hidden md:flex relative z-1 shrink-0 mr-4">
-          <div className="relative group">
-            <div className="absolute inset-0 bg-primary/25 rounded-3xl blur-2xl group-hover:blur-3xl transition-all" />
-            <img
-              src="/app-icon.webp"
-              alt="YT-Z Logo"
-              className="relative w-28 h-28 lg:w-32 lg:h-32 rounded-3xl object-cover shadow-2xl border border-white/20 ring-1 ring-primary/40 transform group-hover:scale-105 transition-transform duration-300"
-            />
-          </div>
-        </div>
-        <div className="absolute -right-8 -bottom-8 w-64 h-64 bg-primary/15 rounded-full filter blur-3xl pointer-events-none" />
+        <button
+          onClick={() => loadHome(true)}
+          disabled={isRefreshing}
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full liquid-glass-control text-xs font-bold transition-all active:scale-95 shadow-sm hover:scale-105"
+          title="Refresh Home Feed from YouTube Music"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-primary' : 'text-primary'}`} />
+          <span>{isRefreshing ? 'Refreshing...' : 'Refresh Feed'}</span>
+        </button>
       </div>
 
       {/* Dynamic Sections from YouTube Music */}

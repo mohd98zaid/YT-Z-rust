@@ -878,6 +878,64 @@ export const SettingsPage: React.FC = () => {
         </div>
       </section>
 
+      {/* About & Credits Section */}
+      <section className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-6 h-6 text-primary" />
+          <h2 className="text-xl font-bold text-foreground">About & Credits</h2>
+        </div>
+
+        <div className="bg-surface border border-border rounded-3xl p-6 shadow-xl space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-border/50 pb-5">
+            <div className="flex items-center gap-3.5">
+              <img
+                src="/app-icon.webp"
+                alt="YT-Z Logo"
+                className="w-14 h-14 rounded-2xl object-cover shadow-lg border border-white/20"
+              />
+              <div>
+                <h3 className="text-lg font-black text-foreground tracking-tight flex items-center gap-2">
+                  <span>YT-Z Ultimate</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-primary/20 text-primary border border-primary/30 uppercase tracking-wider">
+                    v2.5 Pro
+                  </span>
+                </h3>
+                <p className="text-xs text-foreground-muted mt-0.5">
+                  High-Fidelity Music Player & 4K Cinema Downloader
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+            <div className="p-4 rounded-2xl bg-surface-elevated/60 border border-border/50 space-y-1.5">
+              <span className="font-bold text-foreground block">Audio Architecture</span>
+              <p className="text-foreground-muted leading-relaxed">
+                Bit-perfect audio pipeline, Web Audio API DSP, 10-band graphic equalizer, ReplayGain volume normalization, and multi-source Hi-Res stream resolver.
+              </p>
+            </div>
+            <div className="p-4 rounded-2xl bg-surface-elevated/60 border border-border/50 space-y-1.5">
+              <span className="font-bold text-foreground block">Video & Cinema Engine</span>
+              <p className="text-foreground-muted leading-relaxed">
+                4K/1080p frame-locked cinema player, seamless picture-in-picture, YouTube direct HTML5 stream bypass, and yt-dlp uncapped media extractor.
+              </p>
+            </div>
+            <div className="p-4 rounded-2xl bg-surface-elevated/60 border border-border/50 space-y-1.5">
+              <span className="font-bold text-foreground block">Synced Lyrics Engine</span>
+              <p className="text-foreground-muted leading-relaxed">
+                Multi-provider lyrics pipeline (Apple Music, LRCLIB, JioSaavn, YouTube Music) with real-time word/syllable synchronized karaoke view.
+              </p>
+            </div>
+            <div className="p-4 rounded-2xl bg-surface-elevated/60 border border-border/50 space-y-1.5">
+              <span className="font-bold text-foreground block">Credits & Open Source</span>
+              <p className="text-foreground-muted leading-relaxed">
+                Powered by FastAPI, yt-dlp, React 19, Tailwind CSS, Vite, Lucide Icons, and Tauri Desktop framework. Crafted with care for music enthusiasts.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Cache Toast Notification */}
       {cacheToast && (
         <div className="fixed bottom-24 right-8 z-50 flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-xs font-bold shadow-xl animate-fadeIn">
