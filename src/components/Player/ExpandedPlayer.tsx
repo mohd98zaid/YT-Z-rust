@@ -978,20 +978,16 @@ export const ExpandedPlayer: React.FC = () => {
               </div>
             ) : (
               <div className="relative group flex items-center justify-center my-auto w-full py-2">
-                <div className="relative aspect-square w-[72vw] max-w-[285px] max-h-[36vh] -translate-x-2.5 sm:-translate-x-3">
-                  {/* Spinning Vinyl Record Layer Behind Artwork */}
-                  <div
-                    className={`absolute -right-5 sm:-right-6 top-1/2 -translate-y-1/2 w-[90%] h-[90%] rounded-full bg-zinc-950 border-4 border-zinc-800 shadow-2xl flex items-center justify-center pointer-events-none transition-transform duration-500 ${
-                      isPlaying ? 'animate-spin-slow' : ''
-                    }`}
-                  >
-                    <div className="w-16 h-16 rounded-full border-4 border-zinc-700/80 bg-zinc-900 flex items-center justify-center">
-                      <div className="w-4 h-4 rounded-full bg-primary/80" />
-                    </div>
-                  </div>
-
+                <div className={`relative aspect-square w-[75vw] max-w-[290px] max-h-[36vh] transition-all duration-500 ease-out ${
+                  isPlaying ? 'scale-100' : 'scale-[0.91] opacity-90'
+                }`}>
+                  {/* Subtle Colored Ambient Glow behind Artwork */}
+                  <div 
+                    className="absolute inset-0 rounded-3xl filter blur-xl opacity-60 scale-95 transition-all duration-700 pointer-events-none"
+                    style={{ backgroundImage: `url(${currentTrack.thumbnail})`, backgroundSize: 'cover' }}
+                  />
                   {/* High-res Full-bleed Cover Artwork */}
-                  <div className="relative w-full h-full rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.6)] border border-white/15 z-10 bg-surface">
+                  <div className="relative w-full h-full rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.65)] border border-white/20 z-10 bg-surface">
                     <img
                       src={currentTrack.thumbnail || '/placeholder.png'}
                       alt={currentTrack.title}
@@ -1148,7 +1144,7 @@ export const ExpandedPlayer: React.FC = () => {
                     }`}
                   >
                     <Disc className="w-3.5 h-3.5" />
-                    <span>Song & Vinyl</span>
+                    <span>Audio</span>
                   </button>
                   <button
                     onClick={() => {
@@ -1278,20 +1274,16 @@ export const ExpandedPlayer: React.FC = () => {
                 </div>
               ) : (
                 <div className="relative group flex-1 min-h-0 flex items-center justify-center my-auto w-full">
-                  <div className="relative aspect-square h-full max-h-[30vh] sm:max-h-[34vh] max-w-[34vh] w-auto">
-                    {/* Spinning Vinyl Record Layer Behind Artwork */}
-                    <div
-                      className={`absolute -right-7 top-1/2 -translate-y-1/2 w-[90%] h-[90%] rounded-full bg-zinc-950 border-4 border-zinc-800 shadow-2xl flex items-center justify-center ${
-                        isPlaying ? 'animate-spin-slow' : ''
-                      }`}
-                    >
-                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-zinc-700/80 bg-zinc-900 flex items-center justify-center">
-                        <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-primary/80" />
-                      </div>
-                    </div>
-
+                  <div className={`relative aspect-square h-full max-h-[34vh] max-w-[34vh] w-auto transition-all duration-500 ease-out ${
+                    isPlaying ? 'scale-100' : 'scale-[0.92] opacity-90'
+                  }`}>
+                    {/* Subtle Colored Ambient Glow behind Artwork */}
+                    <div 
+                      className="absolute inset-0 rounded-3xl filter blur-2xl opacity-50 scale-95 transition-all duration-700 pointer-events-none"
+                      style={{ backgroundImage: `url(${currentTrack.thumbnail})`, backgroundSize: 'cover' }}
+                    />
                     {/* High-res Full-bleed Cover Artwork */}
-                    <div className="relative w-full h-full rounded-3xl overflow-hidden shadow-2xl border border-white/10 z-10 bg-surface">
+                    <div className="relative w-full h-full rounded-3xl overflow-hidden shadow-[0_25px_60px_rgba(0,0,0,0.7)] border border-white/20 z-10 bg-surface">
                       <img
                         src={currentTrack.thumbnail || '/placeholder.png'}
                         alt={currentTrack.title}
@@ -1605,12 +1597,10 @@ export const ExpandedPlayer: React.FC = () => {
                   {isVideoMode
                     ? '16-bit AAC Sync · 44.1 kHz'
                     : audioStats?.isLossless
-                    ? (typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent)
-                        ? `16-bit fallback · ${((audioStats?.sampleRate || 48000) / 1000).toFixed(0)} kHz`
-                        : `${(audioStats?.codec || 'FLAC').toUpperCase()} ${audioStats?.bitDepth || 24}-bit · ${((audioStats?.sampleRate || 48000) / 1000).toFixed(0)} kHz`)
+                    ? `${(audioStats?.codec || 'FLAC').toUpperCase()} ${audioStats?.bitDepth || 24}-bit Lossless · ${((audioStats?.sampleRate || 48000) / 1000).toFixed(1).replace('.0', '')} kHz`
                     : audioStats?.bitrate && audioStats.bitrate >= 320
-                    ? `${(audioStats?.codec || 'AAC').toUpperCase()} 320 kbps HQ · ${((audioStats?.sampleRate || 44100) / 1000).toFixed(1)} kHz`
-                    : `${(audioStats?.codec || 'OPUS').toUpperCase()} ${audioStats?.bitDepth || 16}-bit · ${((audioStats?.sampleRate || 48000) / 1000).toFixed(0)} kHz`}
+                    ? `${(audioStats?.codec || 'AAC').toUpperCase()} ${audioStats?.bitrate || 320} kbps HQ · ${((audioStats?.sampleRate || 44100) / 1000).toFixed(1).replace('.0', '')} kHz`
+                    : `${(audioStats?.codec || 'OPUS').toUpperCase()} ${audioStats?.bitDepth || 16}-bit · ${((audioStats?.sampleRate || 48000) / 1000).toFixed(1).replace('.0', '')} kHz`}
                 </div>
               </div>
             </div>
@@ -2028,9 +2018,6 @@ export const ExpandedPlayer: React.FC = () => {
           </div>
         </div>
       )}
-
-      {/* Live Signal Path, Decoder to Output Modal */}
-      <AudioPipelineModal isOpen={enableStatsForNerds && showStatsForNerds} onClose={toggleStatsForNerds} />
     </div>
   );
 };

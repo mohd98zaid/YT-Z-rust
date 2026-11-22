@@ -271,10 +271,10 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
 
   return (
     <div 
-      className="fixed inset-0 z-[700] flex items-center justify-center p-4 bg-black/75 backdrop-blur-xl animate-fadeIn"
+      className="fixed inset-0 z-[700] flex items-center justify-center p-4 bg-black/80 backdrop-blur-2xl animate-fadeIn"
       onClick={onClose}
     >
-      {/* Dynamic Keyframe Animations for Traveling Signal Pulse & Synchronized Area Lightning */}
+      {/* Clean, calm audio signal pulse traveling smoothly down the vertical timeline */}
       <style>{`
         @keyframes audioSignalTravel {
           0% {
@@ -282,13 +282,13 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
             opacity: 0;
             transform: scale(0.6);
           }
-          3% {
+          6% {
             opacity: 1;
-            transform: scale(1.2);
+            transform: scale(1.1);
           }
-          96% {
+          94% {
             opacity: 1;
-            transform: scale(1.2);
+            transform: scale(1.1);
           }
           100% {
             top: ${lineGeometry.height}px;
@@ -297,348 +297,19 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
           }
         }
         .audio-signal-dot {
-          animation: audioSignalTravel 2.8s linear infinite;
+          animation: audioSignalTravel 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
         }
-
-        /* Stage 1: Track Info (0% - 20%) */
-        @keyframes stageAreaLightning1 {
-          0% {
-            background: rgba(250, 45, 72, 0.08);
-            border-color: rgba(250, 45, 72, 0.5);
-            box-shadow: 0 0 18px rgba(250, 45, 72, 0.25), inset 0 0 14px rgba(250, 45, 72, 0.1);
-          }
-          8% {
-            background: rgba(250, 45, 72, 0.16);
-            border-color: rgba(250, 45, 72, 0.95);
-            box-shadow: 0 0 26px rgba(250, 45, 72, 0.45), inset 0 0 18px rgba(250, 45, 72, 0.2);
-          }
-          18% {
-            background: rgba(250, 45, 72, 0.05);
-            border-color: rgba(250, 45, 72, 0.3);
-            box-shadow: 0 0 10px rgba(250, 45, 72, 0.15);
-          }
-          22%, 100% {
-            background: rgba(255, 255, 255, 0.02);
-            border-color: rgba(255, 255, 255, 0.06);
-            box-shadow: none;
-          }
-        }
-        @keyframes stageIconGlow1 {
-          0% {
-            transform: scale(1.05);
-            border-color: rgba(250, 45, 72, 0.8);
-            background: #3b1820;
-            box-shadow: 0 0 12px rgba(250, 45, 72, 0.7);
-            color: #ffffff;
-          }
-          8% {
-            transform: scale(1.18);
-            border-color: #fa2d48;
-            background: #fa2d48;
-            box-shadow: 0 0 20px rgba(250, 45, 72, 1), 0 0 6px #ffffff;
-            color: #ffffff;
-          }
-          18% {
-            transform: scale(1.05);
-            border-color: rgba(250, 45, 72, 0.5);
-            background: #3b1820;
-            box-shadow: 0 0 8px rgba(250, 45, 72, 0.3);
-            color: #ffffff;
-          }
-          22%, 100% {
-            transform: scale(1);
-            border-color: rgba(255, 255, 255, 0.2);
-            background: #2c2c2e;
-            box-shadow: none;
-            color: #d4d4d8;
-          }
-        }
-
-        /* Stage 2: Decoder (20% - 40%) */
-        @keyframes stageAreaLightning2 {
-          0%, 19% {
-            background: rgba(255, 255, 255, 0.02);
-            border-color: rgba(255, 255, 255, 0.06);
-            box-shadow: none;
-          }
-          20% {
-            background: rgba(250, 45, 72, 0.08);
-            border-color: rgba(250, 45, 72, 0.5);
-            box-shadow: 0 0 18px rgba(250, 45, 72, 0.25), inset 0 0 14px rgba(250, 45, 72, 0.1);
-          }
-          28% {
-            background: rgba(250, 45, 72, 0.16);
-            border-color: rgba(250, 45, 72, 0.95);
-            box-shadow: 0 0 26px rgba(250, 45, 72, 0.45), inset 0 0 18px rgba(250, 45, 72, 0.2);
-          }
-          38% {
-            background: rgba(250, 45, 72, 0.05);
-            border-color: rgba(250, 45, 72, 0.3);
-            box-shadow: 0 0 10px rgba(250, 45, 72, 0.15);
-          }
-          42%, 100% {
-            background: rgba(255, 255, 255, 0.02);
-            border-color: rgba(255, 255, 255, 0.06);
-            box-shadow: none;
-          }
-        }
-        @keyframes stageIconGlow2 {
-          0%, 19% {
-            transform: scale(1);
-            border-color: rgba(255, 255, 255, 0.2);
-            background: #2c2c2e;
-            box-shadow: none;
-            color: #d4d4d8;
-          }
-          20% {
-            transform: scale(1.05);
-            border-color: rgba(250, 45, 72, 0.8);
-            background: #3b1820;
-            box-shadow: 0 0 12px rgba(250, 45, 72, 0.7);
-            color: #ffffff;
-          }
-          28% {
-            transform: scale(1.18);
-            border-color: #fa2d48;
-            background: #fa2d48;
-            box-shadow: 0 0 20px rgba(250, 45, 72, 1), 0 0 6px #ffffff;
-            color: #ffffff;
-          }
-          38% {
-            transform: scale(1.05);
-            border-color: rgba(250, 45, 72, 0.5);
-            background: #3b1820;
-            box-shadow: 0 0 8px rgba(250, 45, 72, 0.3);
-            color: #ffffff;
-          }
-          42%, 100% {
-            transform: scale(1);
-            border-color: rgba(255, 255, 255, 0.2);
-            background: #2c2c2e;
-            box-shadow: none;
-            color: #d4d4d8;
-          }
-        }
-
-        /* Stage 3: Resampler (40% - 60%) */
-        @keyframes stageAreaLightning3 {
-          0%, 39% {
-            background: rgba(255, 255, 255, 0.02);
-            border-color: rgba(255, 255, 255, 0.06);
-            box-shadow: none;
-          }
-          40% {
-            background: rgba(250, 45, 72, 0.08);
-            border-color: rgba(250, 45, 72, 0.5);
-            box-shadow: 0 0 18px rgba(250, 45, 72, 0.25), inset 0 0 14px rgba(250, 45, 72, 0.1);
-          }
-          48% {
-            background: rgba(250, 45, 72, 0.16);
-            border-color: rgba(250, 45, 72, 0.95);
-            box-shadow: 0 0 26px rgba(250, 45, 72, 0.45), inset 0 0 18px rgba(250, 45, 72, 0.2);
-          }
-          58% {
-            background: rgba(250, 45, 72, 0.05);
-            border-color: rgba(250, 45, 72, 0.3);
-            box-shadow: 0 0 10px rgba(250, 45, 72, 0.15);
-          }
-          62%, 100% {
-            background: rgba(255, 255, 255, 0.02);
-            border-color: rgba(255, 255, 255, 0.06);
-            box-shadow: none;
-          }
-        }
-        @keyframes stageIconGlow3 {
-          0%, 39% {
-            transform: scale(1);
-            border-color: rgba(255, 255, 255, 0.2);
-            background: #2c2c2e;
-            box-shadow: none;
-            color: #d4d4d8;
-          }
-          40% {
-            transform: scale(1.05);
-            border-color: rgba(250, 45, 72, 0.8);
-            background: #3b1820;
-            box-shadow: 0 0 12px rgba(250, 45, 72, 0.7);
-            color: #ffffff;
-          }
-          48% {
-            transform: scale(1.18);
-            border-color: #fa2d48;
-            background: #fa2d48;
-            box-shadow: 0 0 20px rgba(250, 45, 72, 1), 0 0 6px #ffffff;
-            color: #ffffff;
-          }
-          58% {
-            transform: scale(1.05);
-            border-color: rgba(250, 45, 72, 0.5);
-            background: #3b1820;
-            box-shadow: 0 0 8px rgba(250, 45, 72, 0.3);
-            color: #ffffff;
-          }
-          62%, 100% {
-            transform: scale(1);
-            border-color: rgba(255, 255, 255, 0.2);
-            background: #2c2c2e;
-            box-shadow: none;
-            color: #d4d4d8;
-          }
-        }
-
-        /* Stage 4: DSP (60% - 80%) */
-        @keyframes stageAreaLightning4 {
-          0%, 59% {
-            background: rgba(255, 255, 255, 0.02);
-            border-color: rgba(255, 255, 255, 0.06);
-            box-shadow: none;
-          }
-          60% {
-            background: rgba(250, 45, 72, 0.08);
-            border-color: rgba(250, 45, 72, 0.5);
-            box-shadow: 0 0 18px rgba(250, 45, 72, 0.25), inset 0 0 14px rgba(250, 45, 72, 0.1);
-          }
-          68% {
-            background: rgba(250, 45, 72, 0.16);
-            border-color: rgba(250, 45, 72, 0.95);
-            box-shadow: 0 0 26px rgba(250, 45, 72, 0.45), inset 0 0 18px rgba(250, 45, 72, 0.2);
-          }
-          78% {
-            background: rgba(250, 45, 72, 0.05);
-            border-color: rgba(250, 45, 72, 0.3);
-            box-shadow: 0 0 10px rgba(250, 45, 72, 0.15);
-          }
-          82%, 100% {
-            background: rgba(255, 255, 255, 0.02);
-            border-color: rgba(255, 255, 255, 0.06);
-            box-shadow: none;
-          }
-        }
-        @keyframes stageIconGlow4 {
-          0%, 59% {
-            transform: scale(1);
-            border-color: rgba(255, 255, 255, 0.2);
-            background: #2c2c2e;
-            box-shadow: none;
-            color: #d4d4d8;
-          }
-          60% {
-            transform: scale(1.05);
-            border-color: rgba(250, 45, 72, 0.8);
-            background: #3b1820;
-            box-shadow: 0 0 12px rgba(250, 45, 72, 0.7);
-            color: #ffffff;
-          }
-          68% {
-            transform: scale(1.18);
-            border-color: #fa2d48;
-            background: #fa2d48;
-            box-shadow: 0 0 20px rgba(250, 45, 72, 1), 0 0 6px #ffffff;
-            color: #ffffff;
-          }
-          78% {
-            transform: scale(1.05);
-            border-color: rgba(250, 45, 72, 0.5);
-            background: #3b1820;
-            box-shadow: 0 0 8px rgba(250, 45, 72, 0.3);
-            color: #ffffff;
-          }
-          82%, 100% {
-            transform: scale(1);
-            border-color: rgba(255, 255, 255, 0.2);
-            background: #2c2c2e;
-            box-shadow: none;
-            color: #d4d4d8;
-          }
-        }
-
-        /* Stage 5: Output Device (80% - 100%) */
-        @keyframes stageAreaLightning5 {
-          0%, 79% {
-            background: rgba(255, 255, 255, 0.02);
-            border-color: rgba(255, 255, 255, 0.06);
-            box-shadow: none;
-          }
-          80% {
-            background: rgba(250, 45, 72, 0.08);
-            border-color: rgba(250, 45, 72, 0.5);
-            box-shadow: 0 0 18px rgba(250, 45, 72, 0.25), inset 0 0 14px rgba(250, 45, 72, 0.1);
-          }
-          88% {
-            background: rgba(250, 45, 72, 0.16);
-            border-color: rgba(250, 45, 72, 0.95);
-            box-shadow: 0 0 26px rgba(250, 45, 72, 0.45), inset 0 0 18px rgba(250, 45, 72, 0.2);
-          }
-          98% {
-            background: rgba(250, 45, 72, 0.05);
-            border-color: rgba(250, 45, 72, 0.3);
-            box-shadow: 0 0 10px rgba(250, 45, 72, 0.15);
-          }
-          100% {
-            background: rgba(255, 255, 255, 0.02);
-            border-color: rgba(255, 255, 255, 0.06);
-            box-shadow: none;
-          }
-        }
-        @keyframes stageIconGlow5 {
-          0%, 79% {
-            transform: scale(1);
-            border-color: rgba(255, 255, 255, 0.2);
-            background: #2c2c2e;
-            box-shadow: none;
-            color: #d4d4d8;
-          }
-          80% {
-            transform: scale(1.05);
-            border-color: rgba(250, 45, 72, 0.8);
-            background: #3b1820;
-            box-shadow: 0 0 12px rgba(250, 45, 72, 0.7);
-            color: #ffffff;
-          }
-          88% {
-            transform: scale(1.18);
-            border-color: #fa2d48;
-            background: #fa2d48;
-            box-shadow: 0 0 20px rgba(250, 45, 72, 1), 0 0 6px #ffffff;
-            color: #ffffff;
-          }
-          98% {
-            transform: scale(1.05);
-            border-color: rgba(250, 45, 72, 0.5);
-            background: #3b1820;
-            box-shadow: 0 0 8px rgba(250, 45, 72, 0.3);
-            color: #ffffff;
-          }
-          100% {
-            transform: scale(1);
-            border-color: rgba(255, 255, 255, 0.2);
-            background: #2c2c2e;
-            box-shadow: none;
-            color: #d4d4d8;
-          }
-        }
-
-        .pipeline-area-1 { animation: stageAreaLightning1 2.8s linear infinite; }
-        .pipeline-icon-1 { animation: stageIconGlow1 2.8s linear infinite; }
-        .pipeline-area-2 { animation: stageAreaLightning2 2.8s linear infinite; }
-        .pipeline-icon-2 { animation: stageIconGlow2 2.8s linear infinite; }
-        .pipeline-area-3 { animation: stageAreaLightning3 2.8s linear infinite; }
-        .pipeline-icon-3 { animation: stageIconGlow3 2.8s linear infinite; }
-        .pipeline-area-4 { animation: stageAreaLightning4 2.8s linear infinite; }
-        .pipeline-icon-4 { animation: stageIconGlow4 2.8s linear infinite; }
-        .pipeline-area-5 { animation: stageAreaLightning5 2.8s linear infinite; }
-        .pipeline-icon-5 { animation: stageIconGlow5 2.8s linear infinite; }
       `}</style>
 
       <div 
-        className="relative w-full max-w-[390px] max-h-[88vh] liquid-glass-card rounded-[32px] p-6 shadow-[0_25px_65px_rgba(0,0,0,0.65)] text-white flex flex-col font-sans animate-scaleUp border border-white/20"
+        className="relative w-full max-w-[380px] max-h-[88vh] bg-[#1c1c1e]/95 backdrop-blur-3xl rounded-[32px] p-6 shadow-[0_25px_70px_rgba(0,0,0,0.75)] text-white flex flex-col font-sans animate-scaleUp border border-white/10"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Drag Handle */}
         <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-3 shrink-0" />
 
         {/* Header */}
-        <div className="text-center mb-4 shrink-0">
+        <div className="text-center mb-5 shrink-0">
           <h3 className="text-[17px] font-semibold text-white tracking-tight">Audio Pipeline</h3>
           <p className="text-[13px] text-zinc-400 mt-0.5">Live signal path, decoder to output</p>
         </div>
@@ -649,24 +320,24 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
             <Video className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
             <div className="text-[12px] text-amber-200/90 leading-snug">
               <strong className="text-amber-300 font-semibold block">Video Sync Active · Audio Reduced</strong>
-              Audio signal is routed from YouTube video stream (~160 kbps) for frame-synchronized playback. Switch back to &quot;Song &amp; Vinyl&quot; mode for bit-perfect audio.
+              Audio signal is routed from YouTube video stream (~160 kbps) for frame-synchronized playback.
             </div>
           </div>
         )}
 
         {/* Scrollable Pipeline Content */}
-        <div className="flex-1 overflow-y-auto pr-1 -mr-1 space-y-4 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto pr-1 -mr-1 space-y-5 custom-scrollbar">
           {/* Connected Vertical Timeline Container */}
-          <div ref={timelineRef} className="relative pl-8 space-y-3">
-            {/* Continuous vertical line STRICTLY from Icon 1 center to Icon 5 center (stops exactly at Output Device) */}
+          <div ref={timelineRef} className="relative pl-8 space-y-5">
+            {/* Continuous vertical line STRICTLY from Icon 1 center to Icon 5 center */}
             {lineGeometry.height > 0 && (
               <div 
                 className="absolute left-[11.25px] w-[1.5px] bg-white/20 pointer-events-none z-0"
                 style={{ top: `${lineGeometry.top}px`, height: `${lineGeometry.height}px` }}
               >
-                {/* Little glowing audio packet dot traveling from start to end */}
+                {/* Subtle soft-glowing audio packet dot traveling along the signal line */}
                 <div 
-                  className="audio-signal-dot absolute -left-[3.25px] w-2 h-2 rounded-full bg-primary shadow-[0_0_10px_#fa2d48,0_0_18px_#ff3b5c,0_0_3px_#ffffff] pointer-events-none z-10"
+                  className="audio-signal-dot absolute -left-[3.25px] w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399,0_0_14px_rgba(52,211,153,0.6)] pointer-events-none z-10"
                 />
               </div>
             )}
@@ -675,82 +346,66 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
             <div className="relative">
               <div 
                 ref={firstIconRef}
-                className="pipeline-icon-1 absolute -left-8 top-1 w-6 h-6 rounded-full bg-[#2c2c2e] border border-white/20 flex items-center justify-center text-zinc-300 shrink-0 z-10 shadow-sm transition-all"
+                className="absolute -left-8 top-0.5 w-6 h-6 rounded-full bg-[#2c2c2e] border border-white/20 flex items-center justify-center text-zinc-300 shrink-0 z-10 shadow-sm"
               >
                 <FileText className="w-3.5 h-3.5" />
               </div>
-              <div className="pipeline-area-1 rounded-2xl p-3 border transition-all">
-                <div className="text-[12px] font-bold tracking-wider text-zinc-300 uppercase mb-2">
+              <div className="py-0.5">
+                <div className="text-[12px] font-bold tracking-wider text-zinc-400 uppercase mb-1.5">
                   Track Info
                 </div>
-                <div className="space-y-1 text-[13px] leading-relaxed">
+                <div className="space-y-1 text-[13px] leading-relaxed text-zinc-300">
                   <div>
                     <span className="font-semibold text-white/95">Source: </span>
-                    <span className="text-zinc-300 font-normal">{sourceName}</span>
+                    <span className="font-normal">{sourceName}</span>
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">Format: </span>
-                    <span className="text-zinc-300 font-normal">{formatStr}</span>
+                    <span className="font-normal">{formatStr}</span>
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">Bit Depth: </span>
-                    <span className="text-zinc-300 font-normal">{bitDepth}-bit</span>
+                    <span className="font-normal">{bitDepth}-bit</span>
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">Sample Rate: </span>
-                    <span className="text-zinc-300 font-normal">{trackSampleRateKhz} kHz</span>
+                    <span className="font-normal">{trackSampleRateKhz} kHz</span>
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">Bitrate: </span>
-                    <span className={isLossless ? 'text-emerald-400 font-medium' : (bitrateKbps >= 320 ? 'text-cyan-300 font-medium' : 'text-zinc-300 font-normal')}>
+                    <span className={isLossless ? 'text-emerald-400 font-medium' : (bitrateKbps >= 320 ? 'text-cyan-300 font-medium' : 'font-normal')}>
                       {bitrateKbps.toLocaleString()} kbps
                     </span>
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">PCM Data Rate: </span>
-                    <span className="text-zinc-300 font-normal">{pcmDataRateKbps.toLocaleString()} kbps</span>
+                    <span className="font-normal">{pcmDataRateKbps.toLocaleString()} kbps</span>
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">Channels: </span>
-                    <span className="text-zinc-300 font-normal">Stereo</span>
+                    <span className="font-normal">Stereo</span>
                   </div>
-                  <div>
-                    <span className="font-semibold text-white/95">2-Song RAM Cache: </span>
-                    <span className="text-zinc-300 font-normal">
-                      {twoSongCache?.currentLoaded ? 'Playing [100% Buffered]' : `Buffering (${twoSongCache?.currentBufferPercent || 0}%)`}
-                      {' • '}
-                      <span className={twoSongCache?.nextReady ? 'text-emerald-400 font-medium' : 'text-zinc-400'}>
-                        {twoSongCache?.nextReady ? 'Next Track Ready in Cache' : 'Next Track Standby'}
-                      </span>
-                    </span>
-                  </div>
-                  {audioQuality === 'lossless' && !isLossless && (
-                    <div className="mt-2.5 p-2 rounded-xl bg-blue-500/10 border border-blue-500/20 text-[11px] text-blue-200/90 leading-snug">
-                      <span className="font-bold text-blue-300">Lossless Notice: </span>
-                      No FLAC stream available on CDN for this track. Automatically playing highest available fidelity ({bitrateKbps} kbps {formatStr} HQ).
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
 
             {/* 2. DECODER */}
             <div className="relative">
-              <div className="pipeline-icon-2 absolute -left-8 top-1 w-6 h-6 rounded-full bg-[#2c2c2e] border border-white/20 flex items-center justify-center text-zinc-300 shrink-0 z-10 shadow-sm transition-all">
+              <div className="absolute -left-8 top-0.5 w-6 h-6 rounded-full bg-[#2c2c2e] border border-white/20 flex items-center justify-center text-zinc-300 shrink-0 z-10 shadow-sm">
                 <Cpu className="w-3.5 h-3.5" />
               </div>
-              <div className="pipeline-area-2 rounded-2xl p-3 border transition-all">
-                <div className="text-[12px] font-bold tracking-wider text-zinc-300 uppercase mb-2">
+              <div className="py-0.5">
+                <div className="text-[12px] font-bold tracking-wider text-zinc-400 uppercase mb-1.5">
                   Decoder
                 </div>
-                <div className="space-y-1 text-[13px] leading-relaxed">
+                <div className="space-y-1 text-[13px] leading-relaxed text-zinc-300">
                   <div>
-                    <span className="font-semibold text-white/95">Decoder Engine: </span>
-                    <span className="text-zinc-300 font-mono text-[11px]">{decoderEngine}</span>
+                    <span className="font-semibold text-white/95">Decoder Name: </span>
+                    <span className="font-mono text-[12px]">{isAndroid ? `ffmpegLavc63.9.100-${formatStr.toLowerCase()}` : decoderEngine}</span>
                   </div>
                   <div>
-                    <span className="font-semibold text-white/95">Decoded Format: </span>
-                    <span className="text-zinc-300 font-normal">{isAndroid || isIOS ? '16-bit PCM' : 'Float32 PCM (IEEE-754)'}</span>
+                    <span className="font-semibold text-white/95">Format: </span>
+                    <span className="font-normal">{isAndroid || isIOS ? '16-bit PCM' : '32-bit Float PCM'}</span>
                   </div>
                 </div>
               </div>
@@ -758,29 +413,29 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
 
             {/* 3. RESAMPLER */}
             <div className="relative">
-              <div className="pipeline-icon-3 absolute -left-8 top-1 w-6 h-6 rounded-full bg-[#2c2c2e] border border-white/20 flex items-center justify-center text-zinc-300 shrink-0 z-10 shadow-sm transition-all">
+              <div className="absolute -left-8 top-0.5 w-6 h-6 rounded-full bg-[#2c2c2e] border border-white/20 flex items-center justify-center text-zinc-300 shrink-0 z-10 shadow-sm">
                 <Sliders className="w-3.5 h-3.5" />
               </div>
-              <div className="pipeline-area-3 rounded-2xl p-3 border transition-all">
-                <div className="text-[12px] font-bold tracking-wider text-zinc-300 uppercase mb-2">
+              <div className="py-0.5">
+                <div className="text-[12px] font-bold tracking-wider text-zinc-400 uppercase mb-1.5">
                   Resampler
                 </div>
-                <div className="space-y-1 text-[13px] leading-relaxed">
+                <div className="space-y-1 text-[13px] leading-relaxed text-zinc-300">
                   <div>
                     <span className="font-semibold text-white/95">I/O Rate: </span>
-                    <span className="text-zinc-300 font-normal">{resamplerIoRate}</span>
+                    <span className="font-normal">{resamplerIoRate}</span>
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">Type: </span>
-                    <span className="text-zinc-300 font-normal">{resamplerType}</span>
+                    <span className="font-normal">{resamplerType}</span>
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">Cutoff: </span>
-                    <span className="text-zinc-300 font-normal">{resamplerCutoff}</span>
+                    <span className="font-normal">{resamplerCutoff}</span>
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">Quality: </span>
-                    <span className="text-zinc-300 font-normal">{resamplerQuality}</span>
+                    <span className="font-normal">{resamplerQuality}</span>
                   </div>
                 </div>
               </div>
@@ -788,92 +443,92 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
 
             {/* 4. DSP */}
             <div className="relative">
-              <div className="pipeline-icon-4 absolute -left-8 top-1 w-6 h-6 rounded-full bg-[#2c2c2e] border border-white/20 flex items-center justify-center text-zinc-300 shrink-0 z-10 shadow-sm transition-all">
+              <div className="absolute -left-8 top-0.5 w-6 h-6 rounded-full bg-[#2c2c2e] border border-white/20 flex items-center justify-center text-zinc-300 shrink-0 z-10 shadow-sm">
                 <Activity className="w-3.5 h-3.5" />
               </div>
-              <div className="pipeline-area-4 rounded-2xl p-3 border transition-all">
-                <div className="text-[12px] font-bold tracking-wider text-zinc-300 uppercase mb-2">
+              <div className="py-0.5">
+                <div className="text-[12px] font-bold tracking-wider text-zinc-400 uppercase mb-1.5">
                   DSP
                 </div>
-                <div className="space-y-1 text-[13px] leading-relaxed">
+                <div className="space-y-1 text-[13px] leading-relaxed text-zinc-300">
                   <div>
                     <span className="font-semibold text-white/95">PCM Format: </span>
-                    <span className="text-zinc-300 font-normal">Float32</span>
+                    <span className="font-normal">Float32</span>
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">Sample Rate: </span>
-                    <span className="text-zinc-300 font-normal">{dacSampleRateKhz} kHz</span>
+                    <span className="font-normal">{dacSampleRateKhz} kHz</span>
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">Gain: </span>
-                    <span className="text-zinc-300 font-normal">
+                    <span className="font-normal">
                       {volumeNormalization ? '-14.0 LUFS Target' : `${(20 * Math.log10(volume || 0.001)).toFixed(1)} dBFS`}
                     </span>
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">EQ Preset: </span>
-                    <span className="text-zinc-300 font-normal">
+                    <span className="font-normal">
                       {eqEnabled ? `${eqPreset} (Active)` : 'Flat (Bypass)'}
                     </span>
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">Buffers: </span>
-                    <span className="text-zinc-300 font-normal">{bufferText}</span>
+                    <span className="font-normal">{bufferText}</span>
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">Output API: </span>
-                    <span className="text-zinc-300 font-normal">{outputApi}</span>
+                    <span className="font-normal">{outputApi}</span>
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">Bit-exact: </span>
-                    <span className="text-zinc-300 font-normal">{bitExactStatus}</span>
+                    <span className="font-normal">{bitExactStatus}</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* 5. OUTPUT DEVICE (Strict End of Timeline) */}
+            {/* 5. OUTPUT DEVICE */}
             <div className="relative">
               <div 
                 ref={lastIconRef}
-                className="pipeline-icon-5 absolute -left-8 top-1 w-6 h-6 rounded-full bg-[#2c2c2e] border border-white/20 flex items-center justify-center text-zinc-300 shrink-0 z-10 shadow-sm transition-all"
+                className="absolute -left-8 top-0.5 w-6 h-6 rounded-full bg-[#2c2c2e] border border-white/20 flex items-center justify-center text-zinc-300 shrink-0 z-10 shadow-sm"
               >
                 <Volume2 className="w-3.5 h-3.5" />
               </div>
-              <div className="pipeline-area-5 rounded-2xl p-3 border transition-all">
-                <div className="text-[12px] font-bold tracking-wider text-zinc-300 uppercase mb-2">
+              <div className="py-0.5">
+                <div className="text-[12px] font-bold tracking-wider text-zinc-400 uppercase mb-1.5">
                   Output Device
                 </div>
-                <div className="space-y-1 text-[13px] leading-relaxed">
+                <div className="space-y-1 text-[13px] leading-relaxed text-zinc-300">
                   <div>
                     <span className="font-semibold text-white/95">Device Name: </span>
-                    <span className="text-zinc-300 font-normal">{detectedDeviceName}</span>
+                    <span className="font-normal">{detectedDeviceName}</span>
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">Route: </span>
-                    <span className="text-zinc-300 font-normal">{routeName}</span>
+                    <span className="font-normal">{routeName}</span>
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">Transport: </span>
-                    <span className="text-zinc-300 font-normal">{transportName}</span>
+                    <span className="font-normal">{transportName}</span>
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">Direct: </span>
-                    <span className="text-zinc-300 font-normal">
+                    <span className="font-normal">
                       {isBitExact ? 'Direct Bit-Matched Path' : 'System Audio Engine (Shared Path)'}
                     </span>
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">Audio Stream: </span>
-                    <span className="text-zinc-300 font-normal">PCM32 Float / {dacSampleRateKhz} kHz</span>
+                    <span className="font-normal">PCM32 Float / {dacSampleRateKhz} kHz</span>
                   </div>
                   <div>
                     <span className="font-semibold text-white/95">System: </span>
-                    <span className="text-zinc-300 font-normal">{systemMixer}</span>
+                    <span className="font-normal">{systemMixer}</span>
                   </div>
                   <div className="pt-0.5">
                     <span className="font-semibold text-white/95">Status: </span>
-                    <span className="text-zinc-300 font-normal">{fallbackNote}</span>
+                    <span className="font-normal">{fallbackNote}</span>
                   </div>
                 </div>
               </div>
@@ -882,10 +537,10 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
         </div>
 
         {/* Done Button */}
-        <div className="pt-4 shrink-0">
+        <div className="pt-5 shrink-0">
           <button
             onClick={onClose}
-            className="w-full py-3 rounded-2xl bg-[#2c2c2e]/90 hover:bg-[#3a3a3c] text-white font-semibold text-[15px] transition-all active:scale-[0.98] shadow-lg border border-white/10"
+            className="w-full py-3.5 rounded-full bg-white/10 hover:bg-white/15 text-white font-semibold text-[15px] transition-all active:scale-[0.98] shadow-md border border-white/10 cursor-pointer"
           >
             Done
           </button>

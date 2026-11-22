@@ -15,7 +15,6 @@ import {
   ListMusic,
   Download,
   Heart,
-  Info,
   Video,
   Timer,
   Radio,
@@ -25,6 +24,8 @@ import {
   Gauge,
   Check,
   RefreshCw,
+  MoreHorizontal,
+  Activity,
 } from 'lucide-react';
 import { usePlayerStore } from '../../stores/usePlayerStore';
 import { useDownloadStore } from '../../stores/useDownloadStore';
@@ -80,22 +81,41 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
   const { queueDownload } = useDownloadStore();
   const [isLiked, setIsLiked] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [qualityMenuOpen, setQualityMenuOpen] = useState(false);
+
+  const moreMenuRef = useRef<HTMLDivElement>(null);
   const qualityMenuRef = useRef<HTMLDivElement>(null);
+  const progressBarRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!currentTrack) return;
+    api.getFavorites()
+      .then((favs) => {
+        if (Array.isArray(favs)) {
+          setIsLiked(favs.some((f) => f.id === currentTrack.id || (f.videoId && f.videoId === currentTrack.videoId)));
+        }
+      })
+      .catch(() => {});
+  }, [currentTrack?.id]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (qualityMenuRef.current && !qualityMenuRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (moreMenuRef.current && !moreMenuRef.current.contains(target)) {
+        setMoreMenuOpen(false);
+      }
+      if (qualityMenuRef.current && !qualityMenuRef.current.contains(target)) {
         setQualityMenuOpen(false);
       }
     };
-    if (qualityMenuOpen) {
+    if (moreMenuOpen || qualityMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [qualityMenuOpen]);
+  }, [moreMenuOpen, qualityMenuOpen]);
 
   if (!currentTrack) return null;
 
@@ -106,7 +126,15 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const progressPercent = duration > 0 ? Math.min(100, Math.max(0, (currentTime / duration) * 100)) : 0;
+
+  const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!progressBarRef.current || duration <= 0) return;
+    const rect = progressBarRef.current.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const ratio = Math.max(0, Math.min(1, clickX / rect.width));
+    seek(ratio * duration);
+  };
 
   const handleDownloadCurrent = async () => {
     if (!currentTrack) return;
@@ -200,7 +228,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
                   </span>
                 ) : (
                   <span className="shrink-0 px-1 py-0.2 rounded text-[8px] font-mono text-white/70 bg-white/10 border border-white/15">
-                    {audioStats?.codec?.toUpperCase() || 'AAC'} {audioStats?.bitrate ? `${audioStats.bitrate}k` : '320k'}
+                    {audioStats?.codec?.toUpperCase() || 'OPUS'} {audioStats?.bitrate ? `${audioStats.bitrate}k` : '160k'}
                   </span>
                 )}
               </div>
@@ -220,11 +248,11 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
             <button
               onClick={togglePlay}
               disabled={isLoading}
-              className="w-9 h-9 rounded-full liquid-glass-prominent flex items-center justify-center active:scale-90 transition-transform shadow-lg"
+              className="w-9 h-9 rounded-full bg-white text-zinc-950 flex items-center justify-center active:scale-90 transition-transform shadow-lg cursor-pointer hover:bg-zinc-100"
               title={isPlaying ? 'Pause' : 'Play'}
             >
               {isLoading ? (
-                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <div className="w-3.5 h-3.5 border-2 border-zinc-950 border-t-transparent rounded-full animate-spin" />
               ) : isPlaying ? (
                 <Pause className="w-4 h-4 fill-current" />
               ) : (
@@ -247,342 +275,395 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
 
   return (
     <div 
-      className="hidden md:flex h-20 liquid-glass border-t border-white/15 px-6 items-center justify-between shrink-0 select-none z-30 relative shadow-[0_-12px_48px_rgba(0,0,0,0.6)]"
+      className="hidden md:flex h-20 bg-[#121216]/95 backdrop-blur-2xl border-t border-white/10 px-6 items-center justify-between shrink-0 select-none z-30 relative shadow-[0_-8px_32px_rgba(0,0,0,0.6)]"
     >
-      {/* Top Thin Progress Bar (Clickable) */}
-      <div
-        className="absolute top-0 left-0 right-0 h-1 bg-border/60 cursor-pointer group hover:h-1.5 transition-all overflow-hidden"
-        onClick={(e) => {
-          const rect = e.currentTarget.getBoundingClientRect();
-          const clickPos = (e.clientX - rect.left) / rect.width;
-          seek(clickPos * duration);
-        }}
-      >
-        {/* Two-Song Cache Slot 1 Buffer Progress */}
-        <div
-          className="absolute top-0 left-0 h-full bg-white/20 transition-all duration-300 pointer-events-none"
-          style={{ width: `${twoSongCache?.currentLoaded ? 100 : (twoSongCache?.currentBufferPercent || 0)}%` }}
-        />
-        <div
-          className="h-full bg-gradient-to-r from-primary to-accent relative transition-all z-10"
-          style={{ width: `${progressPercent}%` }}
-        >
-          <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white shadow-md opacity-0 group-hover:opacity-100 transition-opacity" />
-        </div>
-      </div>
-
       {/* SponsorBlock Auto-Skip Notice Toast */}
       {lastSkippedNotice && (
-        <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-surface-elevated/90 border border-primary/40 text-primary text-xs font-semibold px-3 py-1 rounded-full shadow-lg backdrop-blur-md animate-bounce">
+        <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-zinc-900/95 border border-primary/40 text-primary text-xs font-semibold px-3 py-1 rounded-full shadow-lg backdrop-blur-md animate-bounce z-40">
           ⚡ {lastSkippedNotice}
         </div>
       )}
 
-      {/* Desktop 3-Column Control Center (hidden md:flex) */}
-      <div className="hidden md:flex items-center justify-between w-full h-full">
+      {/* Desktop 3-Column Control Center */}
+      <div className="flex items-center justify-between w-full h-full gap-4">
         {/* Left: Track Information */}
-        <div className="flex items-center gap-3 w-1/4 min-w-[200px]">
-        <div
-          className="relative w-14 h-14 rounded-xl overflow-hidden shadow-lg border border-border shrink-0 cursor-pointer group"
-          onClick={() => setExpanded(true)}
-        >
-          <img
-            src={currentTrack.thumbnail || '/placeholder.png'}
-            alt={currentTrack.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-          />
-          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-            <Maximize2 className="w-4 h-4 text-white" />
-          </div>
-        </div>
-
-        <div className="min-w-0 pr-2">
-          <h4
-            className="font-semibold text-sm text-foreground truncate cursor-pointer hover:underline"
+        <div className="flex items-center gap-3 w-[28%] min-w-[200px] max-w-[320px]">
+          <div
+            className="relative w-13 h-13 rounded-xl overflow-hidden shadow-lg border border-white/10 shrink-0 cursor-pointer group"
             onClick={() => setExpanded(true)}
           >
-            {currentTrack.title}
-          </h4>
-          <div className="flex items-center gap-1.5 truncate">
-            <p className="text-xs text-foreground-muted truncate">{currentTrack.artist}</p>
-            {activeVideoSource || isVideoMode ? (
-              <span
-                className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-red-600/20 text-red-400 border border-red-500/30"
-                title="Watching YouTube Cinema Video"
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                VIDEO • 1080p
-              </span>
-            ) : showMiniPlayerCodecBadge && (
-              audioQuality === 'data_saver' ? (
+            <img
+              src={currentTrack.thumbnail || '/placeholder.png'}
+              alt={currentTrack.title}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+            />
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+              <Maximize2 className="w-4 h-4 text-white" />
+            </div>
+          </div>
+
+          <div className="min-w-0 flex-1 pr-1">
+            <h4
+              className="font-semibold text-sm text-white truncate cursor-pointer hover:underline"
+              onClick={() => setExpanded(true)}
+            >
+              {currentTrack.title}
+            </h4>
+            <div className="flex items-center gap-2 mt-0.5 truncate">
+              <p className="text-xs text-zinc-400 truncate hover:text-zinc-200 transition-colors">
+                {currentTrack.artist}
+              </p>
+              {activeVideoSource || isVideoMode ? (
                 <span
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setQualityMenuOpen(true);
-                  }}
-                  className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-black tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-[0_0_8px_rgba(16,185,129,0.25)] cursor-pointer hover:scale-105 transition-transform"
-                  title="Data Saver Active (~48k-70k Opus) - Click to change quality"
+                  className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-red-600/20 text-red-400 border border-red-500/30"
+                  title="Watching Cinema Video"
                 >
-                  SAVER
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                  VIDEO
                 </span>
-              ) : audioStats?.isLossless ? (
-                <span
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setQualityMenuOpen(true);
-                  }}
-                  className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-black tracking-wider bg-gradient-to-r from-amber-500/20 to-yellow-500/20 text-amber-300 border border-amber-500/40 shadow-[0_0_8px_rgba(245,158,11,0.25)] cursor-pointer hover:scale-105 transition-transform"
-                  title={`Bit-Perfect Lossless ${audioStats?.codec?.toUpperCase() || 'FLAC'} (${audioStats?.bitDepth || 24}-bit/${Math.round((audioStats?.sampleRate || 96000)/1000)}kHz) - Click to change quality`}
-                >
-                  LOSSLESS
-                </span>
-              ) : audioStats?.bitrate && audioStats.bitrate >= 320 ? (
-                <span
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setQualityMenuOpen(true);
-                  }}
-                  className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold tracking-wider bg-cyan-500/15 text-cyan-300 border border-cyan-500/35 shadow-sm cursor-pointer hover:scale-105 transition-transform"
-                  title="High Quality Lossy Stream (320 kbps AAC) - Click to change quality"
-                >
-                  320k HQ
-                </span>
+              ) : showMiniPlayerCodecBadge && (
+                audioQuality === 'data_saver' ? (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleStatsForNerds();
+                    }}
+                    className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-mono font-bold tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 cursor-pointer hover:bg-emerald-500/30 transition-all"
+                    title="Data Saver Active - Click to view Audio Pipeline"
+                  >
+                    SAVER
+                  </button>
+                ) : audioStats?.isLossless ? (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleStatsForNerds();
+                    }}
+                    className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/30 cursor-pointer hover:bg-amber-500/25 transition-all shadow-xs"
+                    title={`Bit-Perfect Lossless ${audioStats?.codec?.toUpperCase() || 'FLAC'} (${audioStats?.bitDepth || 24}-bit/${Math.round((audioStats?.sampleRate || 48000)/1000)}kHz) - Click for Signal Path`}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                    {audioStats?.sampleRate && audioStats.sampleRate > 48000 ? 'HI-RES' : 'LOSSLESS'}
+                  </button>
+                ) : audioStats?.bitrate && audioStats.bitrate >= 320 ? (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleStatsForNerds();
+                    }}
+                    className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-mono font-bold tracking-wider bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 cursor-pointer hover:bg-cyan-500/25 transition-all shadow-xs"
+                    title="High Quality Lossy Stream (320 kbps AAC) - Click for Signal Path"
+                  >
+                    320k HQ
+                  </button>
+                ) : (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleStatsForNerds();
+                    }}
+                    className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-mono text-zinc-400 bg-white/5 border border-white/10 cursor-pointer hover:text-white transition-colors"
+                    title="Click for Signal Path"
+                  >
+                    {audioStats?.codec?.toUpperCase() || 'AAC'} {audioStats?.bitrate ? `${audioStats.bitrate}k` : '160k'}
+                  </button>
+                )
+              )}
+            </div>
+          </div>
+
+          {/* Favorite Heart Button */}
+          <button
+            onClick={handleToggleFavorite}
+            className={`p-1.5 rounded-full hover:bg-white/5 active:scale-90 transition-all ${
+              isLiked ? 'text-primary' : 'text-zinc-400 hover:text-white'
+            }`}
+            title={isLiked ? 'Remove from Liked' : 'Save to Liked'}
+          >
+            <Heart className={`w-4 h-4 ${isLiked ? 'fill-primary' : ''}`} />
+          </button>
+        </div>
+
+        {/* Center: Main Controls & Unified Scrubber Bar */}
+        <div className="flex flex-col items-center justify-center gap-1.5 flex-1 max-w-xl px-2">
+          {/* Transport Buttons */}
+          <div className="flex items-center gap-3">
+            {/* Shuffle */}
+            <button
+              onClick={toggleShuffle}
+              className={`p-1.5 rounded-full hover:bg-white/5 transition-colors ${
+                shuffle ? 'text-primary' : 'text-zinc-400 hover:text-white'
+              }`}
+              title={shuffle ? 'Shuffle on' : 'Shuffle off'}
+            >
+              <Shuffle className="w-4 h-4" />
+            </button>
+
+            {/* Previous */}
+            <button
+              onClick={previous}
+              className="p-1.5 rounded-full text-zinc-300 hover:text-white hover:bg-white/5 active:scale-95 transition-all"
+              title="Previous track"
+            >
+              <SkipBack className="w-5 h-5 fill-current" />
+            </button>
+
+            {/* Play / Pause Button - Solid High-Contrast White Circle */}
+            <button
+              onClick={togglePlay}
+              disabled={isLoading}
+              className="w-10 h-10 rounded-full bg-white text-zinc-950 flex items-center justify-center transition-all hover:scale-105 active:scale-95 disabled:opacity-50 cursor-pointer shadow-md hover:bg-zinc-100"
+              title={isPlaying ? 'Pause' : 'Play'}
+            >
+              {isLoading ? (
+                <div className="w-4 h-4 border-2 border-zinc-950 border-t-transparent rounded-full animate-spin" />
+              ) : isPlaying ? (
+                <Pause className="w-5 h-5 fill-current" />
               ) : (
-                <span
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setQualityMenuOpen(true);
-                  }}
-                  className="shrink-0 inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-medium bg-surface-elevated text-foreground-subtle border border-border cursor-pointer hover:text-foreground"
-                  title="Click to change streaming quality"
-                >
-                  {audioStats?.codec?.toUpperCase() || 'AAC'} {audioStats?.bitrate ? `${audioStats.bitrate}k` : '160k'}
-                </span>
-              )
-            )}
+                <Play className="w-5 h-5 fill-current ml-0.5" />
+              )}
+            </button>
+
+            {/* Next */}
+            <button
+              onClick={next}
+              className="p-1.5 rounded-full text-zinc-300 hover:text-white hover:bg-white/5 active:scale-95 transition-all"
+              title="Next track"
+            >
+              <SkipForward className="w-5 h-5 fill-current" />
+            </button>
+
+            {/* Repeat */}
+            <button
+              onClick={cycleRepeat}
+              className={`p-1.5 rounded-full hover:bg-white/5 transition-colors ${
+                repeatMode !== 'off' ? 'text-primary' : 'text-zinc-400 hover:text-white'
+              }`}
+              title={`Repeat: ${repeatMode}`}
+            >
+              {repeatMode === 'one' ? <Repeat1 className="w-4 h-4" /> : <Repeat className="w-4 h-4" />}
+            </button>
+          </div>
+
+          {/* Time Scrubber Timeline */}
+          <div className="flex items-center gap-2.5 w-full">
+            <span className="text-[11px] font-mono text-zinc-400 tabular-nums w-9 text-right select-none">
+              {formatTime(currentTime)}
+            </span>
+
+            {/* Interactive Progress Bar */}
+            <div
+              ref={progressBarRef}
+              onClick={handleSeek}
+              className="relative flex-1 h-3 flex items-center cursor-pointer group select-none py-1"
+            >
+              {/* Slider Track */}
+              <div className="w-full h-1 group-hover:h-1.5 bg-white/15 rounded-full overflow-hidden transition-all relative">
+                {/* Buffer Line */}
+                <div
+                  className="absolute top-0 left-0 h-full bg-white/20 transition-all duration-300"
+                  style={{ width: `${twoSongCache?.currentLoaded ? 100 : (twoSongCache?.currentBufferPercent || 0)}%` }}
+                />
+                {/* Current Playhead */}
+                <div
+                  className="h-full bg-white group-hover:bg-primary transition-colors relative"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+
+              {/* Scrubber Knob Thumb */}
+              <div
+                className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white shadow-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none -ml-1.5"
+                style={{ left: `${progressPercent}%` }}
+              />
+            </div>
+
+            <span className="text-[11px] font-mono text-zinc-400 tabular-nums w-9 select-none">
+              {formatTime(duration)}
+            </span>
           </div>
         </div>
 
-        {/* Favorite Heart Button */}
-        <button
-          onClick={handleToggleFavorite}
-          className={`p-1.5 rounded-full hover:bg-surface-elevated transition-colors ${
-            isLiked ? 'text-primary' : 'text-foreground-muted hover:text-foreground'
-          }`}
-          title={isLiked ? 'Remove from favorites' : 'Add to favorites'}
-        >
-          <Heart className={`w-4 h-4 ${isLiked ? 'fill-primary' : ''}`} />
-        </button>
-      </div>
-
-      {/* Center: Main Controls & Time */}
-      <div className="flex flex-col items-center justify-center gap-1.5 max-w-md w-2/4">
-        <div className="flex items-center gap-3">
-          {/* Shuffle */}
+        {/* Right: Quick Features & Volume */}
+        <div className="flex items-center justify-end gap-1.5 w-[28%] min-w-[200px] max-w-[320px]">
+          {/* Audio Pipeline Pill */}
           <button
-            onClick={toggleShuffle}
-            className={`p-1.5 rounded-full hover:bg-surface-elevated transition-colors ${
-              shuffle ? 'text-primary' : 'text-foreground-muted hover:text-foreground'
+            onClick={toggleStatsForNerds}
+            title="Inspect Live Bit-Perfect Audio Pipeline Signal Path"
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-xs ${
+              audioStats?.isLossless
+                ? 'bg-amber-500/15 text-amber-300 border-amber-500/30 hover:bg-amber-500/25'
+                : audioStats?.bitrate && audioStats.bitrate >= 320
+                ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30 hover:bg-cyan-500/25'
+                : 'bg-white/5 text-zinc-300 border-white/10 hover:bg-white/10'
             }`}
-            title={shuffle ? 'Shuffle on' : 'Shuffle off'}
           >
-            <Shuffle className="w-4 h-4" />
+            <Activity className="w-3.5 h-3.5 text-primary" />
+            <span>{audioStats?.isLossless ? 'LOSSLESS' : audioStats?.bitrate && audioStats.bitrate >= 320 ? '320k HQ' : 'PIPELINE'}</span>
           </button>
 
-          {/* Previous */}
+          {/* Synced Lyrics Toggle */}
           <button
-            onClick={previous}
-            className="p-1.5 rounded-full text-foreground hover:bg-surface-elevated transition-colors"
-            title="Previous track"
+            onClick={toggleLyrics}
+            title="Synced Karaoke Lyrics"
+            className={`p-2 rounded-xl transition-all ${
+              isLyricsOpen
+                ? 'bg-primary/20 text-primary border border-primary/30'
+                : 'text-zinc-400 hover:text-white hover:bg-white/5'
+            }`}
           >
-            <SkipBack className="w-5 h-5 fill-current" />
+            <Mic2 className="w-4 h-4" />
           </button>
 
-          {/* Play / Pause */}
+          {/* Up Next Queue Toggle */}
           <button
-            onClick={togglePlay}
-            disabled={isLoading}
-            className="w-11 h-11 rounded-full liquid-glass-prominent flex items-center justify-center transition-all hover:scale-105 active:scale-95 disabled:opacity-50 cursor-pointer"
-            title={isPlaying ? 'Pause' : 'Play'}
+            onClick={toggleQueue}
+            title="Queue / Up Next"
+            className={`p-2 rounded-xl transition-all ${
+              isQueueOpen
+                ? 'bg-primary/20 text-primary border border-primary/30'
+                : 'text-zinc-400 hover:text-white hover:bg-white/5'
+            }`}
           >
-            {isLoading ? (
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : isPlaying ? (
-              <Pause className="w-5 h-5 fill-current" />
-            ) : (
-              <Play className="w-5 h-5 fill-current ml-0.5" />
+            <ListMusic className="w-4 h-4" />
+          </button>
+
+          {/* More Options Popover Menu */}
+          <div className="relative" ref={moreMenuRef}>
+            <button
+              onClick={() => setMoreMenuOpen(!moreMenuOpen)}
+              title="More Options (Equalizer, Download, Timer, Radio, Video, Quality)"
+              className={`p-2 rounded-xl transition-all ${
+                moreMenuOpen
+                  ? 'bg-white/15 text-white'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <MoreHorizontal className="w-4 h-4" />
+            </button>
+
+            {moreMenuOpen && (
+              <div className="absolute right-0 bottom-full mb-3 w-64 bg-zinc-900/95 border border-white/15 rounded-2xl p-2 shadow-2xl backdrop-blur-2xl z-50 animate-fadeIn space-y-1">
+                {/* 1-Click Download Current Song */}
+                <button
+                  onClick={() => {
+                    handleDownloadCurrent();
+                    setMoreMenuOpen(false);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-semibold text-zinc-200 hover:text-white hover:bg-white/10 transition-colors"
+                >
+                  <Download className={`w-4 h-4 ${downloadSuccess ? 'text-emerald-400' : 'text-primary'}`} />
+                  <span>
+                    {downloadSuccess
+                      ? 'Queued for Download!'
+                      : audioStats?.isLossless
+                      ? `Download Lossless FLAC (${audioStats.bitDepth || 24}-bit)`
+                      : 'Download Audio Track'}
+                  </span>
+                </button>
+
+                {/* Graphic Equalizer */}
+                <button
+                  onClick={() => {
+                    toggleEqualizer();
+                    setMoreMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-semibold transition-colors ${
+                    isEqualizerOpen
+                      ? 'bg-primary/20 text-primary'
+                      : 'text-zinc-200 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  <Sliders className="w-4 h-4 text-primary" />
+                  <span>10-Band Studio Equalizer</span>
+                </button>
+
+                {/* Sleep Timer */}
+                <button
+                  onClick={() => {
+                    toggleSleepTimer();
+                    setMoreMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs font-semibold transition-colors ${
+                    sleepTimerRemaining !== null || sleepTimerStopAfterTrack
+                      ? 'bg-primary/20 text-primary'
+                      : 'text-zinc-200 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Timer className="w-4 h-4 text-primary" />
+                    <span>Sleep Timer</span>
+                  </div>
+                  {(sleepTimerRemaining !== null || sleepTimerStopAfterTrack) && (
+                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/20 text-primary">
+                      Active
+                    </span>
+                  )}
+                </button>
+
+                {/* Start Song Radio */}
+                {!currentTrack.isLocal && (
+                  <button
+                    onClick={() => {
+                      startRadio();
+                      setMoreMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-semibold text-zinc-200 hover:text-white hover:bg-white/10 transition-colors"
+                  >
+                    <Radio className="w-4 h-4 text-primary" />
+                    <span>Start Endless Radio</span>
+                  </button>
+                )}
+
+                {/* Watch Music Video */}
+                {!currentTrack.isLocal && (
+                  <button
+                    onClick={() => {
+                      setVideoMode(true);
+                      setExpanded(true);
+                      setMoreMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-semibold text-zinc-200 hover:text-white hover:bg-white/10 transition-colors"
+                  >
+                    <Video className="w-4 h-4 text-primary" />
+                    <span>Watch Music Video</span>
+                  </button>
+                )}
+
+                <div className="border-t border-white/10 pt-1 mt-1">
+                  {/* Streaming Quality Selector trigger */}
+                  <button
+                    onClick={() => {
+                      setQualityMenuOpen(true);
+                      setMoreMenuOpen(false);
+                    }}
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs font-semibold text-zinc-200 hover:text-white hover:bg-white/10 transition-colors"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Sparkles className="w-4 h-4 text-amber-400" />
+                      <span>Audio Quality</span>
+                    </div>
+                    <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded-full bg-white/10 text-white">
+                      {audioQuality.replace('_', ' ')}
+                    </span>
+                  </button>
+                </div>
+              </div>
             )}
-          </button>
+          </div>
 
-          {/* Next */}
-          <button
-            onClick={next}
-            className="p-1.5 rounded-full text-foreground hover:bg-surface-elevated transition-colors"
-            title="Next track"
-          >
-            <SkipForward className="w-5 h-5 fill-current" />
-          </button>
-
-          {/* Repeat */}
-          <button
-            onClick={cycleRepeat}
-            className={`p-1.5 rounded-full hover:bg-surface-elevated transition-colors ${
-              repeatMode !== 'off' ? 'text-primary' : 'text-foreground-muted hover:text-foreground'
-            }`}
-            title={`Repeat: ${repeatMode}`}
-          >
-            {repeatMode === 'one' ? <Repeat1 className="w-4 h-4" /> : <Repeat className="w-4 h-4" />}
-          </button>
-        </div>
-
-        {/* Time Progress Indicator */}
-        <div className="flex items-center gap-2 text-[11px] text-foreground-subtle font-mono">
-          <span>{formatTime(currentTime)}</span>
-          <span>/</span>
-          <span>{formatTime(duration)}</span>
-        </div>
-      </div>
-
-      {/* Right: Quick Features & Volume */}
-      <div className="flex items-center justify-end gap-2 w-1/4 min-w-[220px]">
-        {/* 1-Click Download Current Song at Playing Quality */}
-        <button
-          onClick={handleDownloadCurrent}
-          title={
-            downloadSuccess
-              ? 'Queued for Download!'
-              : audioStats?.isLossless
-              ? `Download Original Lossless FLAC (${audioStats.bitDepth || 24}-bit/${Math.round((audioStats.sampleRate || 44100)/1000)}kHz)`
-              : 'Download Original Audio'
-          }
-          className={`p-2 rounded-xl transition-all ${
-            downloadSuccess
-              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-              : audioStats?.isLossless
-              ? 'text-amber-400 hover:text-amber-300 hover:bg-amber-500/10'
-              : 'text-foreground-muted hover:text-foreground hover:bg-surface-elevated'
-          }`}
-        >
-          <Download className="w-4 h-4" />
-        </button>
-
-        {/* Watch Music Video */}
-        {!currentTrack.isLocal && (
-          <button
-            onClick={() => {
-              setVideoMode(true);
-              setExpanded(true);
-            }}
-            title="Watch Music Video"
-            className="p-2 rounded-xl text-foreground-muted hover:text-primary hover:bg-surface-elevated transition-all"
-          >
-            <Video className="w-4 h-4" />
-          </button>
-        )}
-
-        {/* Synced Lyrics Toggle */}
-        <button
-          onClick={toggleLyrics}
-          title="Synced Karaoke Lyrics"
-          className={`p-2 rounded-xl transition-all ${
-            isLyricsOpen
-              ? 'bg-primary/20 text-primary border border-primary/30'
-              : 'text-foreground-muted hover:text-foreground hover:bg-surface-elevated'
-          }`}
-        >
-          <Mic2 className="w-4 h-4" />
-        </button>
-
-        {/* Equalizer Toggle */}
-        <button
-          onClick={toggleEqualizer}
-          title="Graphic Equalizer"
-          className={`p-2 rounded-xl transition-all ${
-            isEqualizerOpen
-              ? 'bg-primary/20 text-primary border border-primary/30'
-              : 'text-foreground-muted hover:text-foreground hover:bg-surface-elevated'
-          }`}
-        >
-          <Sliders className="w-4 h-4" />
-        </button>
-
-        {/* Up Next Queue Toggle */}
-        <button
-          onClick={toggleQueue}
-          title="Queue / Up Next"
-          className={`p-2 rounded-xl transition-all ${
-            isQueueOpen
-              ? 'bg-primary/20 text-primary border border-primary/30'
-              : 'text-foreground-muted hover:text-foreground hover:bg-surface-elevated'
-          }`}
-        >
-          <ListMusic className="w-4 h-4" />
-        </button>
-
-        {/* Start Song Radio */}
-        {!currentTrack.isLocal && (
-          <button
-            onClick={() => startRadio()}
-            title="Start Endless Song Radio"
-            className="p-2 rounded-xl text-foreground-muted hover:text-primary hover:bg-surface-elevated transition-all"
-          >
-            <Radio className="w-4 h-4" />
-          </button>
-        )}
-
-        {/* Sleep Timer */}
-        <button
-          onClick={toggleSleepTimer}
-          title="Sleep Timer"
-          className={`p-2 rounded-xl transition-all relative ${
-            sleepTimerRemaining !== null || sleepTimerStopAfterTrack
-              ? 'bg-primary/20 text-primary border border-primary/30'
-              : 'text-foreground-muted hover:text-foreground hover:bg-surface-elevated'
-          }`}
-        >
-          <Timer className="w-4 h-4" />
-          {(sleepTimerRemaining !== null || sleepTimerStopAfterTrack) && (
-            <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-primary animate-ping" />
-          )}
-        </button>
-
-        {/* Streaming Audio Quality & Data Saver */}
-        <div className="relative" ref={qualityMenuRef}>
-          <button
-            onClick={() => setQualityMenuOpen(!qualityMenuOpen)}
-            title={`Streaming Quality: ${audioQuality.replace('_', ' ').toUpperCase()} (Click to change)`}
-            className={`p-2 rounded-xl border flex items-center gap-1 transition-all ${
-              qualityMenuOpen
-                ? 'bg-primary/20 text-primary border-primary shadow-sm shadow-primary/20'
-                : audioQuality === 'lossless'
-                ? 'bg-amber-500/15 text-amber-300 border-amber-500/40'
-                : audioQuality === 'data_saver'
-                ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'
-                : 'text-foreground-muted hover:text-foreground hover:bg-surface-elevated border-transparent'
-            }`}
-          >
-            {audioQuality === 'lossless' ? (
-              <Sparkles className="w-4 h-4 text-amber-400" />
-            ) : audioQuality === 'data_saver' ? (
-              <Leaf className="w-4 h-4 text-emerald-400" />
-            ) : audioQuality === 'high' ? (
-              <Zap className="w-4 h-4 text-primary" />
-            ) : (
-              <Gauge className="w-4 h-4" />
-            )}
-          </button>
-
+          {/* Quality Picker Dropdown (when triggered) */}
           {qualityMenuOpen && (
             <div 
-              style={{ backgroundColor: 'var(--bg-surface)' }}
-              className="absolute right-0 bottom-full mb-3 w-84 bg-surface border border-border/80 rounded-2xl p-3 shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 animate-fadeIn space-y-1.5 ring-1 ring-black/10 dark:ring-white/10"
+              ref={qualityMenuRef}
+              className="absolute right-6 bottom-full mb-3 w-80 bg-zinc-900/95 border border-white/15 rounded-2xl p-3 shadow-2xl backdrop-blur-2xl z-50 animate-fadeIn space-y-1.5"
             >
-              <div className="flex items-center justify-between pb-2 border-b border-border/60 mb-2">
+              <div className="flex items-center justify-between pb-2 border-b border-white/10 mb-2">
                 <div>
-                  <p className="text-xs font-extrabold text-foreground tracking-tight">Streaming Quality</p>
-                  <p className="text-[10px] text-foreground-muted">Select audio fidelity or data saver</p>
+                  <p className="text-xs font-extrabold text-white tracking-tight">Streaming Quality</p>
+                  <p className="text-[10px] text-zinc-400">Select audio fidelity mode</p>
                 </div>
-                <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30">
+                <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30">
                   {audioQuality.replace('_', ' ')}
                 </span>
               </div>
@@ -593,9 +674,9 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
                     id: 'lossless',
                     label: 'Lossless / Hi-Res',
                     badge: 'FLAC Master',
-                    desc: 'Plays FLAC when available (local library or lossless bridge), with 320k HQ fallback',
+                    desc: 'Plays bit-perfect FLAC when available with 320k HQ fallback',
                     icon: Sparkles,
-                    color: 'text-amber-500 bg-amber-500/10 border-amber-500/30',
+                    color: 'text-amber-400 bg-amber-500/10 border-amber-500/30',
                   },
                   {
                     id: 'high',
@@ -611,15 +692,15 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
                     badge: '128k–160k',
                     desc: 'Balanced audio fidelity with smooth buffering',
                     icon: Gauge,
-                    color: 'text-blue-500 bg-blue-500/10 border-blue-500/30',
+                    color: 'text-blue-400 bg-blue-500/10 border-blue-500/30',
                   },
                   {
                     id: 'data_saver',
                     label: 'Data Saver',
                     badge: '48k–70k',
-                    desc: 'Uses 70%+ less data — ideal for mobile & metered data',
+                    desc: 'Uses 70%+ less data — ideal for mobile connections',
                     icon: Leaf,
-                    color: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/30',
+                    color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
                   },
                   {
                     id: 'auto',
@@ -627,7 +708,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
                     badge: 'Auto',
                     desc: 'Optimized dynamically based on track and connection',
                     icon: RefreshCw,
-                    color: 'text-purple-500 bg-purple-500/10 border-purple-500/30',
+                    color: 'text-purple-400 bg-purple-500/10 border-purple-500/30',
                   },
                 ].map((opt) => {
                   const isSelected = audioQuality === opt.id;
@@ -641,8 +722,8 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
                       }}
                       className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left transition-all border ${
                         isSelected
-                          ? 'bg-primary/15 border-primary/50 text-foreground shadow-sm shadow-primary/10'
-                          : 'bg-surface-elevated/60 hover:bg-surface-elevated border-border/40 hover:border-border text-foreground-muted hover:text-foreground'
+                          ? 'bg-primary/15 border-primary/50 text-white shadow-sm'
+                          : 'bg-white/5 hover:bg-white/10 border-white/5 text-zinc-300 hover:text-white'
                       }`}
                     >
                       <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-2">
@@ -651,15 +732,15 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5">
-                            <span className={`text-xs font-bold truncate ${isSelected ? 'text-primary' : 'text-foreground'}`}>
+                            <span className={`text-xs font-bold truncate ${isSelected ? 'text-primary' : 'text-white'}`}>
                               {opt.label}
                             </span>
                             {isSelected && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
                           </div>
-                          <p className="text-[10px] text-foreground-muted truncate leading-tight mt-0.5">{opt.desc}</p>
+                          <p className="text-[10px] text-zinc-400 truncate leading-tight mt-0.5">{opt.desc}</p>
                         </div>
                       </div>
-                      <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-md bg-surface border border-border/70 text-foreground shrink-0 shadow-xs">
+                      <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-md bg-black/40 border border-white/10 text-white shrink-0">
                         {opt.badge}
                       </span>
                     </button>
@@ -668,34 +749,38 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
               </div>
             </div>
           )}
-        </div>
 
-        {/* Volume Slider */}
-        <div className="flex items-center gap-1.5 ml-1">
-          <button onClick={toggleMute} className="text-foreground-muted hover:text-foreground">
-            {isMuted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+          {/* Volume Control */}
+          <div className="flex items-center gap-1.5 ml-1">
+            <button
+              onClick={toggleMute}
+              className="p-1.5 rounded-lg text-zinc-400 hover:text-white transition-colors"
+              title={isMuted ? 'Unmute' : 'Mute'}
+            >
+              {isMuted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+            </button>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={isMuted ? 0 : volume}
+              onChange={(e) => setVolume(parseFloat(e.target.value))}
+              className="w-16 h-1 bg-white/20 hover:bg-white/30 rounded-full appearance-none cursor-pointer accent-white transition-colors"
+              title={`Volume: ${Math.round((isMuted ? 0 : volume) * 100)}%`}
+            />
+          </div>
+
+          {/* Fullscreen Expand */}
+          <button
+            onClick={() => setExpanded(true)}
+            title="Expand Fullscreen Player"
+            className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-colors ml-0.5"
+          >
+            <Maximize2 className="w-4 h-4" />
           </button>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            value={isMuted ? 0 : volume}
-            onChange={(e) => setVolume(parseFloat(e.target.value))}
-            className="w-16 h-1 bg-surface-elevated rounded-lg appearance-none cursor-pointer accent-primary"
-          />
         </div>
-
-        {/* Fullscreen Expand */}
-        <button
-          onClick={() => setExpanded(true)}
-          title="Expand Player"
-          className="p-2 rounded-xl text-foreground-muted hover:text-foreground hover:bg-surface-elevated transition-colors ml-1"
-        >
-          <Maximize2 className="w-4 h-4" />
-        </button>
       </div>
     </div>
-  </div>
-);
+  );
 };

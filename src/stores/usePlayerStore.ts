@@ -299,7 +299,22 @@ function initAudioEngine(state: PlayerState) {
 
   audioElement.addEventListener('loadedmetadata', () => {
     if (audioElement) {
-      usePlayerStore.setState({ duration: audioElement.duration || 0, isLoading: false });
+      const dur = audioElement.duration || 0;
+      usePlayerStore.setState((s) => {
+        let updatedStats = s.audioStats;
+        if (updatedStats && dur > 0 && slotCurrent?.sizeBytes) {
+          const measured = Math.round((slotCurrent.sizeBytes * 8) / (dur * 1000));
+          if (measured >= 32 && measured <= 10000) {
+            updatedStats = {
+              ...updatedStats,
+              bitrate: updatedStats.measuredBitrate || measured,
+              measuredBitrate: updatedStats.measuredBitrate || measured,
+              duration: dur,
+            };
+          }
+        }
+        return { duration: dur, isLoading: false, audioStats: updatedStats };
+      });
     }
   });
 
@@ -438,9 +453,19 @@ export const loadCurrentTrackCompletely = async (
     }
 
     // Calculate genuine wire bitrate from measured bytes and duration
-    const dur = track.durationSeconds || 0;
-    const measuredBitrate = (blob.size > 0 && dur > 0)
-      ? Math.round((blob.size * 8) / (dur * 1000))
+    let trackDur = track.durationSeconds || 0;
+    if (!trackDur && typeof track.duration === 'string') {
+      const parts = track.duration.split(':').map((p: string) => parseInt(p, 10));
+      if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+        trackDur = parts[0] * 60 + parts[1];
+      } else if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
+        trackDur = parts[0] * 3600 + parts[1] * 60 + parts[2];
+      }
+    }
+    const playerDur = usePlayerStore.getState().duration || (audioElement?.duration && !isNaN(audioElement.duration) ? audioElement.duration : 0);
+    const effectiveDur = trackDur || playerDur || 0;
+    const measuredBitrate = (blob.size > 0 && effectiveDur > 0)
+      ? Math.round((blob.size * 8) / (effectiveDur * 1000))
       : null;
 
     slotCurrent = {
@@ -476,7 +501,7 @@ export const loadCurrentTrackCompletely = async (
         codec: headerCodec || 'aac',
         bitrate: effectiveMeasured,
         measuredBitrate: effectiveMeasured,
-        duration: dur,
+        duration: effectiveDur,
         provider: headerAddon || headerSource || 'High Quality Stream (320k AAC)',
         isLossless: headerLossless,
         sampleRate: headerSampleRate ? parseInt(headerSampleRate, 10) : 44100,
@@ -1118,23 +1143,26 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         api.getAudioStream(videoId, track.title, track.artist, durParam, quality).then((streamInfo) => {
           const isLosslessStream = Boolean(streamInfo.isLossless);
           const effectiveCodec = (streamInfo.codec || (isLosslessStream ? 'flac' : 'opus')).toLowerCase();
-          const effectiveBitrate = streamInfo.bitrate || (isLosslessStream ? 1411 : (effectiveCodec === 'opus' ? 160 : 320));
-          const effectiveProvider = streamInfo.addonName || (isLosslessStream ? 'Bit-Perfect Lossless FLAC' : (streamInfo.source === 'youtube' ? 'YouTube Music Direct' : 'High Quality Stream (320k AAC)'));
+          const effectiveBitrate = streamInfo.bitrate || (isLosslessStream ? 1535 : (effectiveCodec === 'opus' ? 160 : 320));
+          const effectiveProvider = streamInfo.addonName || (isLosslessStream ? 'PencariMusic' : (streamInfo.source === 'youtube' ? 'YouTube Music Direct' : 'High Quality Stream (320k AAC)'));
 
-          set((s) => ({
-            audioStats: {
-              codec: effectiveCodec,
-              bitrate: s.audioStats?.measuredBitrate || effectiveBitrate,
-              measuredBitrate: s.audioStats?.measuredBitrate,
-              duration: track.durationSeconds || 0,
-              provider: effectiveProvider,
-              isLossless: isLosslessStream,
-              sampleRate: streamInfo.sampleRate || (effectiveCodec === 'opus' ? 48000 : 44100),
-              bitDepth: streamInfo.bitDepth || (isLosslessStream && effectiveBitrate > 1500 ? 24 : 16),
-              qualityTier: streamInfo.qualityTier || (isLosslessStream ? 'lossless' : 'high'),
-              addonName: effectiveProvider,
-            },
-          }));
+          set((s) => {
+            const finalBitrate = streamInfo.bitrate || s.audioStats?.measuredBitrate || effectiveBitrate;
+            return {
+              audioStats: {
+                codec: effectiveCodec,
+                bitrate: finalBitrate,
+                measuredBitrate: finalBitrate,
+                duration: (streamInfo as any).duration || track.durationSeconds || 0,
+                provider: effectiveProvider,
+                isLossless: isLosslessStream,
+                sampleRate: streamInfo.sampleRate || (isLosslessStream ? 48000 : 44100),
+                bitDepth: streamInfo.bitDepth || (isLosslessStream ? 24 : 16),
+                qualityTier: streamInfo.qualityTier || (isLosslessStream ? 'lossless' : 'high'),
+                addonName: effectiveProvider,
+              },
+            };
+          });
         }).catch(() => {
           set({
             audioStats: {

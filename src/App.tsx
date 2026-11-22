@@ -5,6 +5,7 @@ import { Header } from './components/Header';
 import { MiniPlayer } from './components/Player/MiniPlayer';
 import { ExpandedPlayer } from './components/Player/ExpandedPlayer';
 import { EqualizerModal } from './components/Player/EqualizerModal';
+import { AudioPipelineModal } from './components/Player/AudioPipelineModal';
 import { HomePage } from './pages/HomePage';
 import { ExplorePage } from './pages/ExplorePage';
 import { SearchPage } from './pages/SearchPage';
@@ -31,7 +32,13 @@ export const App: React.FC = () => {
   const { initTheme } = useThemeStore();
   const { restoreSessionFromConfig } = usePlayerStore();
   const { initWebSocket } = useDownloadStore();
-  const { isExpanded, currentTrack } = usePlayerStore();
+  const {
+    isExpanded,
+    currentTrack,
+    enableStatsForNerds,
+    showStatsForNerds,
+    toggleStatsForNerds,
+  } = usePlayerStore();
   const { activeVideo, isPiP } = useVideoStore();
   const isWatchingVideoInPage = Boolean(activeVideo && activeTab === 'youtube' && !isPiP);
 
@@ -134,6 +141,9 @@ export const App: React.FC = () => {
 
       {/* Expanded Fullscreen Player Overlay */}
       <ExpandedPlayer />
+
+      {/* BitChord / Apple Music Live Audio Pipeline Modal */}
+      <AudioPipelineModal isOpen={Boolean(enableStatsForNerds && showStatsForNerds)} onClose={toggleStatsForNerds} />
 
       {/* Studio Graphic Equalizer Modal */}
       <EqualizerModal />
