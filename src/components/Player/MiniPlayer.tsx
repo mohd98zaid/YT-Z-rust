@@ -275,7 +275,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
 
   return (
     <div 
-      className="hidden md:flex h-20 bg-[#121216]/95 backdrop-blur-2xl border-t border-white/10 px-6 items-center justify-between shrink-0 select-none z-30 relative shadow-[0_-8px_32px_rgba(0,0,0,0.6)]"
+      className="hidden md:flex h-20 bg-[#121216]/95 backdrop-blur-2xl border-t border-white/10 px-6 items-center justify-between shrink-0 select-none z-30 relative shadow-[0_-8px_32px_rgba(0,0,0,0.6)] overflow-hidden"
     >
       {/* SponsorBlock Auto-Skip Notice Toast */}
       {lastSkippedNotice && (
@@ -287,9 +287,9 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
       {/* Desktop 3-Column Control Center */}
       <div className="flex items-center justify-between w-full h-full gap-4">
         {/* Left: Track Information */}
-        <div className="flex items-center gap-3 w-[28%] min-w-[200px] max-w-[320px]">
+        <div className="flex items-center gap-3 w-[28%] min-w-[200px] max-w-[320px] overflow-hidden">
           <div
-            className="relative w-13 h-13 rounded-xl overflow-hidden shadow-lg border border-white/10 shrink-0 cursor-pointer group"
+            className="relative w-14 h-14 min-w-[56px] min-h-[56px] max-w-[56px] max-h-[56px] rounded-xl overflow-hidden shadow-md border border-white/15 shrink-0 cursor-pointer group bg-zinc-900"
             onClick={() => setExpanded(true)}
           >
             <img
@@ -446,8 +446,8 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
           </div>
 
           {/* Time Scrubber Timeline */}
-          <div className="flex items-center gap-2.5 w-full">
-            <span className="text-[11px] font-mono text-zinc-400 tabular-nums w-9 text-right select-none">
+          <div className="flex items-center gap-3 w-full">
+            <span className="text-[11px] font-mono text-zinc-400 tabular-nums w-10 text-right select-none">
               {formatTime(currentTime)}
             </span>
 
@@ -458,15 +458,15 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
               className="relative flex-1 h-3 flex items-center cursor-pointer group select-none py-1"
             >
               {/* Slider Track */}
-              <div className="w-full h-1 group-hover:h-1.5 bg-white/15 rounded-full overflow-hidden transition-all relative">
+              <div className="w-full h-1 group-hover:h-1.5 bg-zinc-700/70 rounded-full overflow-hidden transition-all relative border border-white/5">
                 {/* Buffer Line */}
                 <div
-                  className="absolute top-0 left-0 h-full bg-white/20 transition-all duration-300"
+                  className="absolute top-0 left-0 h-full bg-white/25 transition-all duration-300"
                   style={{ width: `${twoSongCache?.currentLoaded ? 100 : (twoSongCache?.currentBufferPercent || 0)}%` }}
                 />
                 {/* Current Playhead */}
                 <div
-                  className="h-full bg-white group-hover:bg-primary transition-colors relative"
+                  className="h-full bg-white group-hover:bg-primary transition-colors relative rounded-full"
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
@@ -478,7 +478,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
               />
             </div>
 
-            <span className="text-[11px] font-mono text-zinc-400 tabular-nums w-9 select-none">
+            <span className="text-[11px] font-mono text-zinc-400 tabular-nums w-10 select-none">
               {formatTime(duration)}
             </span>
           </div>
