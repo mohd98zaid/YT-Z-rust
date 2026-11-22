@@ -3,9 +3,6 @@ import {
   Puzzle,
   Plus,
   RefreshCw,
-  CheckCircle2,
-  AlertCircle,
-  ExternalLink,
   Trash2,
   Sliders,
   Mic2,
@@ -13,7 +10,6 @@ import {
   Radio,
   ShieldCheck,
   Zap,
-  Volume2,
   Search,
   Sparkles,
 } from 'lucide-react';

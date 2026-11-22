@@ -1,14 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
 import {
   Play,
   Search,
   Download,
-  ExternalLink,
   Flame,
-  Maximize2,
-  ListPlus,
-  RotateCcw,
   Clipboard,
   X,
   PictureInPicture2,
@@ -24,7 +19,6 @@ import {
   CheckCircle2,
   Cast,
   Bell,
-  Sparkles,
   CheckCircle,
   Expand,
 } from 'lucide-react';

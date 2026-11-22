@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Sliders, X, RotateCcw, Power, Volume2, Sparkles } from 'lucide-react';
+import { Sliders, X, RotateCcw, Power } from 'lucide-react';
 import { usePlayerStore, EQ_FREQUENCIES, EQ_PRESETS } from '../../stores/usePlayerStore';
 
 export const EqualizerModal: React.FC = () => {

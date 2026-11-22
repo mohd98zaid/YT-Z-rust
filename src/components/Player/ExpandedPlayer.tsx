@@ -15,13 +15,11 @@ import {
   Sliders,
   Download,
   Info,
-  Clock,
   Gauge,
   Video,
   Disc,
   Timer,
   Radio,
-  ExternalLink,
   RefreshCw,
   Tv,
   Sparkles,
@@ -29,7 +27,6 @@ import {
   ChevronRight,
   ShieldCheck,
   Maximize2,
-  Minimize2,
   Zap,
   Leaf,
   Check,
@@ -42,7 +39,6 @@ import { useDownloadStore } from '../../stores/useDownloadStore';
 import { useNavigationStore } from '../../stores/useNavigationStore';
 import { api } from '../../services/api';
 import { LyricsView } from '../Lyrics/LyricsView';
-import { AudioPipelineModal } from './AudioPipelineModal';
 
 export const ExpandedPlayer: React.FC = () => {
   const {

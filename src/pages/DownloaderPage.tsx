@@ -1,20 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import {
   Download,
-  Search,
   CheckCircle2,
   XCircle,
-  Clock,
   Play,
   Folder,
   Trash2,
   RotateCcw,
-  Sparkles,
   FileVideo,
   FileAudio,
-  ListPlus,
   Layers,
-  Pause,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { DownloadItem } from '../types';

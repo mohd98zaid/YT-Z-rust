@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sidebar, TabType } from './components/Sidebar';
+import { Sidebar } from './components/Sidebar';
 import { BottomNav } from './components/BottomNav';
 import { Header } from './components/Header';
 import { MiniPlayer } from './components/Player/MiniPlayer';

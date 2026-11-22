@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Maximize2, X, Expand, RefreshCw, PictureInPicture2, ShieldCheck, Play, Tv, ChevronDown, Check } from 'lucide-react';
+import { Maximize2, X, Expand, PictureInPicture2, ShieldCheck, Play, Tv, ChevronDown, Check } from 'lucide-react';
 import { useVideoStore } from '../../stores/useVideoStore';
 import { usePlayerStore } from '../../stores/usePlayerStore';
 import { useNavigationStore } from '../../stores/useNavigationStore';

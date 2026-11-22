@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Play, Download, Sparkles, TrendingUp, Music, Disc3, RefreshCw } from 'lucide-react';
+import { Play, Download, TrendingUp, Music, RefreshCw } from 'lucide-react';
 import { api } from '../services/api';
 import { Track } from '../types';
 import { usePlayerStore } from '../stores/usePlayerStore';

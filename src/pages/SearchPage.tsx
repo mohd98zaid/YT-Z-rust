@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Play, Download, Music, Video, User, Disc, ListMusic, Clock, History, Trash2, X, ListPlus, Plus, Check, Sparkles } from 'lucide-react';
+import { Search, Play, Download, Music, Video, User, Disc, ListMusic, Clock, History, X, ListPlus, Check, Sparkles } from 'lucide-react';
 import { api } from '../services/api';
 import { Track } from '../types';
 import { usePlayerStore } from '../stores/usePlayerStore';

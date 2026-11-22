@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ListMusic, Play, Download, CheckCircle2, ArrowRight, Sparkles, FolderHeart } from 'lucide-react';
+import { ListMusic, Play, Download, CheckCircle2, ArrowRight, FolderHeart } from 'lucide-react';
 import { api } from '../services/api';
 import { usePlayerStore } from '../stores/usePlayerStore';
 import { useDownloadStore } from '../stores/useDownloadStore';

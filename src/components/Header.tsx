@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Sliders, Palette, X, Clock, Trash2, Menu } from 'lucide-react';
+import { Search, Sliders, Palette, X, Clock, Menu } from 'lucide-react';
 import { api } from '../services/api';
 import { useThemeStore } from '../stores/useThemeStore';
 import { usePlayerStore } from '../stores/usePlayerStore';
