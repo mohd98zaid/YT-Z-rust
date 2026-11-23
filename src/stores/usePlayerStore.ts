@@ -241,13 +241,12 @@ function initAudioEngine(state: PlayerState) {
       } catch {}
     }
 
-    // Two-Song Cache: only trigger next song preload if current song is already fully buffered
-    const { queue, queueIndex, twoSongCache } = usePlayerStore.getState();
+    // Two-Song Cache: trigger next song preload if not already cached in RAM
+    const { queue, queueIndex } = usePlayerStore.getState();
     const nextIdx = queueIndex + 1 < queue.length ? queueIndex + 1 : -1;
     if (
       nextIdx !== -1 &&
       queue[nextIdx] &&
-      twoSongCache.currentLoaded &&
       (!slotNext || slotNext.trackId !== queue[nextIdx].id || slotNext.status !== 'ready') &&
       !nextLoadingTrackId
     ) {
@@ -295,6 +294,7 @@ function initAudioEngine(state: PlayerState) {
 
   audioElement.addEventListener('canplaythrough', () => {
     usePlayerStore.setState({ isLoading: false });
+    preloadNextTrack();
   });
 
   audioElement.addEventListener('loadedmetadata', () => {
@@ -539,14 +539,8 @@ export const loadCurrentTrackCompletely = async (
 };
 
 export const preloadNextTrack = async () => {
-  const { queue, queueIndex, repeatMode, shuffle, audioQuality, twoSongCache } = usePlayerStore.getState();
+  const { queue, queueIndex, repeatMode, shuffle, audioQuality } = usePlayerStore.getState();
   if (queue.length === 0 || queueIndex < 0) return;
-
-  // RULE: Current song must be completely loaded first before next song preloads!
-  if (!twoSongCache.currentLoaded && twoSongCache.currentBufferPercent < 95) {
-    console.log('[TwoSongCache] Deferring next song preload until current song is 100% loaded.');
-    return;
-  }
 
   let nextIndex = queueIndex + 1;
   if (shuffle) {
@@ -559,8 +553,8 @@ export const preloadNextTrack = async () => {
   const nextTrack = queue[nextIndex];
   const nextId = nextTrack.id;
 
-  // Already cached in Slot 2
-  if (slotNext && slotNext.trackId === nextId && slotNext.status === 'ready') {
+  // Already cached in Slot 2 and ready in memory
+  if (slotNext && slotNext.trackId === nextId && slotNext.status === 'ready' && slotNext.blobUrl) {
     return;
   }
 
@@ -1223,6 +1217,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         }, 300);
       } else if (!track.isLocal) {
         loadCurrentTrackCompletely(track, streamUrl, resolutionId);
+        setTimeout(() => {
+          preloadNextTrack();
+        }, 1200);
       }
 
       // Update OS / Windows MediaSession metadata & hardware keys

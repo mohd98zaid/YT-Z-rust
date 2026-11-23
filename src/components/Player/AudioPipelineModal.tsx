@@ -385,6 +385,14 @@ export const AudioPipelineModal: React.FC<AudioPipelineModalProps> = ({ isOpen, 
                     <span className="font-semibold text-white/95">Channels: </span>
                     <span className="font-normal">Stereo</span>
                   </div>
+                  <div>
+                    <span className="font-semibold text-white/95">RAM Memory Cache: </span>
+                    <span className={twoSongCache?.nextReady ? 'text-emerald-400 font-medium' : 'text-amber-300 font-normal'}>
+                      {twoSongCache?.nextReady
+                        ? `Slot 2 Ready (${twoSongCache.nextTrackTitle || 'Next Song'})`
+                        : (twoSongCache?.nextTrackTitle ? `Preloading: ${twoSongCache.nextTrackTitle}` : 'Slot 1 Active')}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
