@@ -15,11 +15,11 @@ interface NavigationState {
   setSidebarCollapsed: (collapsed: boolean) => void;
 }
 
-const savedTab = (typeof window !== 'undefined' && (localStorage.getItem('ytz_active_tab') as TabType)) || 'home';
+const savedTab: TabType = 'home';
 const savedCollapsed = typeof window !== 'undefined' && localStorage.getItem('ytz_sidebar_collapsed') === 'true';
 
 export const useNavigationStore = create<NavigationState>((set) => ({
-  activeTab: savedTab,
+  activeTab: 'home',
   isSidebarCollapsed: savedCollapsed,
   toggleSidebarCollapse: () => {
     set((state) => {
@@ -44,18 +44,11 @@ export const useNavigationStore = create<NavigationState>((set) => ({
     api.updateConfig({ active_tab: tab }).catch(() => {});
   },
   initNavigation: async () => {
-    const saved = typeof window !== 'undefined' ? localStorage.getItem('ytz_active_tab') : null;
-    if (!saved) {
-      try {
-        const config = await api.getConfig();
-        if (config?.active_tab) {
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('ytz_active_tab', config.active_tab);
-          }
-          set({ activeTab: config.active_tab as TabType });
-        }
-      } catch {}
-    }
+    // Default screen is strictly Home screen on launch
+    set({ activeTab: 'home' });
+    try {
+      localStorage.setItem('ytz_active_tab', 'home');
+    } catch {}
   },
   youtubeSelectedVideo: null,
   youtubeSearchQuery: '',

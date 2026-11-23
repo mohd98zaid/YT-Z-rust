@@ -625,10 +625,12 @@ const loadPersistedSession = () => {
     const rawVolNorm = localStorage.getItem('ytz_volume_normalization');
     const rawAudioStats = localStorage.getItem('ytz_persisted_audio_stats');
 
+    const parsedTrack = rawTrack ? (JSON.parse(rawTrack) as Track) : null;
     return {
-      currentTrack: rawTrack ? (JSON.parse(rawTrack) as Track) : null,
-      queue: rawQueue ? (JSON.parse(rawQueue) as Track[]) : [],
-      queueIndex: rawQueueIndex !== null ? parseInt(rawQueueIndex, 10) : -1,
+      currentTrack: parsedTrack,
+      // User requested: ONLY current playing song resume if user relaunch application, not all
+      queue: parsedTrack ? [parsedTrack] : [],
+      queueIndex: parsedTrack ? 0 : -1,
       currentTime: rawCurrentTime !== null ? parseFloat(rawCurrentTime) : 0,
       volume: rawVolume !== null ? parseFloat(rawVolume) : 0.85,
       isMuted: rawIsMuted === 'true',
@@ -1553,12 +1555,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     const current = get().currentTrack;
     const targetTrack = cfg.current_track || current || initialSession.currentTrack;
     if (targetTrack) {
-      const restoredQueue = cfg.queue && cfg.queue.length > 0
-        ? cfg.queue
-        : (get().queue.length > 0 ? get().queue : [targetTrack]);
-      const restoredIndex = typeof cfg.queue_index === 'number'
-        ? cfg.queue_index
-        : (get().queueIndex >= 0 ? get().queueIndex : 0);
+      // User requested: ONLY current playing song resume if user relaunch application, not all
+      const restoredQueue = [targetTrack];
+      const restoredIndex = 0;
       const restoredTime = typeof cfg.current_time === 'number'
         ? cfg.current_time
         : (get().currentTime || initialSession.currentTime || 0);

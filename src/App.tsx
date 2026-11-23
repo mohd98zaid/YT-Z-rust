@@ -29,6 +29,7 @@ import { api } from './services/api';
 export const App: React.FC = () => {
   const { activeTab, setActiveTab, initNavigation } = useNavigationStore();
   const [searchQuery, setSearchQuery] = useState('');
+  const [allTabsMounted, setAllTabsMounted] = useState(false);
   const { initTheme } = useThemeStore();
   const { restoreSessionFromConfig } = usePlayerStore();
   const { initWebSocket } = useDownloadStore();
@@ -44,23 +45,44 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     initTheme();
+    // Default screen is strictly home screen
+    setActiveTab('home');
     initNavigation();
 
-    // Start playing the last song immediately when starting the app
-    const initialPlayerState = usePlayerStore.getState();
-    if (initialPlayerState.currentTrack && !initialPlayerState.isPlaying) {
-      initialPlayerState.autoPlayLastTrack();
-    }
+    // Priority 1: Resume only the current playing song on launch (clean single-call)
+    let sessionResumed = false;
+    const resumeCurrentSong = (trackToPlay?: any, timeToSeek?: number) => {
+      if (sessionResumed) return;
+      sessionResumed = true;
+      const state = usePlayerStore.getState();
+      const trk = trackToPlay || state.currentTrack;
+      if (trk) {
+        const seek = typeof timeToSeek === 'number' ? timeToSeek : state.currentTime;
+        state.autoPlayLastTrack(trk, [trk], seek);
+      }
+    };
 
     api.getConfig().then((cfg) => {
       if (cfg) {
-        restoreSessionFromConfig(cfg, true);
+        restoreSessionFromConfig(cfg, false);
+        const trk = cfg.current_track || usePlayerStore.getState().currentTrack;
+        const seek = typeof cfg.current_time === 'number' ? cfg.current_time : usePlayerStore.getState().currentTime;
+        resumeCurrentSong(trk, seek);
       } else {
-        usePlayerStore.getState().autoPlayLastTrack();
+        resumeCurrentSong();
       }
     }).catch(() => {
-      usePlayerStore.getState().autoPlayLastTrack();
+      resumeCurrentSong();
     });
+
+    const fallbackResume = setTimeout(() => {
+      resumeCurrentSong();
+    }, 250);
+
+    // Priority 2: Preload complete UI for all tabs in background after Home page & Song priority load
+    const tabPreloadTimer = setTimeout(() => {
+      setAllTabsMounted(true);
+    }, 120);
 
     const cleanupWs = initWebSocket();
 
@@ -78,10 +100,12 @@ export const App: React.FC = () => {
     window.addEventListener('keydown', handleKeyDown);
 
     return () => {
+      clearTimeout(fallbackResume);
+      clearTimeout(tabPreloadTimer);
       cleanupWs();
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [initTheme, initWebSocket]);
+  }, [initTheme, initWebSocket, setActiveTab, initNavigation, restoreSessionFromConfig]);
 
   const handleSearchSubmit = (query: string) => {
     setSearchQuery(query);
@@ -105,15 +129,52 @@ export const App: React.FC = () => {
         {/* Scrollable Page Body */}
         <main id="main-content" className="flex-1 overflow-y-auto scroll-smooth">
           <ErrorBoundary fallbackTitle="Something went wrong while rendering this section">
-            {activeTab === 'home' && <HomePage />}
-            {activeTab === 'explore' && <ExplorePage />}
-            {activeTab === 'search' && <SearchPage initialQuery={searchQuery} />}
-            {activeTab === 'youtube' && <YouTubePage />}
-            {activeTab === 'downloader' && <DownloaderPage />}
-            {activeTab === 'spotify' && <SpotifyImporterPage />}
-            {activeTab === 'library' && <LibraryPage />}
-            {activeTab === 'plugins' && <PluginsPage />}
-            {activeTab === 'settings' && <SettingsPage />}
+            {/* Priority 1: Home page UI loads first immediately */}
+            <div className={activeTab === 'home' ? 'min-h-full' : 'hidden'}>
+              <HomePage />
+            </div>
+
+            {/* Complete UI loaded across all tabs with background preloading */}
+            {(allTabsMounted || activeTab === 'explore') && (
+              <div className={activeTab === 'explore' ? 'min-h-full' : 'hidden'}>
+                <ExplorePage />
+              </div>
+            )}
+            {(allTabsMounted || activeTab === 'search') && (
+              <div className={activeTab === 'search' ? 'min-h-full' : 'hidden'}>
+                <SearchPage initialQuery={searchQuery} />
+              </div>
+            )}
+            {(allTabsMounted || activeTab === 'youtube') && (
+              <div className={activeTab === 'youtube' ? 'min-h-full' : 'hidden'}>
+                <YouTubePage />
+              </div>
+            )}
+            {(allTabsMounted || activeTab === 'downloader') && (
+              <div className={activeTab === 'downloader' ? 'min-h-full' : 'hidden'}>
+                <DownloaderPage />
+              </div>
+            )}
+            {(allTabsMounted || activeTab === 'spotify') && (
+              <div className={activeTab === 'spotify' ? 'min-h-full' : 'hidden'}>
+                <SpotifyImporterPage />
+              </div>
+            )}
+            {(allTabsMounted || activeTab === 'library') && (
+              <div className={activeTab === 'library' ? 'min-h-full' : 'hidden'}>
+                <LibraryPage />
+              </div>
+            )}
+            {(allTabsMounted || activeTab === 'plugins') && (
+              <div className={activeTab === 'plugins' ? 'min-h-full' : 'hidden'}>
+                <PluginsPage />
+              </div>
+            )}
+            {(allTabsMounted || activeTab === 'settings') && (
+              <div className={activeTab === 'settings' ? 'min-h-full' : 'hidden'}>
+                <SettingsPage />
+              </div>
+            )}
           </ErrorBoundary>
         </main>
 
