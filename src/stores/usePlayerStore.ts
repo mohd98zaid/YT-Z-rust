@@ -215,6 +215,11 @@ function initAudioEngine(state: PlayerState) {
     const { isVideoMode, activeVideoSource } = usePlayerStore.getState();
     if (isVideoMode || activeVideoSource === 'youtube_video') return;
     const time = audioElement.currentTime;
+    
+    // Auto-clear loading spinner if audio is actively progressing
+    if (time > 0 && !audioElement.paused && usePlayerStore.getState().isLoading) {
+      usePlayerStore.setState({ isLoading: false, isPlaying: true });
+    }
     usePlayerStore.setState({ currentTime: time });
 
     const now = Date.now();
@@ -271,7 +276,7 @@ function initAudioEngine(state: PlayerState) {
     }
   });
 
-  // Track HTML5 audio buffering progress to ensure current song loads completely
+  // Track HTML5 audio buffering progress
   audioElement.addEventListener('progress', () => {
     if (!audioElement || !audioElement.duration) return;
     if (audioElement.buffered.length > 0) {
@@ -285,11 +290,14 @@ function initAudioEngine(state: PlayerState) {
           currentLoaded: isComplete || s.twoSongCache.currentLoaded,
         },
       }));
-      // When current song has loaded completely, initiate next song preload into Slot 2
       if (isComplete && !nextLoadingTrackId && (!slotNext || slotNext.status !== 'ready')) {
         preloadNextTrack();
       }
     }
+  });
+
+  audioElement.addEventListener('canplay', () => {
+    usePlayerStore.setState({ isLoading: false });
   });
 
   audioElement.addEventListener('canplaythrough', () => {
@@ -332,8 +340,15 @@ function initAudioEngine(state: PlayerState) {
     }
   });
 
+  let waitingRecoveryTimer: any = null;
   audioElement.addEventListener('waiting', () => {
     usePlayerStore.setState({ isLoading: true });
+    if (waitingRecoveryTimer) clearTimeout(waitingRecoveryTimer);
+    waitingRecoveryTimer = setTimeout(() => {
+      if (audioElement && audioElement.currentTime > 0 && !audioElement.paused) {
+        usePlayerStore.setState({ isLoading: false });
+      }
+    }, 2500);
   });
 
   audioElement.addEventListener('playing', () => {
@@ -359,6 +374,22 @@ function initAudioEngine(state: PlayerState) {
       } catch {}
     }
     usePlayerStore.setState({ isPlaying: false });
+  });
+
+  audioElement.addEventListener('error', (e) => {
+    console.warn('[Player] Audio element error encountered:', audioElement?.error, e);
+    const { currentTrack } = usePlayerStore.getState();
+    usePlayerStore.setState({ isLoading: false });
+    // Resilient fallback: if error was caused by blob URL or high-bitrate stream decoding error, fall back to standard stream
+    if (currentTrack && audioElement) {
+      const vid = currentTrack.videoId || currentTrack.id;
+      const fallbackUrl = `${API_BASE}/api/stream/${encodeURIComponent(vid)}/audio?quality=standard`;
+      if (audioElement.src !== fallbackUrl) {
+        console.log('[Player] Recovering via standard stream fallback');
+        audioElement.src = fallbackUrl;
+        audioElement.play().catch(() => {});
+      }
+    }
   });
 }
 
@@ -390,152 +421,19 @@ let currentLoadingTrackId: string | null = null;
 
 export const loadCurrentTrackCompletely = async (
   track: Track,
-  streamUrl: string,
-  resolutionId: number
+  _streamUrl: string,
+  _resolutionId: number
 ) => {
-  // If already 100% loaded in Slot 1, trigger next preload right away
-  if (slotCurrent && slotCurrent.trackId === track.id && slotCurrent.isFullyLoaded) {
-    usePlayerStore.setState((s) => ({
-      twoSongCache: { ...s.twoSongCache, currentLoaded: true, currentBufferPercent: 100 },
-    }));
-    preloadNextTrack();
-    return;
-  }
-
-  // Cancel any previous in-flight downloads
-  if (currentSongAbortController) {
-    currentSongAbortController.abort();
-    currentSongAbortController = null;
-  }
-  // Strictly abort any next-song preload to guarantee 100% network bandwidth to current song
-  if (nextSongAbortController) {
-    nextSongAbortController.abort();
-    nextSongAbortController = null;
-    nextLoadingTrackId = null;
-  }
-
-  const controller = new AbortController();
-  currentSongAbortController = controller;
-  currentLoadingTrackId = track.id;
-
+  // Current playing track is streamed natively and cached on disk by backend.
   usePlayerStore.setState((s) => ({
     twoSongCache: {
       ...s.twoSongCache,
-      currentLoaded: false,
-      currentBufferPercent: 0,
-      nextReady: false,
+      currentLoaded: true,
+      currentBufferPercent: 100,
     },
   }));
-
-  try {
-    const response = await fetch(streamUrl, { signal: controller.signal });
-    if (!response.ok) {
-      throw new Error(`Current track HTTP error: ${response.status}`);
-    }
-
-    const headerCodec = response.headers.get('X-Audio-Codec');
-    const headerBitrate = response.headers.get('X-Audio-Bitrate');
-    const headerLossless = response.headers.get('X-Audio-Lossless') === 'true';
-    const headerSource = response.headers.get('X-Audio-Source');
-    const headerSampleRate = response.headers.get('X-Audio-Sample-Rate');
-    const headerBitDepth = response.headers.get('X-Audio-Bit-Depth');
-    const headerAddon = response.headers.get('X-Audio-Addon-Name');
-
-    const blob = await response.blob();
-    if (resolutionId !== currentTrackResolutionId) {
-      console.log(`[TwoSongCache] Stale track download discarded: ${track.title}`);
-      return;
-    }
-
-    const blobUrl = URL.createObjectURL(blob);
-    if (slotCurrent?.blobUrl && slotCurrent.blobUrl !== blobUrl) {
-      URL.revokeObjectURL(slotCurrent.blobUrl);
-    }
-
-    // Calculate genuine wire bitrate from measured bytes and duration
-    let trackDur = track.durationSeconds || 0;
-    if (!trackDur && typeof track.duration === 'string') {
-      const parts = track.duration.split(':').map((p: string) => parseInt(p, 10));
-      if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-        trackDur = parts[0] * 60 + parts[1];
-      } else if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
-        trackDur = parts[0] * 3600 + parts[1] * 60 + parts[2];
-      }
-    }
-    const playerDur = usePlayerStore.getState().duration || (audioElement?.duration && !isNaN(audioElement.duration) ? audioElement.duration : 0);
-    const effectiveDur = trackDur || playerDur || 0;
-    const measuredBitrate = (blob.size > 0 && effectiveDur > 0)
-      ? Math.round((blob.size * 8) / (effectiveDur * 1000))
-      : null;
-
-    slotCurrent = {
-      trackId: track.id,
-      blobUrl,
-      blob,
-      sizeBytes: blob.size,
-      isFullyLoaded: true,
-      status: 'ready',
-    };
-
-    console.log(
-      `[TwoSongCache] Slot 1 (Current Song) 100% loaded: "${track.title}" (${(blob.size / 1024 / 1024).toFixed(2)} MB, measured: ${measuredBitrate || 'N/A'} kbps)`
-    );
-
-    usePlayerStore.setState((s) => {
-      const prev = s.audioStats;
-      const effectiveMeasured = (measuredBitrate && measuredBitrate >= 32 && measuredBitrate <= 9216)
-        ? measuredBitrate
-        : (headerBitrate ? parseInt(headerBitrate, 10) : prev?.bitrate || 320);
-
-      const updatedStats: AudioStats = prev ? {
-        ...prev,
-        bitrate: effectiveMeasured,
-        measuredBitrate: effectiveMeasured,
-        codec: headerCodec || prev.codec,
-        sampleRate: headerSampleRate ? parseInt(headerSampleRate, 10) : prev.sampleRate,
-        bitDepth: headerBitDepth ? parseInt(headerBitDepth, 10) : prev.bitDepth,
-        isLossless: headerLossless ?? prev.isLossless,
-        provider: headerAddon || headerSource || prev.provider,
-        addonName: headerAddon || prev.addonName,
-      } : {
-        codec: headerCodec || 'aac',
-        bitrate: effectiveMeasured,
-        measuredBitrate: effectiveMeasured,
-        duration: effectiveDur,
-        provider: headerAddon || headerSource || 'High Quality Stream (320k AAC)',
-        isLossless: headerLossless,
-        sampleRate: headerSampleRate ? parseInt(headerSampleRate, 10) : 44100,
-        bitDepth: headerBitDepth ? parseInt(headerBitDepth, 10) : 16,
-      };
-
-      if (slotCurrent) {
-        slotCurrent.stats = updatedStats;
-      }
-
-      return {
-        audioStats: updatedStats,
-        twoSongCache: {
-          ...s.twoSongCache,
-          currentLoaded: true,
-          currentBufferPercent: 100,
-        },
-      };
-    });
-
-    // CURRENT SONG IS NOW 100% COMPLETELY LOADED.
-    // We can safely begin preloading the NEXT song without starving current playback!
-    preloadNextTrack();
-  } catch (err: any) {
-    if (err.name === 'AbortError') {
-      console.log(`[TwoSongCache] Current song download aborted for track switch: ${track.title}`);
-    } else {
-      console.warn(`[TwoSongCache] Current song full load error for ${track.title}:`, err);
-    }
-  } finally {
-    if (currentLoadingTrackId === track.id) {
-      currentLoadingTrackId = null;
-    }
-  }
+  // Initiate preloading the next track smoothly without delay
+  preloadNextTrack();
 };
 
 export const preloadNextTrack = async () => {
@@ -553,8 +451,8 @@ export const preloadNextTrack = async () => {
   const nextTrack = queue[nextIndex];
   const nextId = nextTrack.id;
 
-  // Already cached in Slot 2 and ready in memory
-  if (slotNext && slotNext.trackId === nextId && slotNext.status === 'ready' && slotNext.blobUrl) {
+  // Already cached in Slot 2 and ready
+  if (slotNext && slotNext.trackId === nextId && slotNext.status === 'ready') {
     return;
   }
 
@@ -585,12 +483,24 @@ export const preloadNextTrack = async () => {
     },
   }));
 
-  // Warm up backend audio cache in background
+  // 1. Warm up backend audio cache on local disk
   if (!nextTrack.isLocal) {
-    api.preloadTrack(videoId, nextTrack.title, nextTrack.artist, durParam, quality);
+    api.preloadTrack(videoId, nextTrack.title, nextTrack.artist, durParam, quality).then(() => {
+      if (slotNext && slotNext.trackId === nextId) {
+        slotNext.status = 'ready';
+        slotNext.isFullyLoaded = true;
+      }
+      usePlayerStore.setState((s) => ({
+        twoSongCache: {
+          ...s.twoSongCache,
+          nextReady: true,
+          nextTrackTitle: nextTrack.title,
+        },
+      }));
+    }).catch(() => {});
   }
 
-  // 1. Pre-warm stream metadata & lyrics in background
+  // 2. Pre-fetch stream metadata & stats
   let cachedStats: AudioStats | undefined;
   let cachedLyrics: any | undefined;
   let cachedSegments: any[] | undefined;
@@ -632,7 +542,7 @@ export const preloadNextTrack = async () => {
       .catch(() => {});
   }
 
-  // Pre-cache lyrics for instant display
+  // 3. Pre-cache lyrics for instant display
   api.getLyrics(nextTrack.title, nextTrack.artist, durParam)
     .then((lyrics) => {
       cachedLyrics = lyrics;
@@ -642,7 +552,7 @@ export const preloadNextTrack = async () => {
     })
     .catch(() => {});
 
-  // Preload full audio stream into Slot 2 RAM Blob
+  // 4. Preload audio stream into Slot 2 memory Blob
   const nextUrl =
     nextTrack.isLocal && nextTrack.filePath
       ? `${API_BASE}/api/library/stream?path=${encodeURIComponent(nextTrack.filePath)}`
@@ -656,9 +566,8 @@ export const preloadNextTrack = async () => {
     const blob = await response.blob();
     const blobUrl = URL.createObjectURL(blob);
 
-    // Evict old slotNext blob if any
     if (slotNext?.blobUrl) {
-      URL.revokeObjectURL(slotNext.blobUrl);
+      try { URL.revokeObjectURL(slotNext.blobUrl); } catch {}
     }
 
     slotNext = {
@@ -1047,6 +956,23 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       audioContext.resume();
     }
 
+    // Cleanly stop and detach previous audio stream before starting new track
+    if (audioElement) {
+      try {
+        audioElement.pause();
+        audioElement.removeAttribute('src');
+        audioElement.load();
+      } catch {}
+    }
+
+    // Safely revoke previous blob URL now that audio element has detached
+    const prevBlobUrl = slotCurrent?.blobUrl;
+    if (prevBlobUrl && prevBlobUrl !== slotNext?.blobUrl) {
+      try {
+        URL.revokeObjectURL(prevBlobUrl);
+      } catch {}
+    }
+
     try {
       let streamUrl = '';
       let codec = 'opus';
@@ -1055,9 +981,6 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       // 1. Two-Song Cache: Slot 2 Instant Promotion Check
       if (slotNext && slotNext.trackId === track.id && slotNext.blobUrl && slotNext.status === 'ready') {
         console.log(`[TwoSongCache] Slot 2 Promotion! 0ms instant playback for: "${track.title}"`);
-        if (slotCurrent?.blobUrl && slotCurrent.blobUrl !== slotNext.blobUrl) {
-          URL.revokeObjectURL(slotCurrent.blobUrl);
-        }
         slotCurrent = { ...slotNext, isFullyLoaded: true, status: 'ready' };
         slotNext = null;
         streamUrl = slotCurrent.blobUrl;
@@ -1112,21 +1035,19 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         // Use range-aware audio streaming proxy with resilient fallback & backend cache
         streamUrl = `${API_BASE}/api/stream/${encodeURIComponent(videoId)}/audio?title=${titleParam}&artist=${artistParam}&duration=${durParam}&quality=${quality}`;
 
-        // Reset cache slots for fresh playback
-        if (slotCurrent?.blobUrl) URL.revokeObjectURL(slotCurrent.blobUrl);
-        if (slotNext?.blobUrl) URL.revokeObjectURL(slotNext.blobUrl);
+        // Reset cache slot for fresh playback
         slotCurrent = {
           trackId: track.id,
           blobUrl: '',
           sizeBytes: 0,
-          isFullyLoaded: false,
-          status: 'loading',
+          isFullyLoaded: true,
+          status: 'ready',
         };
         slotNext = null;
 
         set({
           twoSongCache: {
-            currentLoaded: false,
+            currentLoaded: true,
             nextReady: false,
             currentBufferPercent: 0,
             nextTrackTitle: null,
@@ -1198,7 +1119,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
           try {
             await audioElement.play();
             set({ isPlaying: true, isLoading: false });
-          } catch (playErr) {
+          } catch (playErr: any) {
+            if (playErr.name === 'AbortError') {
+              console.log('Playback superseded by newer track selection');
+              return;
+            }
             console.warn('Playback deferred or blocked by browser autoplay policy', playErr);
             set({ isPlaying: false, isLoading: false });
           }
@@ -1208,19 +1133,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       // Fetch Lyrics in background
       get().loadLyrics(track);
 
-      // Prioritized Two-Song Caching:
-      // If current song was already promoted from Slot 2 (100% in RAM), preload next track right away!
-      // Otherwise, dedicate 100% bandwidth to current song to load completely first before preloading next.
-      if (slotCurrent && slotCurrent.isFullyLoaded) {
-        setTimeout(() => {
-          preloadNextTrack();
-        }, 300);
-      } else if (!track.isLocal) {
-        loadCurrentTrackCompletely(track, streamUrl, resolutionId);
-        setTimeout(() => {
-          preloadNextTrack();
-        }, 1200);
-      }
+      // Trigger preload for the next track in queue smoothly
+      setTimeout(() => {
+        preloadNextTrack();
+      }, 350);
 
       // Update OS / Windows MediaSession metadata & hardware keys
       if (typeof window !== 'undefined' && 'mediaSession' in navigator) {
