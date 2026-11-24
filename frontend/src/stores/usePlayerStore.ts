@@ -382,7 +382,9 @@ function initAudioEngine(state: PlayerState) {
         console.warn('[Player] Executing auto-recovery for stalled stream...');
         const cur = audioElement.currentTime || 0;
         const vid = currentTrack.videoId || currentTrack.id;
-        audioElement.src = `${API_BASE}/api/stream/${encodeURIComponent(vid)}/audio?quality=standard&recovery=${Date.now()}`;
+        const tParam = encodeURIComponent(currentTrack.title || '');
+        const aParam = encodeURIComponent(currentTrack.artist || '');
+        audioElement.src = `${API_BASE}/api/stream/${encodeURIComponent(vid)}/audio?title=${tParam}&artist=${aParam}&quality=standard&recovery=${Date.now()}`;
         audioElement.currentTime = cur;
         audioElement.play().catch(() => {});
       }
@@ -431,7 +433,9 @@ function initAudioEngine(state: PlayerState) {
             if (!audioElement) return;
             const vid = currentTrack.videoId || currentTrack.id;
             const cur = audioElement.currentTime || 0;
-            audioElement.src = `${API_BASE}/api/stream/${encodeURIComponent(vid)}/audio?quality=standard&recovery=${Date.now()}`;
+            const tParam = encodeURIComponent(currentTrack.title || '');
+            const aParam = encodeURIComponent(currentTrack.artist || '');
+            audioElement.src = `${API_BASE}/api/stream/${encodeURIComponent(vid)}/audio?title=${tParam}&artist=${aParam}&quality=standard&recovery=${Date.now()}`;
             audioElement.currentTime = cur;
             audioElement.play().catch(() => {});
           });
@@ -450,7 +454,9 @@ function initAudioEngine(state: PlayerState) {
     if (currentTrack && audioElement) {
       const vid = currentTrack.videoId || currentTrack.id;
       const cur = audioElement.currentTime || 0;
-      const fallbackUrl = `${API_BASE}/api/stream/${encodeURIComponent(vid)}/audio?quality=standard&recovery=${Date.now()}`;
+      const tParam = encodeURIComponent(currentTrack.title || '');
+      const aParam = encodeURIComponent(currentTrack.artist || '');
+      const fallbackUrl = `${API_BASE}/api/stream/${encodeURIComponent(vid)}/audio?title=${tParam}&artist=${aParam}&quality=standard&recovery=${Date.now()}`;
       if (audioElement.src !== fallbackUrl) {
         console.log('[Player] Recovering via standard stream fallback at', cur);
         audioElement.src = fallbackUrl;
@@ -1334,6 +1340,26 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       if (repeatMode === 'all') {
         nextIndex = 0;
       } else {
+        const cur = get().currentTrack;
+        if (cur && !cur.isLocal) {
+          try {
+            const vid = cur.videoId || cur.id;
+            const radioTracks = await api.getRadio(vid);
+            if (radioTracks && radioTracks.length > 0) {
+              const currentQ = get().queue;
+              const existingIds = new Set(currentQ.map((t) => t.id));
+              const fresh = radioTracks.filter((t) => !existingIds.has(t.id));
+              if (fresh.length > 0) {
+                const updatedQ = [...currentQ, ...fresh];
+                set({ queue: updatedQ, queueIndex: queueIndex + 1 });
+                await get().playTrack(fresh[0]);
+                return;
+              }
+            }
+          } catch (err) {
+            console.warn('[Player] Auto-radio on end of queue failed:', err);
+          }
+        }
         return;
       }
     }
