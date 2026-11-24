@@ -729,7 +729,13 @@ const loadPersistedSession = () => {
     const rawVolNorm = localStorage.getItem('ytz_volume_normalization');
     const rawAudioStats = localStorage.getItem('ytz_persisted_audio_stats');
 
-    const parsedTrack = rawTrack ? (JSON.parse(rawTrack) as Track) : null;
+    let parsedTrack = rawTrack ? (JSON.parse(rawTrack) as Track) : null;
+    if (parsedTrack && !parsedTrack.thumbnail) {
+      const vId = parsedTrack.videoId || parsedTrack.id;
+      if (vId && typeof vId === 'string' && vId.length === 11 && !/[/?&=#\s]/.test(vId)) {
+        parsedTrack.thumbnail = `https://i.ytimg.com/vi/${vId}/maxresdefault.jpg`;
+      }
+    }
     return {
       currentTrack: parsedTrack,
       // User requested: ONLY current playing song resume if user relaunch application, not all
@@ -1023,28 +1029,45 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
     set({ isVideoMode: false, activeVideoSource: null });
 
+    const trackVid = track.videoId || track.id;
+    const is11CharYt = trackVid && typeof trackVid === 'string' && trackVid.length === 11 && !/[/?&=#\s]/.test(trackVid);
+    const effectiveTrack: Track = {
+      ...track,
+      thumbnail: track.thumbnail || (is11CharYt ? `https://i.ytimg.com/vi/${trackVid}/maxresdefault.jpg` : ''),
+    };
+
     let queue = get().queue;
     let queueIndex = get().queueIndex;
 
     if (newQueue) {
-      queue = newQueue;
-      queueIndex = newQueue.findIndex((t) => t.id === track.id);
+      queue = newQueue.map((t) => {
+        if (t.id === effectiveTrack.id) return effectiveTrack;
+        if (!t.thumbnail) {
+          const tVid = t.videoId || t.id;
+          if (tVid && typeof tVid === 'string' && tVid.length === 11 && !/[/?&=#\s]/.test(tVid)) {
+            return { ...t, thumbnail: `https://i.ytimg.com/vi/${tVid}/maxresdefault.jpg` };
+          }
+        }
+        return t;
+      });
+      queueIndex = queue.findIndex((t) => t.id === effectiveTrack.id);
       if (queueIndex === -1) {
-        queue = [track, ...newQueue];
+        queue = [effectiveTrack, ...queue];
         queueIndex = 0;
       }
     } else {
-      const idx = queue.findIndex((t) => t.id === track.id);
+      const idx = queue.findIndex((t) => t.id === effectiveTrack.id);
       if (idx !== -1) {
         queueIndex = idx;
+        queue[idx] = effectiveTrack;
       } else {
-        queue = [...queue, track];
+        queue = [...queue, effectiveTrack];
         queueIndex = queue.length - 1;
       }
     }
 
     set({
-      currentTrack: track,
+      currentTrack: effectiveTrack,
       queue,
       queueIndex,
       isLoading: true,
@@ -1055,13 +1078,13 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
     // Persist session to localStorage
     try {
-      localStorage.setItem('ytz_persisted_current_track', JSON.stringify(track));
+      localStorage.setItem('ytz_persisted_current_track', JSON.stringify(effectiveTrack));
       localStorage.setItem('ytz_persisted_queue', JSON.stringify(queue));
       localStorage.setItem('ytz_persisted_queue_index', String(queueIndex));
     } catch {}
 
     // Record playback in SQLite history
-    api.recordPlayback(track).catch(() => {});
+    api.recordPlayback(effectiveTrack).catch(() => {});
 
     // Resume AudioContext if suspended
     if (audioContext && audioContext.state === 'suspended') {
@@ -1175,7 +1198,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
           set((s) => {
             const finalBitrate = streamInfo.bitrate || s.audioStats?.measuredBitrate || effectiveBitrate;
+            const updatedTrack = (s.currentTrack && streamInfo.thumbnail && (!s.currentTrack.thumbnail || s.currentTrack.thumbnail.includes('maxresdefault.jpg')))
+              ? { ...s.currentTrack, thumbnail: streamInfo.thumbnail }
+              : s.currentTrack;
             return {
+              currentTrack: updatedTrack,
               audioStats: {
                 codec: effectiveCodec,
                 bitrate: finalBitrate,

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Play,
   Pause,
@@ -83,6 +83,17 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
   const [downloadSuccess, setDownloadSuccess] = useState(false);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [qualityMenuOpen, setQualityMenuOpen] = useState(false);
+
+  const effectiveThumbnail = useMemo(() => {
+    if (currentTrack?.thumbnail && currentTrack.thumbnail.trim() !== '' && currentTrack.thumbnail !== '/placeholder.png') {
+      return currentTrack.thumbnail;
+    }
+    const vId = currentTrack?.videoId || currentTrack?.id;
+    if (vId && typeof vId === 'string' && vId.length === 11 && !/[/?&=#\s]/.test(vId)) {
+      return `https://i.ytimg.com/vi/${vId}/maxresdefault.jpg`;
+    }
+    return '';
+  }, [currentTrack]);
 
   const moreMenuRef = useRef<HTMLDivElement>(null);
   const qualityMenuRef = useRef<HTMLDivElement>(null);
@@ -203,9 +214,17 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
           >
             <div className="relative shrink-0">
               <img
-                src={currentTrack.thumbnail || '/placeholder.png'}
+                src={effectiveThumbnail || '/placeholder.png'}
                 alt={currentTrack.title}
                 className="w-11 h-11 rounded-xl object-cover shadow-md border border-white/15"
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  const vId = currentTrack?.videoId || currentTrack?.id;
+                  if (vId && typeof vId === 'string' && vId.length === 11 && !target.dataset.triedHq) {
+                    target.dataset.triedHq = 'true';
+                    target.src = `https://i.ytimg.com/vi/${vId}/hqdefault.jpg`;
+                  }
+                }}
               />
               {isPlaying && (
                 <span className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-primary flex items-center justify-center ring-2 ring-[#14151b]">
@@ -292,9 +311,17 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
             onClick={() => setExpanded(true)}
           >
             <img
-              src={currentTrack.thumbnail || '/placeholder.png'}
+              src={effectiveThumbnail || '/placeholder.png'}
               alt={currentTrack.title}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+              onError={(e) => {
+                const target = e.currentTarget;
+                const vId = currentTrack?.videoId || currentTrack?.id;
+                if (vId && typeof vId === 'string' && vId.length === 11 && !target.dataset.triedHq) {
+                  target.dataset.triedHq = 'true';
+                  target.src = `https://i.ytimg.com/vi/${vId}/hqdefault.jpg`;
+                }
+              }}
             />
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
               <Maximize2 className="w-4 h-4 text-white" />

@@ -88,6 +88,7 @@ export const api = {
       qualityTier: string;
       source: string;
       addonName?: string;
+      thumbnail?: string;
     }>(
       `${API_BASE}/api/stream/${videoId}?title=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist)}&duration=${duration}&quality=${quality}`
     ),

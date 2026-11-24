@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import {
   ChevronDown,
   Play,
@@ -105,6 +105,17 @@ export const ExpandedPlayer: React.FC = () => {
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+
+  const effectiveThumbnail = useMemo(() => {
+    if (currentTrack?.thumbnail && currentTrack.thumbnail.trim() !== '' && currentTrack.thumbnail !== '/placeholder.png') {
+      return currentTrack.thumbnail;
+    }
+    const vId = currentTrack?.videoId || currentTrack?.id;
+    if (vId && typeof vId === 'string' && vId.length === 11 && !/[/?&=#\s]/.test(vId)) {
+      return `https://i.ytimg.com/vi/${vId}/maxresdefault.jpg`;
+    }
+    return '';
+  }, [currentTrack]);
 
   React.useEffect(() => {
     if (!currentTrack) return;
@@ -522,21 +533,25 @@ export const ExpandedPlayer: React.FC = () => {
       }}
       className="fixed inset-0 z-[500] flex flex-col bg-background select-none overflow-hidden animate-fadeIn pb-safe"
     >
-      {/* Apple Music Fluid Ambient Mesh Visualizer */}
+      {/* Dynamic Ambient Full-Bleed Blurred Artwork Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none select-none">
-        {/* Layer 1: Blurred Album Cover Base */}
-        <div
-          className="absolute inset-0 bg-cover bg-center filter blur-3xl opacity-30 scale-125 transition-all duration-1000"
-          style={{ backgroundImage: `url(${currentTrack.thumbnail})` }}
-        />
-        {/* Layer 2: Floating Organic Mesh Orbs */}
-        <div className="absolute inset-0 filter blur-[90px] opacity-45 mix-blend-screen">
+        {/* Layer 1: Rich Blurred Cover Art */}
+        {effectiveThumbnail ? (
+          <div
+            className="absolute -inset-12 bg-cover bg-center filter blur-[80px] md:blur-[110px] scale-125 opacity-75 saturate-150 brightness-[0.70] transition-all duration-1000 ease-out"
+            style={{ backgroundImage: `url(${effectiveThumbnail})` }}
+          />
+        ) : null}
+
+        {/* Layer 2: Subtle Dynamic Mesh Glow for extra vibrancy */}
+        <div className="absolute inset-0 filter blur-[100px] opacity-35 mix-blend-screen pointer-events-none">
           <div className="absolute top-[10%] left-[15%] w-[45vw] h-[45vw] max-w-[550px] max-h-[550px] rounded-full bg-primary/40 animate-mesh-1" />
           <div className="absolute top-[40%] right-[10%] w-[40vw] h-[40vw] max-w-[500px] max-h-[500px] rounded-full bg-rose-600/35 animate-mesh-2" />
           <div className="absolute bottom-[10%] left-[30%] w-[35vw] h-[35vw] max-w-[450px] max-h-[450px] rounded-full bg-violet-600/30 animate-mesh-3" />
         </div>
-        {/* Layer 3: Glass Scrim */}
-        <div className="absolute inset-0 bg-background/80 backdrop-blur-2xl" />
+
+        {/* Layer 3: Cinematic Vignette Scrim ensuring 100% legibility */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/20 to-black/85" />
       </div>
 
       {/* BitChord / Apple Music Mobile Top Bar (flex md:hidden) */}
@@ -980,17 +995,34 @@ export const ExpandedPlayer: React.FC = () => {
                   isPlaying ? 'scale-100' : 'scale-[0.91] opacity-90'
                 }`}>
                   {/* Subtle Colored Ambient Glow behind Artwork */}
-                  <div 
-                    className="absolute inset-0 rounded-3xl filter blur-xl opacity-60 scale-95 transition-all duration-700 pointer-events-none"
-                    style={{ backgroundImage: `url(${currentTrack.thumbnail})`, backgroundSize: 'cover' }}
-                  />
-                  {/* High-res Full-bleed Cover Artwork */}
-                  <div className="relative w-full h-full rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.65)] border border-white/20 z-10 bg-surface">
-                    <img
-                      src={currentTrack.thumbnail || '/placeholder.png'}
-                      alt={currentTrack.title}
-                      className="w-full h-full object-cover"
+                  {effectiveThumbnail && (
+                    <div 
+                      className="absolute inset-0 rounded-3xl filter blur-2xl opacity-70 scale-95 transition-all duration-700 pointer-events-none"
+                      style={{ backgroundImage: `url(${effectiveThumbnail})`, backgroundSize: 'cover' }}
                     />
+                  )}
+                  {/* High-res Full-bleed Cover Artwork */}
+                  <div className="relative w-full h-full rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.65)] border border-white/20 z-10 bg-zinc-950 flex items-center justify-center">
+                    {effectiveThumbnail ? (
+                      <img
+                        src={effectiveThumbnail}
+                        alt={currentTrack.title}
+                        className="w-full h-full object-cover transition-opacity duration-300"
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          const vId = currentTrack?.videoId || currentTrack?.id;
+                          if (vId && typeof vId === 'string' && vId.length === 11 && !target.dataset.triedHq) {
+                            target.dataset.triedHq = 'true';
+                            target.src = `https://i.ytimg.com/vi/${vId}/hqdefault.jpg`;
+                          }
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-zinc-800 to-zinc-950 p-4 text-center">
+                        <Disc className="w-12 h-12 text-primary animate-spin mb-2" style={{ animationDuration: '6s' }} />
+                        <span className="text-xs font-bold text-white/80 truncate max-w-[85%]">{currentTrack.title}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1086,9 +1118,17 @@ export const ExpandedPlayer: React.FC = () => {
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <img
-                          src={t.thumbnail}
+                          src={t.thumbnail || ((t.videoId || t.id)?.length === 11 ? `https://i.ytimg.com/vi/${t.videoId || t.id}/hqdefault.jpg` : '/placeholder.png')}
                           alt=""
                           className="w-10 h-10 rounded-xl object-cover shrink-0 shadow-sm border border-white/10"
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            const vId = t.videoId || t.id;
+                            if (vId && typeof vId === 'string' && vId.length === 11 && !target.dataset.triedHq) {
+                              target.dataset.triedHq = 'true';
+                              target.src = `https://i.ytimg.com/vi/${vId}/hqdefault.jpg`;
+                            }
+                          }}
                         />
                         <div className="min-w-0">
                           <p className="text-xs truncate">{t.title}</p>
@@ -1276,17 +1316,35 @@ export const ExpandedPlayer: React.FC = () => {
                     isPlaying ? 'scale-100' : 'scale-[0.92] opacity-90'
                   }`}>
                     {/* Subtle Colored Ambient Glow behind Artwork */}
-                    <div 
-                      className="absolute inset-0 rounded-3xl filter blur-2xl opacity-50 scale-95 transition-all duration-700 pointer-events-none"
-                      style={{ backgroundImage: `url(${currentTrack.thumbnail})`, backgroundSize: 'cover' }}
-                    />
-                    {/* High-res Full-bleed Cover Artwork */}
-                    <div className="relative w-full h-full rounded-3xl overflow-hidden shadow-[0_25px_60px_rgba(0,0,0,0.7)] border border-white/20 z-10 bg-surface">
-                      <img
-                        src={currentTrack.thumbnail || '/placeholder.png'}
-                        alt={currentTrack.title}
-                        className="w-full h-full object-cover"
+                    {effectiveThumbnail && (
+                      <div 
+                        className="absolute inset-0 rounded-3xl filter blur-2xl opacity-60 scale-95 transition-all duration-700 pointer-events-none"
+                        style={{ backgroundImage: `url(${effectiveThumbnail})`, backgroundSize: 'cover' }}
                       />
+                    )}
+                    {/* High-res Full-bleed Cover Artwork */}
+                    <div className="relative w-full h-full rounded-3xl overflow-hidden shadow-[0_25px_60px_rgba(0,0,0,0.7)] border border-white/20 z-10 bg-zinc-950 flex items-center justify-center">
+                      {effectiveThumbnail ? (
+                        <img
+                          src={effectiveThumbnail}
+                          alt={currentTrack.title}
+                          className="w-full h-full object-cover transition-opacity duration-300"
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            const vId = currentTrack?.videoId || currentTrack?.id;
+                            if (vId && typeof vId === 'string' && vId.length === 11 && !target.dataset.triedHq) {
+                              target.dataset.triedHq = 'true';
+                              target.src = `https://i.ytimg.com/vi/${vId}/hqdefault.jpg`;
+                            }
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-zinc-800 to-zinc-950 p-6 text-center">
+                          <Disc className="w-16 h-16 text-primary animate-spin mb-3" style={{ animationDuration: '6s' }} />
+                          <span className="text-sm font-bold text-white/80 truncate max-w-[85%]">{currentTrack.title}</span>
+                          <span className="text-xs text-white/50 truncate max-w-[85%] mt-1">{currentTrack.artist}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1404,9 +1462,17 @@ export const ExpandedPlayer: React.FC = () => {
                           >
                             <div className="flex items-center gap-2.5 min-w-0">
                               <img
-                                src={t.thumbnail}
+                                src={t.thumbnail || ((t.videoId || t.id)?.length === 11 ? `https://i.ytimg.com/vi/${t.videoId || t.id}/hqdefault.jpg` : '/placeholder.png')}
                                 alt=""
                                 className="w-9 h-9 rounded-xl object-cover shrink-0"
+                                onError={(e) => {
+                                  const target = e.currentTarget;
+                                  const vId = t.videoId || t.id;
+                                  if (vId && typeof vId === 'string' && vId.length === 11 && !target.dataset.triedHq) {
+                                    target.dataset.triedHq = 'true';
+                                    target.src = `https://i.ytimg.com/vi/${vId}/hqdefault.jpg`;
+                                  }
+                                }}
                               />
                               <div className="min-w-0">
                                 <p className="text-xs font-semibold truncate">{t.title}</p>
@@ -1938,9 +2004,17 @@ export const ExpandedPlayer: React.FC = () => {
             <div className="w-10 h-1 bg-white/30 rounded-full mx-auto -mt-1 mb-2" />
             <div className="flex items-center gap-3 pb-3 border-b border-white/10">
               <img
-                src={currentTrack.thumbnail || '/placeholder.png'}
+                src={effectiveThumbnail || '/placeholder.png'}
                 alt=""
                 className="w-12 h-12 rounded-xl object-cover shadow-md border border-white/10"
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  const vId = currentTrack?.videoId || currentTrack?.id;
+                  if (vId && typeof vId === 'string' && vId.length === 11 && !target.dataset.triedHq) {
+                    target.dataset.triedHq = 'true';
+                    target.src = `https://i.ytimg.com/vi/${vId}/hqdefault.jpg`;
+                  }
+                }}
               />
               <div className="min-w-0 flex-1">
                 <h4 className="font-bold text-sm text-white truncate">{currentTrack.title}</h4>
