@@ -247,7 +247,7 @@ function initAudioEngine(state: PlayerState) {
       } catch {}
     }
 
-    // Two-Song Cache: trigger next song preload if not already cached in RAM
+    // Two-Song Cache: trigger next song preload when current track is playing stably
     const { queue, queueIndex } = usePlayerStore.getState();
     const nextIdx = queueIndex + 1 < queue.length ? queueIndex + 1 : -1;
     if (
@@ -256,13 +256,22 @@ function initAudioEngine(state: PlayerState) {
       (!slotNext || slotNext.trackId !== queue[nextIdx].id || slotNext.status !== 'ready') &&
       !nextLoadingTrackId
     ) {
-      preloadNextTrack();
+      const currentDur = audioElement.duration || 0;
+      // Preload next track once current track is stably playing (at least 12s or 30% elapsed)
+      if (time >= 12 || (currentDur > 0 && time / currentDur >= 0.3)) {
+        preloadNextTrack();
+      }
     }
 
-    // Check SponsorBlock skip segments
+    // Check SponsorBlock skip segments (guarded against skipping music outros)
     const { sponsorBlockEnabled, skipSegments } = usePlayerStore.getState();
     if (sponsorBlockEnabled && skipSegments.length > 0) {
+      const dur = audioElement.duration || 0;
       for (const seg of skipSegments) {
+        // Do not skip music outros or segments that jump within 8s of track end
+        if (seg.category === 'outro' || (dur > 0 && seg.end >= dur - 8)) {
+          continue;
+        }
         if (time >= seg.start && time < seg.end - 0.5) {
           audioElement.currentTime = seg.end;
           usePlayerStore.setState({
@@ -303,7 +312,6 @@ function initAudioEngine(state: PlayerState) {
 
   audioElement.addEventListener('canplaythrough', () => {
     usePlayerStore.setState({ isLoading: false });
-    preloadNextTrack();
   });
 
   audioElement.addEventListener('loadedmetadata', () => {
@@ -328,11 +336,33 @@ function initAudioEngine(state: PlayerState) {
   });
 
   audioElement.addEventListener('ended', () => {
-    const { repeatMode, next, sleepTimerStopAfterTrack } = usePlayerStore.getState();
+    const { repeatMode, next, sleepTimerStopAfterTrack, currentTrack } = usePlayerStore.getState();
     if (sleepTimerStopAfterTrack) {
       usePlayerStore.setState({ isPlaying: false, sleepTimerStopAfterTrack: false });
       return;
     }
+
+    // Strict validation against premature 'ended' events (e.g. truncated socket / mid-stream EOF)
+    const dur = audioElement ? audioElement.duration : 0;
+    const cur = audioElement ? audioElement.currentTime : 0;
+    const expectedDur = currentTrack?.durationSeconds || dur;
+
+    // If currentTime is significantly before the expected duration (> 5s remaining),
+    // the stream ended prematurely due to a network glitch. Reconnect and finish the song!
+    if (expectedDur > 12 && cur > 0 && cur < expectedDur - 5) {
+      console.warn(`[Player] Premature 'ended' event at ${cur.toFixed(1)}s of ${expectedDur}s. Reconnecting rather than skipping!`);
+      usePlayerStore.setState({ isLoading: true });
+      if (currentTrack && audioElement) {
+        const vid = currentTrack.videoId || currentTrack.id;
+        const tParam = encodeURIComponent(currentTrack.title || '');
+        const aParam = encodeURIComponent(currentTrack.artist || '');
+        audioElement.src = `${API_BASE}/api/stream/${encodeURIComponent(vid)}/audio?title=${tParam}&artist=${aParam}&quality=standard&resume=${Date.now()}`;
+        audioElement.currentTime = cur;
+        audioElement.play().catch(() => {});
+      }
+      return;
+    }
+
     if (repeatMode === 'one' && audioElement) {
       audioElement.currentTime = 0;
       audioElement.play();
@@ -1214,11 +1244,6 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
       // Fetch Lyrics in background
       get().loadLyrics(track);
-
-      // Trigger preload for the next track in queue smoothly
-      setTimeout(() => {
-        preloadNextTrack();
-      }, 350);
 
       // Update OS / Windows MediaSession metadata & hardware keys
       if (typeof window !== 'undefined' && 'mediaSession' in navigator) {

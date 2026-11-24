@@ -311,16 +311,18 @@ export const ExpandedPlayer: React.FC = () => {
             usePlayerStore.setState({ duration: info.duration });
           }
 
-          // State synchronization: 1 = playing, 2 = paused, 0 = ended
-          if (info.playerState === 1) {
-            pauseAudio();
-            setActiveVideoSource('expanded_video');
-            usePlayerStore.setState({ isPlaying: true });
-          } else if (info.playerState === 2) {
-            usePlayerStore.setState({ isPlaying: false });
-          } else if (info.playerState === 0) {
-            // Video ended: advance to next track smoothly in video mode
-            usePlayerStore.getState().next();
+          // State synchronization: 1 = playing, 2 = paused, 0 = ended (ONLY active in video mode)
+          const state = usePlayerStore.getState();
+          if (state.isVideoMode && state.activeVideoSource === 'expanded_video') {
+            if (info.playerState === 1) {
+              pauseAudio();
+              usePlayerStore.setState({ isPlaying: true });
+            } else if (info.playerState === 2) {
+              usePlayerStore.setState({ isPlaying: false });
+            } else if (info.playerState === 0) {
+              // Video ended: advance to next track smoothly in video mode
+              usePlayerStore.getState().next();
+            }
           }
         }
       } catch {}
