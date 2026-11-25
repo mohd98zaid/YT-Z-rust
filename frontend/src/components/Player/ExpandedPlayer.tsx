@@ -3,6 +3,8 @@ import {
   ChevronDown,
   Play,
   Pause,
+  Ban,
+  UserX,
   SkipBack,
   SkipForward,
   Shuffle,
@@ -37,6 +39,7 @@ import {
 import { usePlayerStore } from '../../stores/usePlayerStore';
 import { useDownloadStore } from '../../stores/useDownloadStore';
 import { useNavigationStore } from '../../stores/useNavigationStore';
+import { useRecommendationStore } from '../../stores/useRecommendationStore';
 import { api } from '../../services/api';
 import { LyricsView } from '../Lyrics/LyricsView';
 
@@ -100,6 +103,7 @@ export const ExpandedPlayer: React.FC = () => {
 
   const { queueDownload } = useDownloadStore();
   const { navigateToYouTube } = useNavigationStore();
+  const { blockVideo, blockArtist } = useRecommendationStore();
   const [activeTab, setActiveTab] = useState<'lyrics' | 'queue'>('lyrics');
   const [mobileView, setMobileView] = useState<'artwork' | 'lyrics' | 'queue'>('artwork');
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
@@ -535,6 +539,8 @@ export const ExpandedPlayer: React.FC = () => {
     >
       {/* Dynamic Ambient Full-Bleed Blurred Artwork Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none select-none">
+        {/* Layer 0: Radiant Glass Gradient so the background is never a flat black void */}
+        <div className="absolute inset-0 bg-gradient-to-tr from-rose-950/40 via-[#0a0a0f] to-purple-950/30 opacity-95" />
         {/* Layer 1: Rich Blurred Cover Art with Resilient Fallback */}
         {effectiveThumbnail ? (
           <img
@@ -1044,6 +1050,10 @@ export const ExpandedPlayer: React.FC = () => {
                         src={effectiveThumbnail}
                         alt={currentTrack.title}
                         className="relative z-10 w-full h-full object-cover transition-opacity duration-300"
+                        style={{ opacity: 0 }}
+                        onLoad={(e) => {
+                          e.currentTarget.style.opacity = '1';
+                        }}
                         onError={(e) => {
                           const target = e.currentTarget;
                           const vId = currentTrack?.videoId || currentTrack?.id;
@@ -1393,6 +1403,10 @@ export const ExpandedPlayer: React.FC = () => {
                           src={effectiveThumbnail}
                           alt={currentTrack.title}
                           className="relative z-10 w-full h-full object-cover transition-opacity duration-300"
+                          style={{ opacity: 0 }}
+                          onLoad={(e) => {
+                            e.currentTarget.style.opacity = '1';
+                          }}
                           onError={(e) => {
                             const target = e.currentTarget;
                             const vId = currentTrack?.videoId || currentTrack?.id;
@@ -2151,6 +2165,36 @@ export const ExpandedPlayer: React.FC = () => {
                 </div>
                 {shareCopied && <span className="text-[10px] text-emerald-400 font-semibold">Copied!</span>}
               </button>
+
+              {/* Don't Recommend Options */}
+              <button
+                onClick={() => {
+                  if (currentTrack) {
+                    const vId = currentTrack.videoId || currentTrack.id;
+                    blockVideo(vId, currentTrack.title);
+                    setIsMoreMenuOpen(false);
+                    next();
+                  }
+                }}
+                className="w-full flex items-center gap-3 p-3 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs font-bold transition-all active:scale-[0.98] cursor-pointer"
+              >
+                <Ban className="w-4 h-4 text-rose-400 shrink-0" />
+                <span>Not interested in this song</span>
+              </button>
+
+              {currentTrack?.artist && (
+                <button
+                  onClick={() => {
+                    blockArtist(currentTrack.artist);
+                    setIsMoreMenuOpen(false);
+                    next();
+                  }}
+                  className="w-full flex items-center gap-3 p-3 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs font-bold transition-all active:scale-[0.98] cursor-pointer"
+                >
+                  <UserX className="w-4 h-4 text-rose-400 shrink-0" />
+                  <span>Don't recommend artist ({currentTrack.artist})</span>
+                </button>
+              )}
             </div>
           </div>
         </div>

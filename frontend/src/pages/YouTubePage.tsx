@@ -21,11 +21,14 @@ import {
   Bell,
   CheckCircle,
   Expand,
+  Ban,
+  UserX,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { Track } from '../types';
 import { usePlayerStore } from '../stores/usePlayerStore';
 import { useDownloadStore } from '../stores/useDownloadStore';
+import { useRecommendationStore } from '../stores/useRecommendationStore';
 import { useNavigationStore } from '../stores/useNavigationStore';
 import { useVideoStore } from '../stores/useVideoStore';
 
@@ -69,7 +72,7 @@ export const YouTubePage: React.FC = () => {
   const [searchResults, setSearchResults] = useState<Track[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; onUndo?: () => void } | null>(null);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [mobileMenuVideo, setMobileMenuVideo] = useState<Track | null>(null);
   const [likedVideos, setLikedVideos] = useState<Record<string, boolean>>({});
@@ -78,9 +81,11 @@ export const YouTubePage: React.FC = () => {
   const [trendingCategory, setTrendingCategory] = useState<string>('All');
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 2500);
+  const { isBlocked, blockVideo, blockArtist, undoLastBlock } = useRecommendationStore();
+
+  const showToast = (msg: string, onUndo?: () => void) => {
+    setToast({ message: msg, onUndo });
+    setTimeout(() => setToast(null), onUndo ? 5000 : 2500);
   };
 
   const {
@@ -383,7 +388,40 @@ export const YouTubePage: React.FC = () => {
     }
   };
 
-  const displayedVideos = searchResults.length > 0 ? searchResults : trendingVideos;
+  const rawVideos = searchResults.length > 0 ? searchResults : trendingVideos;
+  const displayedVideos = rawVideos.filter((v) => !isBlocked(v.videoId || v.id, v.artist));
+
+  const handleBlockCurrentVideo = () => {
+    if (!activeVideo) return;
+    const currentId = activeVideo.id;
+    const currentTitle = activeVideo.title;
+    blockVideo(currentId, currentTitle);
+    showToast(`Marked "${currentTitle}" as Not Interested`, () => undoLastBlock());
+    const nextVid = displayedVideos.find(
+      (v) => (v.videoId || v.id) !== currentId && !isBlocked(v.videoId || v.id, v.artist)
+    );
+    if (nextVid) {
+      handleSelectVideo(nextVid);
+    } else {
+      closeVideo();
+    }
+  };
+
+  const handleBlockChannel = (channelName: string) => {
+    if (!channelName) return;
+    blockArtist(channelName);
+    showToast(`Will not recommend channel "${channelName}"`, () => undoLastBlock());
+    if (activeVideo && (activeVideo.artist === channelName || activeVideo.artist?.toLowerCase() === channelName.toLowerCase())) {
+      const nextVid = displayedVideos.find(
+        (v) => (v.videoId || v.id) !== activeVideo.id && !isBlocked(v.videoId || v.id, v.artist)
+      );
+      if (nextVid) {
+        handleSelectVideo(nextVid);
+      } else {
+        closeVideo();
+      }
+    }
+  };
 
   // Shorts shelf items extracted from trending videos
   const shortsItems = displayedVideos.slice(0, 6).map((item, i) => ({
@@ -404,11 +442,22 @@ export const YouTubePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-white selection:bg-red-600 selection:text-white pb-48 md:pb-36">
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[9999] px-4 py-2 bg-[#212121] text-white text-xs font-semibold rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.8)] border border-white/10 flex items-center gap-2 animate-fadeIn">
-          <CheckCircle2 className="w-4 h-4 text-red-500" />
-          <span>{toastMessage}</span>
+      {/* Toast Notification with Undo */}
+      {toast && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[9999] px-4 py-2 bg-[#212121]/95 backdrop-blur-md text-white text-xs font-semibold rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.8)] border border-white/15 flex items-center gap-3 animate-fadeIn">
+          <CheckCircle2 className="w-4 h-4 text-red-500 shrink-0" />
+          <span className="truncate max-w-[280px] sm:max-w-md">{toast.message}</span>
+          {toast.onUndo && (
+            <button
+              onClick={() => {
+                toast.onUndo?.();
+                setToast(null);
+              }}
+              className="px-2.5 py-0.5 rounded-full bg-white/20 hover:bg-white/30 text-white font-bold text-[11px] transition-colors shrink-0 cursor-pointer"
+            >
+              Undo
+            </button>
+          )}
         </div>
       )}
 
@@ -778,10 +827,20 @@ export const YouTubePage: React.FC = () => {
                     {/* Share */}
                     <button
                       onClick={() => handleShareVideo(activeVideo.id)}
-                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full liquid-glass-control border border-white/15 text-white/80 hover:text-white text-xs font-semibold whitespace-nowrap transition-all"
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full liquid-glass-control border border-white/15 text-white/80 hover:text-white text-xs font-semibold whitespace-nowrap transition-all cursor-pointer"
                     >
                       <Share2 className="w-3.5 h-3.5" />
                       <span>Share</span>
+                    </button>
+
+                    {/* Don't Recommend / Not Interested */}
+                    <button
+                      onClick={() => handleBlockCurrentVideo()}
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full liquid-glass-control border border-rose-500/35 text-rose-400 hover:text-rose-300 hover:border-rose-500/60 text-xs font-semibold whitespace-nowrap transition-all hover:scale-105 active:scale-95 shadow-sm cursor-pointer"
+                      title="Not interested in this video"
+                    >
+                      <Ban className="w-3.5 h-3.5 text-rose-400" />
+                      <span>Not Interested</span>
                     </button>
 
                     {/* Download MP4 */}
@@ -851,11 +910,23 @@ export const YouTubePage: React.FC = () => {
                               {duration}
                             </span>
                           </div>
-                          <div>
-                            <h4 className="text-xs font-semibold text-white line-clamp-2 leading-snug group-hover:text-red-400 transition-colors">
-                              {video.title}
-                            </h4>
-                            <p className="text-[11px] text-[#aaaaaa] mt-0.5 truncate">{author}</p>
+                          <div className="flex items-start justify-between gap-1">
+                            <div className="min-w-0 flex-1">
+                              <h4 className="text-xs font-semibold text-white line-clamp-2 leading-snug group-hover:text-red-400 transition-colors">
+                                {video.title}
+                              </h4>
+                              <p className="text-[11px] text-[#aaaaaa] mt-0.5 truncate">{author}</p>
+                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setMobileMenuVideo(video);
+                              }}
+                              className="opacity-0 group-hover:opacity-100 p-1 text-[#aaaaaa] hover:text-white transition-all shrink-0 cursor-pointer"
+                              title="Options"
+                            >
+                              <MoreVertical className="w-3.5 h-3.5" />
+                            </button>
                           </div>
                         </div>
                       );
@@ -888,6 +959,18 @@ export const YouTubePage: React.FC = () => {
                           <p className="text-[11px] text-[#aaaaaa] mt-1 truncate">{author}</p>
                           <p className="text-[10px] text-[#888888]">420K views</p>
                         </div>
+
+                        {/* 3-dots option button for Up Next */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setMobileMenuVideo(video);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 p-1 text-[#aaaaaa] hover:text-white transition-all shrink-0 cursor-pointer self-start mt-1"
+                          title="Options"
+                        >
+                          <MoreVertical className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     );
                   })}
@@ -1182,10 +1265,40 @@ export const YouTubePage: React.FC = () => {
                   handleShareVideo(mobileMenuVideo.videoId || mobileMenuVideo.id);
                   setMobileMenuVideo(null);
                 }}
-                className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-white/10 text-white transition-colors"
+                className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-white/10 text-white transition-colors cursor-pointer"
               >
                 <Share2 className="w-4 h-4 text-zinc-300" />
                 <span>Copy YouTube Link</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  const vid = mobileMenuVideo.videoId || mobileMenuVideo.id;
+                  blockVideo(vid, mobileMenuVideo.title);
+                  showToast(`Marked "${mobileMenuVideo.title}" as Not Interested`, () => undoLastBlock());
+                  if (activeVideo && (activeVideo.id === vid || activeVideo.id === mobileMenuVideo.id)) {
+                    const nextVid = displayedVideos.find((v) => (v.videoId || v.id) !== vid && !isBlocked(v.videoId || v.id, v.artist));
+                    if (nextVid) handleSelectVideo(nextVid);
+                    else closeVideo();
+                  }
+                  setMobileMenuVideo(null);
+                }}
+                className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-rose-500/10 text-rose-400 transition-colors cursor-pointer text-left font-medium text-xs"
+              >
+                <Ban className="w-4 h-4 text-rose-400 shrink-0" />
+                <span>Not interested in this video</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  const channel = mobileMenuVideo.artist || 'this channel';
+                  handleBlockChannel(channel);
+                  setMobileMenuVideo(null);
+                }}
+                className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-rose-500/10 text-rose-400 transition-colors cursor-pointer text-left font-medium text-xs"
+              >
+                <UserX className="w-4 h-4 text-rose-400 shrink-0" />
+                <span>Don't recommend channel ({mobileMenuVideo.artist || 'Channel'})</span>
               </button>
             </div>
 
