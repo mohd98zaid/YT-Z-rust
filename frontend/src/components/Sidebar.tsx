@@ -170,17 +170,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
         </nav>
       </div>
 
-      {/* Docked PiP Video Slot in Sidebar */}
-      <div className={`py-2 shrink-0 ${isSidebarCollapsed ? 'px-1' : 'px-3'}`}>
-        <div
-          id="sidebar-pip-anchor"
-          className={`w-full transition-all duration-300 rounded-2xl ${
-            activeVideo && (isPiP || activeTab !== 'youtube')
-              ? 'aspect-video bg-black/60 border border-white/20 shadow-xl'
-              : 'h-0 opacity-0 overflow-hidden'
-          }`}
-        />
-      </div>
+      {/* Docked PiP Video Slot in Sidebar - Only dock when sidebar is expanded, otherwise float at bottom-right */}
+      {!isSidebarCollapsed && (
+        <div className="py-2 shrink-0 px-3">
+          <div
+            id="sidebar-pip-anchor"
+            className={`w-full transition-all duration-300 rounded-2xl ${
+              activeVideo && (isPiP || activeTab !== 'youtube')
+                ? 'aspect-video bg-black/60 border border-white/20 shadow-xl'
+                : 'h-0 opacity-0 overflow-hidden'
+            }`}
+          />
+        </div>
+      )}
 
       {/* Footer Info */}
       <div className={`border-t border-white/10 text-[11px] text-foreground-subtle transition-all ${isSidebarCollapsed ? 'p-2 flex justify-center' : 'p-4 space-y-2'}`}>

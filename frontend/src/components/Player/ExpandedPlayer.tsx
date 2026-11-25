@@ -112,7 +112,7 @@ export const ExpandedPlayer: React.FC = () => {
     }
     const vId = currentTrack?.videoId || currentTrack?.id;
     if (vId && typeof vId === 'string' && vId.length === 11 && !/[/?&=#\s]/.test(vId)) {
-      return `https://i.ytimg.com/vi/${vId}/maxresdefault.jpg`;
+      return `https://i.ytimg.com/vi/${vId}/hqdefault.jpg`;
     }
     return '';
   }, [currentTrack]);
@@ -535,11 +535,23 @@ export const ExpandedPlayer: React.FC = () => {
     >
       {/* Dynamic Ambient Full-Bleed Blurred Artwork Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none select-none">
-        {/* Layer 1: Rich Blurred Cover Art */}
+        {/* Layer 1: Rich Blurred Cover Art with Resilient Fallback */}
         {effectiveThumbnail ? (
-          <div
-            className="absolute -inset-12 bg-cover bg-center filter blur-[80px] md:blur-[110px] scale-125 opacity-75 saturate-150 brightness-[0.70] transition-all duration-1000 ease-out"
-            style={{ backgroundImage: `url(${effectiveThumbnail})` }}
+          <img
+            src={effectiveThumbnail}
+            alt=""
+            aria-hidden="true"
+            className="absolute -inset-16 w-[calc(100%+8rem)] h-[calc(100%+8rem)] object-cover filter blur-[90px] md:blur-[120px] scale-125 opacity-75 saturate-150 brightness-[0.70] transition-all duration-700 ease-out pointer-events-none select-none"
+            onError={(e) => {
+              const target = e.currentTarget;
+              const vId = currentTrack?.videoId || currentTrack?.id;
+              if (vId && typeof vId === 'string' && vId.length === 11 && !target.dataset.triedHq) {
+                target.dataset.triedHq = 'true';
+                target.src = `https://i.ytimg.com/vi/${vId}/hqdefault.jpg`;
+              } else {
+                target.style.display = 'none';
+              }
+            }}
           />
         ) : null}
 
@@ -995,33 +1007,61 @@ export const ExpandedPlayer: React.FC = () => {
                   isPlaying ? 'scale-100' : 'scale-[0.91] opacity-90'
                 }`}>
                   {/* Subtle Colored Ambient Glow behind Artwork */}
-                  {effectiveThumbnail && (
-                    <div 
-                      className="absolute inset-0 rounded-3xl filter blur-2xl opacity-70 scale-95 transition-all duration-700 pointer-events-none"
-                      style={{ backgroundImage: `url(${effectiveThumbnail})`, backgroundSize: 'cover' }}
+                  {effectiveThumbnail ? (
+                    <img
+                      src={effectiveThumbnail}
+                      alt=""
+                      aria-hidden="true"
+                      className="absolute inset-0 w-full h-full object-cover rounded-3xl filter blur-2xl opacity-75 scale-95 transition-all duration-700 pointer-events-none select-none"
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        const vId = currentTrack?.videoId || currentTrack?.id;
+                        if (vId && typeof vId === 'string' && vId.length === 11 && !target.dataset.triedHq) {
+                          target.dataset.triedHq = 'true';
+                          target.src = `https://i.ytimg.com/vi/${vId}/hqdefault.jpg`;
+                        } else {
+                          target.style.display = 'none';
+                        }
+                      }}
                     />
-                  )}
+                  ) : null}
                   {/* High-res Full-bleed Cover Artwork */}
-                  <div className="relative w-full h-full rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.65)] border border-white/20 z-10 bg-zinc-950 flex items-center justify-center">
-                    {effectiveThumbnail ? (
+                  <div className="relative w-full h-full rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.65)] border border-white/20 z-10 bg-gradient-to-br from-zinc-800 via-zinc-900 to-black flex items-center justify-center">
+                    {/* Rich Fallback Card: Always present underneath */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center select-none bg-gradient-to-br from-rose-950/40 via-zinc-900 to-zinc-950">
+                      <div className="relative mb-2 flex items-center justify-center">
+                        <Disc className="w-12 h-12 text-primary/80 animate-spin" style={{ animationDuration: '8s' }} />
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                          <span className="w-3 h-3 rounded-full bg-white/20 border border-white/40" />
+                        </div>
+                      </div>
+                      <span className="text-xs font-bold text-white/90 truncate max-w-[85%] drop-shadow-md">{currentTrack.title}</span>
+                      <span className="text-[11px] text-white/60 truncate max-w-[85%] mt-0.5">{currentTrack.artist}</span>
+                    </div>
+
+                    {effectiveThumbnail && (
                       <img
                         src={effectiveThumbnail}
                         alt={currentTrack.title}
-                        className="w-full h-full object-cover transition-opacity duration-300"
+                        className="relative z-10 w-full h-full object-cover transition-opacity duration-300"
                         onError={(e) => {
                           const target = e.currentTarget;
                           const vId = currentTrack?.videoId || currentTrack?.id;
-                          if (vId && typeof vId === 'string' && vId.length === 11 && !target.dataset.triedHq) {
-                            target.dataset.triedHq = 'true';
-                            target.src = `https://i.ytimg.com/vi/${vId}/hqdefault.jpg`;
+                          if (vId && typeof vId === 'string' && vId.length === 11) {
+                            if (!target.dataset.triedHq) {
+                              target.dataset.triedHq = 'true';
+                              target.src = `https://i.ytimg.com/vi/${vId}/hqdefault.jpg`;
+                              return;
+                            }
+                            if (!target.dataset.triedMq) {
+                              target.dataset.triedMq = 'true';
+                              target.src = `https://i.ytimg.com/vi/${vId}/mqdefault.jpg`;
+                              return;
+                            }
                           }
+                          target.style.display = 'none';
                         }}
                       />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-zinc-800 to-zinc-950 p-4 text-center">
-                        <Disc className="w-12 h-12 text-primary animate-spin mb-2" style={{ animationDuration: '6s' }} />
-                        <span className="text-xs font-bold text-white/80 truncate max-w-[85%]">{currentTrack.title}</span>
-                      </div>
                     )}
                   </div>
                 </div>
@@ -1316,34 +1356,61 @@ export const ExpandedPlayer: React.FC = () => {
                     isPlaying ? 'scale-100' : 'scale-[0.92] opacity-90'
                   }`}>
                     {/* Subtle Colored Ambient Glow behind Artwork */}
-                    {effectiveThumbnail && (
-                      <div 
-                        className="absolute inset-0 rounded-3xl filter blur-2xl opacity-60 scale-95 transition-all duration-700 pointer-events-none"
-                        style={{ backgroundImage: `url(${effectiveThumbnail})`, backgroundSize: 'cover' }}
+                    {effectiveThumbnail ? (
+                      <img
+                        src={effectiveThumbnail}
+                        alt=""
+                        aria-hidden="true"
+                        className="absolute inset-0 w-full h-full object-cover rounded-3xl filter blur-2xl opacity-75 scale-95 transition-all duration-700 pointer-events-none select-none"
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          const vId = currentTrack?.videoId || currentTrack?.id;
+                          if (vId && typeof vId === 'string' && vId.length === 11 && !target.dataset.triedHq) {
+                            target.dataset.triedHq = 'true';
+                            target.src = `https://i.ytimg.com/vi/${vId}/hqdefault.jpg`;
+                          } else {
+                            target.style.display = 'none';
+                          }
+                        }}
                       />
-                    )}
+                    ) : null}
                     {/* High-res Full-bleed Cover Artwork */}
-                    <div className="relative w-full h-full rounded-3xl overflow-hidden shadow-[0_25px_60px_rgba(0,0,0,0.7)] border border-white/20 z-10 bg-zinc-950 flex items-center justify-center">
-                      {effectiveThumbnail ? (
+                    <div className="relative w-full h-full rounded-3xl overflow-hidden shadow-[0_25px_60px_rgba(0,0,0,0.7)] border border-white/20 z-10 bg-gradient-to-br from-zinc-800 via-zinc-900 to-black flex items-center justify-center">
+                      {/* Rich Fallback Card: Always present underneath */}
+                      <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center select-none bg-gradient-to-br from-rose-950/40 via-zinc-900 to-zinc-950">
+                        <div className="relative mb-3 flex items-center justify-center">
+                          <Disc className="w-16 h-16 text-primary/80 animate-spin" style={{ animationDuration: '8s' }} />
+                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <span className="w-4 h-4 rounded-full bg-white/20 border border-white/40" />
+                          </div>
+                        </div>
+                        <span className="text-sm font-bold text-white/90 truncate max-w-[90%] drop-shadow-md">{currentTrack.title}</span>
+                        <span className="text-xs text-white/60 truncate max-w-[90%] mt-1">{currentTrack.artist}</span>
+                      </div>
+
+                      {effectiveThumbnail && (
                         <img
                           src={effectiveThumbnail}
                           alt={currentTrack.title}
-                          className="w-full h-full object-cover transition-opacity duration-300"
+                          className="relative z-10 w-full h-full object-cover transition-opacity duration-300"
                           onError={(e) => {
                             const target = e.currentTarget;
                             const vId = currentTrack?.videoId || currentTrack?.id;
-                            if (vId && typeof vId === 'string' && vId.length === 11 && !target.dataset.triedHq) {
-                              target.dataset.triedHq = 'true';
-                              target.src = `https://i.ytimg.com/vi/${vId}/hqdefault.jpg`;
+                            if (vId && typeof vId === 'string' && vId.length === 11) {
+                              if (!target.dataset.triedHq) {
+                                target.dataset.triedHq = 'true';
+                                target.src = `https://i.ytimg.com/vi/${vId}/hqdefault.jpg`;
+                                return;
+                              }
+                              if (!target.dataset.triedMq) {
+                                target.dataset.triedMq = 'true';
+                                target.src = `https://i.ytimg.com/vi/${vId}/mqdefault.jpg`;
+                                return;
+                              }
                             }
+                            target.style.display = 'none';
                           }}
                         />
-                      ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-zinc-800 to-zinc-950 p-6 text-center">
-                          <Disc className="w-16 h-16 text-primary animate-spin mb-3" style={{ animationDuration: '6s' }} />
-                          <span className="text-sm font-bold text-white/80 truncate max-w-[85%]">{currentTrack.title}</span>
-                          <span className="text-xs text-white/50 truncate max-w-[85%] mt-1">{currentTrack.artist}</span>
-                        </div>
                       )}
                     </div>
                   </div>

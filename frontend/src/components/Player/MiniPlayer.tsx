@@ -90,7 +90,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
     }
     const vId = currentTrack?.videoId || currentTrack?.id;
     if (vId && typeof vId === 'string' && vId.length === 11 && !/[/?&=#\s]/.test(vId)) {
-      return `https://i.ytimg.com/vi/${vId}/maxresdefault.jpg`;
+      return `https://i.ytimg.com/vi/${vId}/hqdefault.jpg`;
     }
     return '';
   }, [currentTrack]);
@@ -220,10 +220,19 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
                 onError={(e) => {
                   const target = e.currentTarget;
                   const vId = currentTrack?.videoId || currentTrack?.id;
-                  if (vId && typeof vId === 'string' && vId.length === 11 && !target.dataset.triedHq) {
-                    target.dataset.triedHq = 'true';
-                    target.src = `https://i.ytimg.com/vi/${vId}/hqdefault.jpg`;
+                  if (vId && typeof vId === 'string' && vId.length === 11) {
+                    if (!target.dataset.triedHq) {
+                      target.dataset.triedHq = 'true';
+                      target.src = `https://i.ytimg.com/vi/${vId}/hqdefault.jpg`;
+                      return;
+                    }
+                    if (!target.dataset.triedMq) {
+                      target.dataset.triedMq = 'true';
+                      target.src = `https://i.ytimg.com/vi/${vId}/mqdefault.jpg`;
+                      return;
+                    }
                   }
+                  target.src = '/placeholder.png';
                 }}
               />
               {isPlaying && (
@@ -317,10 +326,19 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
               onError={(e) => {
                 const target = e.currentTarget;
                 const vId = currentTrack?.videoId || currentTrack?.id;
-                if (vId && typeof vId === 'string' && vId.length === 11 && !target.dataset.triedHq) {
-                  target.dataset.triedHq = 'true';
-                  target.src = `https://i.ytimg.com/vi/${vId}/hqdefault.jpg`;
+                if (vId && typeof vId === 'string' && vId.length === 11) {
+                  if (!target.dataset.triedHq) {
+                    target.dataset.triedHq = 'true';
+                    target.src = `https://i.ytimg.com/vi/${vId}/hqdefault.jpg`;
+                    return;
+                  }
+                  if (!target.dataset.triedMq) {
+                    target.dataset.triedMq = 'true';
+                    target.src = `https://i.ytimg.com/vi/${vId}/mqdefault.jpg`;
+                    return;
+                  }
                 }
+                target.src = '/placeholder.png';
               }}
             />
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">

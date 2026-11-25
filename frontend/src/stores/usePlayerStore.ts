@@ -257,8 +257,8 @@ function initAudioEngine(state: PlayerState) {
       !nextLoadingTrackId
     ) {
       const currentDur = audioElement.duration || 0;
-      // Preload next track once current track is stably playing (at least 12s or 30% elapsed)
-      if (time >= 12 || (currentDur > 0 && time / currentDur >= 0.3)) {
+      // Preload next track once current track is stably playing (at least 3s or 15% elapsed)
+      if (time >= 3 || (currentDur > 0 && time / currentDur >= 0.15)) {
         preloadNextTrack();
       }
     }
@@ -498,10 +498,12 @@ function initAudioEngine(state: PlayerState) {
 }
 
 // =========================================================================
-// Industrial Two-Song Cache & Gapless Engine
-// Exactly two songs in cache:
-//   Slot 1: Current Playing Song (strictly prioritised to load 100% first)
-//   Slot 2: Next Song in Queue (preloaded into RAM for 0ms handover)
+// Industrial Multi-Song RAM Cache & Gapless Engine
+// Holds Current, Previous, and Next songs in RAM for 0ms Instant Playback:
+//   - Recent Tracks Cache: LRU Map with up to 5 tracks kept in memory
+//   - Previous Track: Retained in memory so pressing 'Previous' plays with 0ms delay
+//   - Current Track: Actively buffered into RAM Blob in background
+//   - Next Song: Preloaded into RAM Blob for 0ms gapless transition
 // =========================================================================
 
 export interface CacheSlot {
@@ -514,7 +516,11 @@ export interface CacheSlot {
   segments?: any[];
   isFullyLoaded: boolean;
   status: 'idle' | 'loading' | 'ready' | 'error';
+  lastAccessed?: number;
 }
+
+const MAX_CACHED_TRACKS = 5;
+export const recentTracksCache = new Map<string, CacheSlot>();
 
 let slotCurrent: CacheSlot | null = null;
 let slotNext: CacheSlot | null = null;
@@ -523,12 +529,129 @@ let nextSongAbortController: AbortController | null = null;
 let nextLoadingTrackId: string | null = null;
 let currentLoadingTrackId: string | null = null;
 
+export function putTrackInCache(trackId: string, slot: CacheSlot) {
+  if (!trackId || !slot) return;
+  slot.lastAccessed = Date.now();
+  recentTracksCache.set(trackId, slot);
+
+  // When cache exceeds limit, safely evict oldest unreferenced items
+  if (recentTracksCache.size > MAX_CACHED_TRACKS) {
+    const state = usePlayerStore.getState();
+    const curId = state.currentTrack?.id;
+    const curVid = state.currentTrack?.videoId;
+    const q = state.queue || [];
+    const qIdx = state.queueIndex;
+    const prevTrack = qIdx > 0 ? q[qIdx - 1] : null;
+    const prevId = prevTrack?.id;
+    const prevVid = prevTrack?.videoId;
+    const nextTrack = qIdx >= 0 && qIdx + 1 < q.length ? q[qIdx + 1] : null;
+    const nextId = nextTrack?.id;
+    const nextVid = nextTrack?.videoId;
+
+    let oldestKey: string | null = null;
+    let oldestTime = Infinity;
+
+    for (const [key, item] of recentTracksCache.entries()) {
+      // Strictly protect current song, previous song, and next song from eviction!
+      if (
+        key === curId ||
+        key === curVid ||
+        key === prevId ||
+        key === prevVid ||
+        key === nextId ||
+        key === nextVid ||
+        key === slotCurrent?.trackId ||
+        key === slotNext?.trackId
+      ) {
+        continue;
+      }
+
+      const accessTime = item.lastAccessed || 0;
+      if (accessTime < oldestTime) {
+        oldestTime = accessTime;
+        oldestKey = key;
+      }
+    }
+
+    if (oldestKey) {
+      const evicted = recentTracksCache.get(oldestKey);
+      if (
+        evicted?.blobUrl &&
+        evicted.blobUrl.startsWith('blob:') &&
+        evicted.blobUrl !== slotCurrent?.blobUrl &&
+        evicted.blobUrl !== slotNext?.blobUrl
+      ) {
+        try {
+          URL.revokeObjectURL(evicted.blobUrl);
+        } catch {}
+      }
+      recentTracksCache.delete(oldestKey);
+    }
+  }
+}
+
+export const cacheCurrentTrack = async (
+  track: Track,
+  streamUrl: string,
+  resolutionId: number
+) => {
+  if (!track || !streamUrl || streamUrl.startsWith('blob:')) return;
+  const trackId = track.id;
+  const videoId = track.videoId || track.id;
+
+  try {
+    const controller = new AbortController();
+    currentSongAbortController = controller;
+    const resp = await fetch(streamUrl, { signal: controller.signal });
+    if (!resp.ok) return;
+    const blob = await resp.blob();
+
+    if (resolutionId !== currentTrackResolutionId) return;
+
+    const blobUrl = URL.createObjectURL(blob);
+    const state = usePlayerStore.getState();
+    const slot: CacheSlot = {
+      trackId,
+      blobUrl,
+      blob,
+      sizeBytes: blob.size,
+      stats: state.audioStats || undefined,
+      lyrics: state.lyrics || undefined,
+      segments: state.skipSegments || undefined,
+      isFullyLoaded: true,
+      status: 'ready',
+      lastAccessed: Date.now(),
+    };
+
+    putTrackInCache(trackId, slot);
+    if (videoId && videoId !== trackId) {
+      putTrackInCache(videoId, slot);
+    }
+
+    if (slotCurrent && (slotCurrent.trackId === trackId || slotCurrent.trackId === videoId)) {
+      slotCurrent = slot;
+    }
+
+    usePlayerStore.setState((s) => ({
+      twoSongCache: {
+        ...s.twoSongCache,
+        currentLoaded: true,
+        currentBufferPercent: 100,
+      },
+    }));
+    console.log(`[PlayerCache] Current track buffered into RAM: "${track.title}" (${(blob.size / 1024 / 1024).toFixed(2)} MB)`);
+  } catch (err: any) {
+    if (err.name !== 'AbortError') {
+      console.debug('Background current song cache buffering completed or interrupted');
+    }
+  }
+};
+
 export const loadCurrentTrackCompletely = async (
   track: Track,
-  _streamUrl: string,
-  _resolutionId: number
+  streamUrl: string,
+  resolutionId: number
 ) => {
-  // Current playing track is streamed natively and cached on disk by backend.
   usePlayerStore.setState((s) => ({
     twoSongCache: {
       ...s.twoSongCache,
@@ -536,6 +659,8 @@ export const loadCurrentTrackCompletely = async (
       currentBufferPercent: 100,
     },
   }));
+  // Buffer current track into RAM cache in parallel for instant 0ms back-navigation
+  cacheCurrentTrack(track, streamUrl, resolutionId);
   // Initiate preloading the next track smoothly without delay
   preloadNextTrack();
 };
@@ -670,10 +795,6 @@ export const preloadNextTrack = async () => {
     const blob = await response.blob();
     const blobUrl = URL.createObjectURL(blob);
 
-    if (slotNext?.blobUrl) {
-      try { URL.revokeObjectURL(slotNext.blobUrl); } catch {}
-    }
-
     slotNext = {
       trackId: nextId,
       blobUrl,
@@ -684,10 +805,16 @@ export const preloadNextTrack = async () => {
       segments: cachedSegments,
       isFullyLoaded: true,
       status: 'ready',
+      lastAccessed: Date.now(),
     };
 
+    putTrackInCache(nextId, slotNext);
+    if (videoId && videoId !== nextId) {
+      putTrackInCache(videoId, slotNext);
+    }
+
     console.log(
-      `[TwoSongCache] Slot 2 (Next Song) ready in RAM: "${nextTrack.title}" (${(blob.size / 1024 / 1024).toFixed(2)} MB)`
+      `[PlayerCache] Slot 2 (Next Song) ready in RAM: "${nextTrack.title}" (${(blob.size / 1024 / 1024).toFixed(2)} MB)`
     );
 
     usePlayerStore.setState((s) => ({
@@ -1066,14 +1193,25 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       }
     }
 
+    // Check if song is already cached in RAM (from previous play or next preload)
+    const cachedSlot =
+      recentTracksCache.get(effectiveTrack.id) ||
+      (effectiveTrack.videoId ? recentTracksCache.get(effectiveTrack.videoId) : null) ||
+      (track.id ? recentTracksCache.get(track.id) : null) ||
+      (track.videoId ? recentTracksCache.get(track.videoId) : null) ||
+      (slotNext && (slotNext.trackId === effectiveTrack.id || slotNext.trackId === effectiveTrack.videoId || slotNext.trackId === track.id) && slotNext.status === 'ready' ? slotNext : null);
+
+    const isInstantCacheAvailable = Boolean(cachedSlot && cachedSlot.blobUrl && cachedSlot.status === 'ready');
+
     set({
       currentTrack: effectiveTrack,
       queue,
       queueIndex,
-      isLoading: true,
+      isLoading: !isInstantCacheAvailable,
       currentTime: seekTime !== undefined ? seekTime : 0,
-      skipSegments: [],
-      lyrics: null,
+      skipSegments: cachedSlot?.segments || [],
+      lyrics: cachedSlot?.lyrics || null,
+      ...(cachedSlot?.stats ? { audioStats: cachedSlot.stats } : {}),
     });
 
     // Persist session to localStorage
@@ -1091,6 +1229,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       audioContext.resume();
     }
 
+    // Preserve previous track in RAM cache before switching
+    if (slotCurrent && slotCurrent.blobUrl && slotCurrent.status === 'ready') {
+      putTrackInCache(slotCurrent.trackId, slotCurrent);
+    }
+
     // Cleanly stop and detach previous audio stream before starting new track
     if (audioElement) {
       try {
@@ -1100,25 +1243,23 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       } catch {}
     }
 
-    // Safely revoke previous blob URL now that audio element has detached
-    const prevBlobUrl = slotCurrent?.blobUrl;
-    if (prevBlobUrl && prevBlobUrl !== slotNext?.blobUrl) {
-      try {
-        URL.revokeObjectURL(prevBlobUrl);
-      } catch {}
-    }
-
     try {
       let streamUrl = '';
       let codec = 'opus';
       let bitrate = 160;
 
-      // 1. Two-Song Cache: Slot 2 Instant Promotion Check
-      if (slotNext && slotNext.trackId === track.id && slotNext.blobUrl && slotNext.status === 'ready') {
-        console.log(`[TwoSongCache] Slot 2 Promotion! 0ms instant playback for: "${track.title}"`);
-        slotCurrent = { ...slotNext, isFullyLoaded: true, status: 'ready' };
-        slotNext = null;
-        streamUrl = slotCurrent.blobUrl;
+      // 1. Instant RAM Cache Retrieval (0ms delay for previously played or preloaded songs)
+      if (isInstantCacheAvailable && cachedSlot) {
+        console.log(`[PlayerCache] 0ms Instant RAM Playback for: "${track.title}" from cache!`);
+        streamUrl = cachedSlot.blobUrl;
+        slotCurrent = { ...cachedSlot, isFullyLoaded: true, status: 'ready', lastAccessed: Date.now() };
+        putTrackInCache(effectiveTrack.id, slotCurrent);
+        if (effectiveTrack.videoId && effectiveTrack.videoId !== effectiveTrack.id) {
+          putTrackInCache(effectiveTrack.videoId, slotCurrent);
+        }
+        if (slotNext && (slotNext.trackId === effectiveTrack.id || slotNext.trackId === effectiveTrack.videoId)) {
+          slotNext = null;
+        }
 
         if (slotCurrent.stats) {
           set({ audioStats: slotCurrent.stats });
@@ -1131,17 +1272,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         }
 
         set({
-          twoSongCache: {
-            currentLoaded: true,
-            nextReady: false,
-            currentBufferPercent: 100,
-            nextTrackTitle: null,
-          },
-        });
-      } else if (slotCurrent && slotCurrent.trackId === track.id && slotCurrent.blobUrl && slotCurrent.status === 'ready') {
-        streamUrl = slotCurrent.blobUrl;
-        console.log(`[TwoSongCache] Replaying Slot 1 cached audio: "${track.title}"`);
-        set({
+          isLoading: false,
           twoSongCache: {
             currentLoaded: true,
             nextReady: Boolean(slotNext && slotNext.status === 'ready'),
@@ -1149,6 +1280,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
             nextTrackTitle: slotNext ? 'Ready' : null,
           },
         });
+        preloadNextTrack();
       } else if (track.isLocal && track.filePath) {
         streamUrl = `${API_BASE}/api/library/stream?path=${encodeURIComponent(track.filePath)}`;
         codec = track.filePath.split('.').pop() || 'mp3';
@@ -1160,6 +1292,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
             provider: 'Local Storage',
           },
         });
+        loadCurrentTrackCompletely(effectiveTrack, streamUrl, resolutionId);
       } else {
         const videoId = track.videoId || track.id;
         const quality = get().audioQuality || 'lossless';
@@ -1172,11 +1305,12 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
         // Reset cache slot for fresh playback
         slotCurrent = {
-          trackId: track.id,
+          trackId: effectiveTrack.id,
           blobUrl: '',
           sizeBytes: 0,
           isFullyLoaded: true,
           status: 'ready',
+          lastAccessed: Date.now(),
         };
         slotNext = null;
 
@@ -1188,6 +1322,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
             nextTrackTitle: null,
           },
         });
+
+        // Buffer current track in background to RAM Blob for instant 0ms back-navigation
+        loadCurrentTrackCompletely(effectiveTrack, streamUrl, resolutionId);
 
         // Fetch stream metadata with Lossless Addon details in background
         api.getAudioStream(videoId, track.title, track.artist, durParam, quality).then((streamInfo) => {
