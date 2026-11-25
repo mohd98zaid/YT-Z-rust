@@ -539,24 +539,31 @@ export const ExpandedPlayer: React.FC = () => {
     >
       {/* Dynamic Ambient Full-Bleed Blurred Artwork Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none select-none">
-        {/* Layer 0: Radiant Glass Gradient so the background is never a flat black void */}
-        <div className="absolute inset-0 bg-gradient-to-tr from-rose-950/40 via-[#0a0a0f] to-purple-950/30 opacity-95" />
+        {/* Layer 0: Radiant Glass Gradient base */}
+        <div className="absolute inset-0 bg-gradient-to-tr from-rose-950/40 via-[#0a0a14]/70 to-purple-950/30 opacity-60" />
         {/* Layer 1: Rich Blurred Cover Art with Resilient Fallback */}
         {effectiveThumbnail ? (
           <img
             src={effectiveThumbnail}
             alt=""
             aria-hidden="true"
-            className="absolute -inset-16 w-[calc(100%+8rem)] h-[calc(100%+8rem)] object-cover filter blur-[90px] md:blur-[120px] scale-125 opacity-75 saturate-150 brightness-[0.70] transition-all duration-700 ease-out pointer-events-none select-none"
+            className="absolute -inset-16 w-[calc(100%+8rem)] h-[calc(100%+8rem)] object-cover filter blur-[70px] md:blur-[100px] scale-125 opacity-80 saturate-[1.65] brightness-[0.75] transition-all duration-700 ease-out pointer-events-none select-none"
             onError={(e) => {
               const target = e.currentTarget;
               const vId = currentTrack?.videoId || currentTrack?.id;
-              if (vId && typeof vId === 'string' && vId.length === 11 && !target.dataset.triedHq) {
-                target.dataset.triedHq = 'true';
-                target.src = `https://i.ytimg.com/vi/${vId}/hqdefault.jpg`;
-              } else {
-                target.style.display = 'none';
+              if (vId && typeof vId === 'string' && vId.length === 11) {
+                if (!target.dataset.triedHq) {
+                  target.dataset.triedHq = 'true';
+                  target.src = `https://i.ytimg.com/vi/${vId}/hqdefault.jpg`;
+                  return;
+                }
+                if (!target.dataset.triedMq) {
+                  target.dataset.triedMq = 'true';
+                  target.src = `https://i.ytimg.com/vi/${vId}/mqdefault.jpg`;
+                  return;
+                }
               }
+              target.style.display = 'none';
             }}
           />
         ) : null}
@@ -1049,11 +1056,7 @@ export const ExpandedPlayer: React.FC = () => {
                       <img
                         src={effectiveThumbnail}
                         alt={currentTrack.title}
-                        className="relative z-10 w-full h-full object-cover transition-opacity duration-300"
-                        style={{ opacity: 0 }}
-                        onLoad={(e) => {
-                          e.currentTarget.style.opacity = '1';
-                        }}
+                        className="relative z-10 w-full h-full object-cover transition-opacity duration-300 opacity-100"
                         onError={(e) => {
                           const target = e.currentTarget;
                           const vId = currentTrack?.videoId || currentTrack?.id;
@@ -1402,11 +1405,7 @@ export const ExpandedPlayer: React.FC = () => {
                         <img
                           src={effectiveThumbnail}
                           alt={currentTrack.title}
-                          className="relative z-10 w-full h-full object-cover transition-opacity duration-300"
-                          style={{ opacity: 0 }}
-                          onLoad={(e) => {
-                            e.currentTarget.style.opacity = '1';
-                          }}
+                          className="relative z-10 w-full h-full object-cover transition-opacity duration-300 opacity-100"
                           onError={(e) => {
                             const target = e.currentTarget;
                             const vId = currentTrack?.videoId || currentTrack?.id;
