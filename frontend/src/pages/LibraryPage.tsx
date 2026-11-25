@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   FolderHeart,
   Play,
@@ -24,6 +24,12 @@ import {
   Sparkles,
   Volume2,
   ArrowLeft,
+  GitMerge,
+  Copy,
+  MoreVertical,
+  FileDown,
+  UploadCloud,
+  CheckCircle2,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { Track } from '../types';
@@ -66,6 +72,21 @@ export const LibraryPage: React.FC = () => {
   const [customPlaylists, setCustomPlaylists] = useState<any[]>([]);
   const [selectedPlaylist, setSelectedPlaylist] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Merge Playlists modal state
+  const [isMergeOpen, setIsMergeOpen] = useState(false);
+  const [mergeSourceIds, setMergeSourceIds] = useState<string[]>([]);
+  const [mergeTargetType, setMergeTargetType] = useState<'new' | 'existing'>('new');
+  const [mergeTargetId, setMergeTargetId] = useState('');
+  const [mergeNewName, setMergeNewName] = useState('');
+  const [mergeNewDesc, setMergeNewDesc] = useState('');
+  const [mergeDeduplicate, setMergeDeduplicate] = useState(true);
+  const [mergeDeleteSources, setMergeDeleteSources] = useState(false);
+  const [isMerging, setIsMerging] = useState(false);
+
+  // Card 3-dots dropdown menu
+  const [activeCardMenuId, setActiveCardMenuId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Create Playlist modal state
   const [isCreatePlaylistOpen, setIsCreatePlaylistOpen] = useState(false);
@@ -200,6 +221,178 @@ export const LibraryPage: React.FC = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  const openMergeModal = (initialPlaylistId?: string) => {
+    if (initialPlaylistId) {
+      setMergeSourceIds([initialPlaylistId]);
+      const other = customPlaylists.find((p) => p.id !== initialPlaylistId);
+      if (other) {
+        setMergeTargetId(other.id);
+      }
+    } else {
+      setMergeSourceIds(customPlaylists.slice(0, 2).map((p) => p.id));
+      if (customPlaylists.length > 2) {
+        setMergeTargetId(customPlaylists[2].id);
+      }
+    }
+    setMergeTargetType('new');
+    setMergeNewName('');
+    setMergeNewDesc('');
+    setMergeDeduplicate(true);
+    setMergeDeleteSources(false);
+    setIsMergeOpen(true);
+    setActiveCardMenuId(null);
+  };
+
+  const handleExecuteMerge = async () => {
+    if (mergeSourceIds.length === 0) {
+      showToast('Select at least one playlist to merge');
+      return;
+    }
+    if (mergeTargetType === 'new' && !mergeNewName.trim()) {
+      showToast('Please enter a name for the merged playlist');
+      return;
+    }
+    if (mergeTargetType === 'existing' && !mergeTargetId) {
+      showToast('Please select a target playlist');
+      return;
+    }
+    setIsMerging(true);
+    try {
+      const res = await api.mergeCustomPlaylists({
+        sourcePlaylistIds: mergeSourceIds,
+        targetPlaylistId: mergeTargetType === 'existing' ? mergeTargetId : undefined,
+        newPlaylistName: mergeTargetType === 'new' ? mergeNewName.trim() : undefined,
+        newPlaylistDescription: mergeTargetType === 'new' ? mergeNewDesc.trim() : undefined,
+        deduplicate: mergeDeduplicate,
+        deleteSources: mergeDeleteSources,
+      });
+      setIsMergeOpen(false);
+      await loadData();
+      showToast(`Merged into "${res.name}" (${res.totalCount} tracks)!`);
+    } catch {
+      showToast('Failed to merge playlists');
+    } finally {
+      setIsMerging(false);
+    }
+  };
+
+  const handleDuplicatePlaylist = async (playlistId: string, name?: string) => {
+    setActiveCardMenuId(null);
+    try {
+      const res = await api.duplicateCustomPlaylist(playlistId, name);
+      await loadData();
+      showToast(`Duplicated playlist: "${res.name}"!`);
+    } catch {
+      showToast('Failed to duplicate playlist');
+    }
+  };
+
+  const handleDeduplicatePlaylist = async (playlistId: string, name: string) => {
+    setActiveCardMenuId(null);
+    try {
+      const res = await api.deduplicateCustomPlaylist(playlistId);
+      await loadData();
+      if (selectedPlaylist && selectedPlaylist.id === playlistId) {
+        const updated = await api.getCustomPlaylist(playlistId);
+        setSelectedPlaylist(updated);
+      }
+      if (res.removedCount > 0) {
+        showToast(`Removed ${res.removedCount} duplicate songs from "${name}"!`);
+      } else {
+        showToast(`"${name}" is already clean with no duplicate songs!`);
+      }
+    } catch {
+      showToast('Failed to remove duplicates');
+    }
+  };
+
+  const exportPlaylistM3U = (playlist: any) => {
+    setActiveCardMenuId(null);
+    if (!playlist || !playlist.tracks || playlist.tracks.length === 0) {
+      showToast('Playlist has no tracks to export');
+      return;
+    }
+    let m3u = '#EXTM3U\n';
+    playlist.tracks.forEach((t: any) => {
+      const dur = t.durationSeconds || 0;
+      const title = t.title || 'Unknown Title';
+      const artist = t.artist || 'Unknown Artist';
+      const url = t.isLocal
+        ? t.filePath || ''
+        : `https://www.youtube.com/watch?v=${t.videoId || t.id}`;
+      m3u += `#EXTINF:${dur},${artist} - ${title}\n${url}\n`;
+    });
+    const blob = new Blob([m3u], { type: 'audio/x-mpegurl;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${(playlist.name || 'playlist').replace(/[/\\?%*:|"<>]/g, '_')}.m3u`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast(`Exported "${playlist.name}.m3u"!`);
+  };
+
+  const handleImportM3U = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const lines = text.split('\n');
+      const playlistName = file.name.replace(/\.[^/.]+$/, '');
+      const tracksToImport: any[] = [];
+      let currentTitle = '';
+      let currentArtist = '';
+
+      for (const rawLine of lines) {
+        const line = rawLine.trim();
+        if (line.startsWith('#EXTINF:')) {
+          const parts = line.substring(8).split(',');
+          if (parts.length > 1) {
+            const fullTitle = parts.slice(1).join(',');
+            const dashIdx = fullTitle.indexOf(' - ');
+            if (dashIdx > 0) {
+              currentArtist = fullTitle.substring(0, dashIdx).trim();
+              currentTitle = fullTitle.substring(dashIdx + 3).trim();
+            } else {
+              currentTitle = fullTitle.trim();
+              currentArtist = 'Imported';
+            }
+          }
+        } else if (line && !line.startsWith('#')) {
+          let vId = '';
+          if (line.includes('watch?v=')) {
+            vId = line.split('watch?v=')[1].split('&')[0];
+          } else if (line.includes('youtu.be/')) {
+            vId = line.split('youtu.be/')[1].split('?')[0];
+          }
+          tracksToImport.push({
+            id: vId || `imp_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+            videoId: vId || undefined,
+            title: currentTitle || 'Imported Song',
+            artist: currentArtist || 'Unknown Artist',
+            duration: '3:30',
+            thumbnail: vId ? `https://i.ytimg.com/vi/${vId}/hqdefault.jpg` : '',
+          });
+          currentTitle = '';
+          currentArtist = '';
+        }
+      }
+
+      const newPl = await api.createCustomPlaylist(playlistName, `Imported from ${file.name}`);
+      for (const t of tracksToImport) {
+        await api.addTrackToPlaylist(newPl.id, t);
+      }
+      await loadData();
+      showToast(`Successfully imported "${playlistName}" (${tracksToImport.length} tracks)!`);
+    } catch {
+      showToast('Failed to import playlist file');
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   const handleCreatePlaylist = async () => {
     const name = newPlaylistName.trim();
@@ -433,13 +626,43 @@ export const LibraryPage: React.FC = () => {
         )}
 
         {activeSubTab === 'playlists' && (
-          <button
-            onClick={() => setIsCreatePlaylistOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-primary text-white hover:bg-primary-hover shadow-md shadow-primary/20 transition-all"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>New Playlist</span>
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept=".m3u,.m3u8,.txt"
+              onChange={handleImportM3U}
+              className="hidden"
+            />
+
+            {customPlaylists.length >= 2 && (
+              <button
+                onClick={() => openMergeModal()}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold liquid-glass-control border border-white/20 text-foreground hover:text-primary transition-all hover:scale-105 active:scale-95 shadow-sm cursor-pointer"
+                title="Merge multiple playlists into one"
+              >
+                <GitMerge className="w-3.5 h-3.5 text-primary" />
+                <span>Merge Playlists</span>
+              </button>
+            )}
+
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold liquid-glass-control border border-white/20 text-foreground hover:text-white transition-all hover:scale-105 active:scale-95 shadow-sm cursor-pointer"
+              title="Import .m3u playlist file"
+            >
+              <UploadCloud className="w-3.5 h-3.5 text-blue-400" />
+              <span>Import M3U</span>
+            </button>
+
+            <button
+              onClick={() => setIsCreatePlaylistOpen(true)}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-primary text-white hover:bg-primary-hover shadow-md shadow-primary/20 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>New Playlist</span>
+            </button>
+          </div>
         )}
       </div>
 
@@ -596,10 +819,46 @@ export const LibraryPage: React.FC = () => {
 
                   <button
                     onClick={() => handleStartEditPlaylist(selectedPlaylist)}
-                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-full liquid-glass-control text-foreground hover:text-white text-xs font-semibold hover:scale-105 active:scale-95 transition-all"
+                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-full liquid-glass-control text-foreground hover:text-white text-xs font-semibold hover:scale-105 active:scale-95 transition-all cursor-pointer"
                   >
                     <Edit3 className="w-3.5 h-3.5 text-foreground-muted" />
                     <span>Edit</span>
+                  </button>
+
+                  <button
+                    onClick={() => openMergeModal(selectedPlaylist.id)}
+                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-full liquid-glass-control text-foreground hover:text-primary text-xs font-semibold hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                    title="Merge this playlist with another collection"
+                  >
+                    <GitMerge className="w-3.5 h-3.5 text-primary" />
+                    <span>Merge</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleDuplicatePlaylist(selectedPlaylist.id)}
+                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-full liquid-glass-control text-foreground hover:text-white text-xs font-semibold hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                    title="Make an identical duplicate copy"
+                  >
+                    <Copy className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Duplicate</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleDeduplicatePlaylist(selectedPlaylist.id, selectedPlaylist.name)}
+                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-full liquid-glass-control text-foreground hover:text-white text-xs font-semibold hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                    title="Remove any repeated or duplicate songs"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Remove Duplicates</span>
+                  </button>
+
+                  <button
+                    onClick={() => exportPlaylistM3U(selectedPlaylist)}
+                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-full liquid-glass-control text-foreground hover:text-white text-xs font-semibold hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                    title="Export playlist as .m3u file"
+                  >
+                    <FileDown className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Export M3U</span>
                   </button>
                 </div>
               </div>
@@ -802,13 +1061,114 @@ export const LibraryPage: React.FC = () => {
                       {pl.description || `${pl.trackCount} tracks`}
                     </p>
                   </div>
-                  <button
-                    onClick={(e) => handleDeletePlaylist(e, pl.id)}
-                    title="Delete playlist"
-                    className="p-1.5 rounded-lg text-foreground-subtle hover:text-red-400 hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {/* 3-dots Playlist Options Button */}
+                  <div className="relative">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveCardMenuId(activeCardMenuId === pl.id ? null : pl.id);
+                      }}
+                      title="Playlist Options"
+                      className="p-1.5 rounded-lg text-foreground-subtle hover:text-white hover:bg-white/10 transition-all opacity-80 group-hover:opacity-100 cursor-pointer"
+                    >
+                      <MoreVertical className="w-4 h-4" />
+                    </button>
+
+                    {/* Dropdown Menu */}
+                    {activeCardMenuId === pl.id && (
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="absolute right-0 bottom-full mb-1 z-50 w-52 p-1.5 rounded-2xl bg-[#1c1c1f]/95 backdrop-blur-2xl border border-white/20 shadow-2xl space-y-1 animate-fadeIn text-left"
+                      >
+                        <button
+                          onClick={async () => {
+                            setActiveCardMenuId(null);
+                            const details = await api.getCustomPlaylist(pl.id);
+                            if (details && details.tracks && details.tracks.length > 0) {
+                              playTrack(details.tracks[0], details.tracks);
+                            }
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-white/10 text-white text-xs font-medium transition-colors cursor-pointer"
+                        >
+                          <Play className="w-3.5 h-3.5 text-primary" />
+                          <span>Play All</span>
+                        </button>
+
+                        <button
+                          onClick={() => openMergeModal(pl.id)}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-white/10 text-white text-xs font-medium transition-colors cursor-pointer"
+                        >
+                          <GitMerge className="w-3.5 h-3.5 text-primary" />
+                          <span>Merge with another...</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleDuplicatePlaylist(pl.id)}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-white/10 text-white text-xs font-medium transition-colors cursor-pointer"
+                        >
+                          <Copy className="w-3.5 h-3.5 text-blue-400" />
+                          <span>Duplicate Playlist</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleDeduplicatePlaylist(pl.id, pl.name)}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-white/10 text-white text-xs font-medium transition-colors cursor-pointer"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Remove Duplicates</span>
+                        </button>
+
+                        <button
+                          onClick={async () => {
+                            setActiveCardMenuId(null);
+                            const details = await api.getCustomPlaylist(pl.id);
+                            if (details && details.tracks) {
+                              handleDownloadAllPlaylist(details.tracks);
+                            }
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-white/10 text-white text-xs font-medium transition-colors cursor-pointer"
+                        >
+                          <Download className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Download All Tracks</span>
+                        </button>
+
+                        <button
+                          onClick={async () => {
+                            const details = await api.getCustomPlaylist(pl.id);
+                            exportPlaylistM3U(details || pl);
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-white/10 text-white text-xs font-medium transition-colors cursor-pointer"
+                        >
+                          <FileDown className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Export as .m3u</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setActiveCardMenuId(null);
+                            handleStartEditPlaylist(pl);
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-white/10 text-white text-xs font-medium transition-colors cursor-pointer"
+                        >
+                          <Edit3 className="w-3.5 h-3.5 text-zinc-300" />
+                          <span>Edit Details</span>
+                        </button>
+
+                        <div className="border-t border-white/10 my-1" />
+
+                        <button
+                          onClick={(e) => {
+                            setActiveCardMenuId(null);
+                            handleDeletePlaylist(e, pl.id);
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-rose-500/15 text-rose-400 hover:text-rose-300 text-xs font-medium transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                          <span>Delete Playlist</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
@@ -1115,6 +1475,208 @@ export const LibraryPage: React.FC = () => {
                 className="px-5 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-hover shadow-md disabled:opacity-50"
               >
                 Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Merge Playlists Modal */}
+      {isMergeOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fadeIn">
+          <div className="bg-[#18181b] border border-white/15 rounded-3xl p-6 w-full max-w-xl shadow-2xl space-y-5 text-foreground max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-primary/20 text-primary">
+                  <GitMerge className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-foreground">Merge Playlists</h3>
+                  <p className="text-xs text-foreground-muted">Combine multiple playlists into one organized collection</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsMergeOpen(false)}
+                className="p-1 rounded-full text-foreground-muted hover:text-foreground transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Step 1: Select Source Playlists */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-foreground-muted uppercase tracking-wider block">
+                1. Select Playlists to Combine ({mergeSourceIds.length} selected)
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                {customPlaylists.map((p) => {
+                  const isChecked = mergeSourceIds.includes(p.id);
+                  return (
+                    <div
+                      key={p.id}
+                      onClick={() => {
+                        if (isChecked) {
+                          setMergeSourceIds(mergeSourceIds.filter((id) => id !== p.id));
+                        } else {
+                          setMergeSourceIds([...mergeSourceIds, p.id]);
+                        }
+                      }}
+                      className={`flex items-center gap-3 p-2.5 rounded-2xl border transition-all cursor-pointer ${
+                        isChecked
+                          ? 'bg-primary/15 border-primary/40 text-foreground shadow-sm'
+                          : 'bg-white/5 border-white/10 text-foreground-muted hover:bg-white/10'
+                      }`}
+                    >
+                      <div className={`w-4 h-4 rounded-md border flex items-center justify-center transition-colors shrink-0 ${
+                        isChecked ? 'bg-primary border-primary text-white' : 'border-white/30'
+                      }`}>
+                        {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                      </div>
+                      <div className="w-9 h-9 rounded-xl overflow-hidden shrink-0 bg-black/40">
+                        <PlaylistCoverImage src={p.thumbnail} alt={p.name} iconSize="sm" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-xs font-bold truncate text-foreground">{p.name}</h4>
+                        <span className="text-[10px] text-foreground-muted">{p.trackCount} tracks</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Step 2: Destination Option */}
+            <div className="space-y-3 pt-2 border-t border-white/10">
+              <label className="text-xs font-bold text-foreground-muted uppercase tracking-wider block">
+                2. Merge Destination
+              </label>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setMergeTargetType('new')}
+                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                    mergeTargetType === 'new'
+                      ? 'liquid-glass-pill-active border-primary/50 text-white'
+                      : 'liquid-glass-pill-inactive text-foreground-muted hover:text-foreground'
+                  }`}
+                >
+                  <span className="block text-xs font-bold">New Playlist</span>
+                  <span className="block text-[10px] opacity-80 mt-0.5">Create a fresh combined collection</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMergeTargetType('existing');
+                    if (!mergeTargetId) {
+                      const avail = customPlaylists.find((p) => !mergeSourceIds.includes(p.id)) || customPlaylists[0];
+                      if (avail) setMergeTargetId(avail.id);
+                    }
+                  }}
+                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                    mergeTargetType === 'existing'
+                      ? 'liquid-glass-pill-active border-primary/50 text-white'
+                      : 'liquid-glass-pill-inactive text-foreground-muted hover:text-foreground'
+                  }`}
+                >
+                  <span className="block text-xs font-bold">Existing Playlist</span>
+                  <span className="block text-[10px] opacity-80 mt-0.5">Append into an already created playlist</span>
+                </button>
+              </div>
+
+              {mergeTargetType === 'new' ? (
+                <div className="space-y-2 pt-1 animate-fadeIn">
+                  <div>
+                    <label className="text-[11px] font-semibold text-foreground-muted block mb-1">Playlist Name</label>
+                    <input
+                      type="text"
+                      value={mergeNewName}
+                      onChange={(e) => setMergeNewName(e.target.value)}
+                      placeholder="e.g. Mega Bollywood Mix"
+                      className="w-full bg-white/10 border border-white/20 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-foreground focus:border-primary outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-foreground-muted block mb-1">Description (Optional)</label>
+                    <input
+                      type="text"
+                      value={mergeNewDesc}
+                      onChange={(e) => setMergeNewDesc(e.target.value)}
+                      placeholder="e.g. Combined from B-Town Softies and Late Night Drives"
+                      className="w-full bg-white/10 border border-white/20 rounded-xl px-3.5 py-2 text-xs text-foreground focus:border-primary outline-none"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-1 pt-1 animate-fadeIn">
+                  <label className="text-[11px] font-semibold text-foreground-muted block mb-1">Target Playlist</label>
+                  <select
+                    value={mergeTargetId}
+                    onChange={(e) => setMergeTargetId(e.target.value)}
+                    className="w-full bg-[#27272a] border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-foreground focus:border-primary outline-none"
+                  >
+                    {customPlaylists.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.trackCount} tracks)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* Step 3: Options (Deduplication & Delete source) */}
+            <div className="space-y-2 pt-2 border-t border-white/10">
+              <label
+                onClick={() => setMergeDeduplicate(!mergeDeduplicate)}
+                className="flex items-center gap-2.5 text-xs text-foreground cursor-pointer select-none"
+              >
+                <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors shrink-0 ${
+                  mergeDeduplicate ? 'bg-primary border-primary text-white' : 'border-white/30'
+                }`}>
+                  {mergeDeduplicate && <Check className="w-3 h-3 stroke-[3]" />}
+                </div>
+                <span><strong>Smart Deduplication:</strong> Skip songs already in the target</span>
+              </label>
+
+              <label
+                onClick={() => setMergeDeleteSources(!mergeDeleteSources)}
+                className="flex items-center gap-2.5 text-xs text-rose-400 cursor-pointer select-none"
+              >
+                <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors shrink-0 ${
+                  mergeDeleteSources ? 'bg-rose-600 border-rose-600 text-white' : 'border-rose-400/30'
+                }`}>
+                  {mergeDeleteSources && <Check className="w-3 h-3 stroke-[3]" />}
+                </div>
+                <span>Delete original source playlists after merge is complete</span>
+              </label>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-white/10">
+              <button
+                onClick={() => setIsMergeOpen(false)}
+                className="px-4 py-2 rounded-xl liquid-glass-control text-xs font-semibold text-foreground-muted hover:text-foreground cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleExecuteMerge}
+                disabled={isMerging || mergeSourceIds.length === 0}
+                className="flex items-center gap-2 px-5 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-hover shadow-lg disabled:opacity-50 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+              >
+                {isMerging ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Merging Playlists...</span>
+                  </>
+                ) : (
+                  <>
+                    <GitMerge className="w-3.5 h-3.5" />
+                    <span>Merge Now</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

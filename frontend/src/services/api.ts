@@ -269,6 +269,29 @@ export const api = {
     fetchJson<any>(`${API_BASE}/api/playlists/custom/${playlistId}/tracks/${encodeURIComponent(trackId)}`, {
       method: 'DELETE',
     }),
+  mergeCustomPlaylists: (payload: {
+    sourcePlaylistIds: string[];
+    targetPlaylistId?: string;
+    newPlaylistName?: string;
+    newPlaylistDescription?: string;
+    deduplicate?: boolean;
+    deleteSources?: boolean;
+  }) =>
+    fetchJson<any>(`${API_BASE}/api/playlists/custom/merge`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }),
+  duplicateCustomPlaylist: (playlistId: string, name?: string) =>
+    fetchJson<any>(`${API_BASE}/api/playlists/custom/${playlistId}/duplicate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    }),
+  deduplicateCustomPlaylist: (playlistId: string) =>
+    fetchJson<any>(`${API_BASE}/api/playlists/custom/${playlistId}/deduplicate`, {
+      method: 'POST',
+    }),
 
   // ID3 Tag Editor
   editAudioTags: (payload: { filePath: string; title: string; artist: string; album: string; year?: string; genre?: string }) =>
