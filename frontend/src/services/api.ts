@@ -351,4 +351,16 @@ export const api = {
       ws?.close();
     };
   },
+
+  updateTaskbarState: async (isPlaying: boolean, title: string, artist: string): Promise<void> => {
+    try {
+      await fetch(`${API_BASE}/player/taskbar-state`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isPlaying, title, artist }),
+      });
+    } catch {
+      // Ignored when running standalone or in browser
+    }
+  },
 };

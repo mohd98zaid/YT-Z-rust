@@ -99,13 +99,39 @@ export const App: React.FC = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
 
+    // Native Windows Taskbar Thumbnail Toolbar Action Listener (Previous / Play-Pause / Next)
+    const handleTaskbarAction = (e: Event) => {
+      const customEvent = e as CustomEvent<string>;
+      const action = customEvent.detail;
+      const player = usePlayerStore.getState();
+      if (action === 'previous') {
+        player.previous().catch(() => {});
+      } else if (action === 'togglePlay') {
+        player.togglePlay();
+      } else if (action === 'next') {
+        player.next().catch(() => {});
+      }
+    };
+    window.addEventListener('ytz-taskbar-action', handleTaskbarAction);
+
     return () => {
       clearTimeout(fallbackResume);
       clearTimeout(tabPreloadTimer);
       cleanupWs();
       window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('ytz-taskbar-action', handleTaskbarAction);
     };
   }, [initTheme, initWebSocket, setActiveTab, initNavigation, restoreSessionFromConfig]);
+
+  // Synchronize playback state & metadata with Windows Taskbar thumbnail controls & tooltip
+  const isPlaying = usePlayerStore((s) => s.isPlaying);
+  useEffect(() => {
+    api.updateTaskbarState(
+      isPlaying,
+      currentTrack?.title || 'YT-Z',
+      currentTrack?.artist || 'Ultimate YouTube Music'
+    ).catch(() => {});
+  }, [isPlaying, currentTrack?.id, currentTrack?.title, currentTrack?.artist]);
 
   const handleSearchSubmit = (query: string) => {
     setSearchQuery(query);
