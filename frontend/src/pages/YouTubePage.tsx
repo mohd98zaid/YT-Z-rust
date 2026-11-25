@@ -178,11 +178,18 @@ export const YouTubePage: React.FC = () => {
   }, [activeVideo, setPiP]);
 
   const handleToggleFullscreen = () => {
+    const el = document.getElementById('youtube-cinema-anchor') || document.documentElement;
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen?.().catch(() => {});
+      if (el.requestFullscreen) {
+        el.requestFullscreen().catch(() => {});
+      } else if ((el as any).webkitRequestFullscreen) {
+        (el as any).webkitRequestFullscreen();
+      }
       setIsFullscreen(true);
     } else {
-      document.exitFullscreen?.().catch(() => {});
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
       setIsFullscreen(false);
     }
   };

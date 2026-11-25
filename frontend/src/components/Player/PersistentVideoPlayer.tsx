@@ -55,18 +55,7 @@ export const PersistentVideoPlayer: React.FC = () => {
   useEffect(() => {
     setHasPlaybackStarted(false);
     setShowDirectPrompt(false);
-
-    // If iframe fails to start playback within 2.5s (e.g. YouTube Error 150/152 blocked embed),
-    // automatically switch to Direct Video player so the video ALWAYS plays
-    const timer = setTimeout(() => {
-      if (!useDirectVideo) {
-        console.warn('YouTube embed did not start playback within 2.5s (likely Error 152 restriction). Auto-activating Direct Video...');
-        setUseDirectVideo(true);
-      }
-    }, 2500);
-
-    return () => clearTimeout(timer);
-  }, [activeVideo?.id, reloadKey, useDirectVideo, setUseDirectVideo]);
+  }, [activeVideo?.id, reloadKey]);
 
   useEffect(() => {
     const handleMsg = (e: MessageEvent) => {
@@ -106,7 +95,7 @@ export const PersistentVideoPlayer: React.FC = () => {
     return () => window.removeEventListener('message', handleMsg);
   }, [setUseDirectVideo]);
 
-  // Determine portal mount target without any JS scroll tracking
+  // Determine portal mount target without unmounting across fullscreen transitions
   useEffect(() => {
     if (!activeVideo) {
       setMountNode(null);
@@ -114,11 +103,6 @@ export const PersistentVideoPlayer: React.FC = () => {
     }
 
     const resolveMount = () => {
-      if (isFullscreen) {
-        setMountNode(document.body);
-        return;
-      }
-
       const isCinema = !isPiP && activeTab === 'youtube';
       if (isCinema) {
         const cinemaAnchor = document.getElementById('youtube-cinema-anchor');
@@ -149,7 +133,7 @@ export const PersistentVideoPlayer: React.FC = () => {
       clearTimeout(t2);
       clearTimeout(t3);
     };
-  }, [activeVideo?.id, isFullscreen, isPiP, activeTab]);
+  }, [activeVideo?.id, isPiP, activeTab]);
 
   // Handle Fullscreen state change events
   useEffect(() => {
@@ -388,7 +372,7 @@ export const PersistentVideoPlayer: React.FC = () => {
         <div className="absolute top-2.5 left-2.5 z-30 flex items-center gap-1.5 animate-fadeIn pointer-events-auto">
           <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-emerald-500/40 text-emerald-300 text-[10px] font-bold shadow-md">
             <ShieldCheck className="w-3 h-3 text-emerald-400" />
-            <span>Direct 1080p</span>
+            <span>Direct Stream</span>
           </span>
           <button
             type="button"
