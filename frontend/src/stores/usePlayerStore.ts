@@ -160,6 +160,11 @@ let registeredVideoPrevious: (() => void) | null = null;
 let isStreamRecovering = false;
 let recoveryAttemptsForCurrentTrack = 0;
 let streamStallTimer: any = null;
+let waitingUiTimer: any = null;
+let recoveryWatchdogTimer: any = null;
+let lastPlaybackProgressTime = 0;
+let activeStreamUrlForCurrentTrack = '';
+let activeResolutionIdForCurrentTrack = 0;
 
 export const registerVideoControls = (handlers: { stop: () => void; next: () => void; previous: () => void }) => {
   registeredVideoStopper = handlers.stop;
@@ -214,17 +219,20 @@ function initAudioEngine(state: PlayerState) {
 
   // Audio Event Listeners
   let lastTimeSave = 0;
-  let lastPlaybackProgressTime = 0;
   audioElement.addEventListener('timeupdate', () => {
     if (!audioElement) return;
-    const { isVideoMode, activeVideoSource } = usePlayerStore.getState();
+    const { isVideoMode, activeVideoSource, currentTrack } = usePlayerStore.getState();
     if (isVideoMode || activeVideoSource === 'youtube_video') return;
     const time = audioElement.currentTime;
-    
-    // Auto-clear loading spinner ONLY if audio is actively moving forward (>0.15s)
+
+    // Auto-clear loading spinner ONLY if audio is actively advancing and has sufficient buffer
     if (Math.abs(time - lastPlaybackProgressTime) > 0.15) {
       lastPlaybackProgressTime = time;
-      if (!audioElement.paused && usePlayerStore.getState().isLoading) {
+      if (waitingUiTimer) {
+        clearTimeout(waitingUiTimer);
+        waitingUiTimer = null;
+      }
+      if (!audioElement.paused && audioElement.readyState >= 3 && usePlayerStore.getState().isLoading) {
         usePlayerStore.setState({ isLoading: false, isPlaying: true });
       }
     }
@@ -254,8 +262,23 @@ function initAudioEngine(state: PlayerState) {
       } catch {}
     }
 
-    // Two-Song Cache: trigger next song preload when current track is playing stably
+    // Deferred Single-Stream RAM Cache & Two-Song Preload:
+    // Wait until current track is playing stably (>= 4s and buffered) before caching to RAM Blob
+    // so we NEVER contend with initial playback startup on slow external FLAC upstreams.
     const { queue, queueIndex } = usePlayerStore.getState();
+    const isStablePlayback = !audioElement.paused && audioElement.readyState >= 3 && time >= 4;
+    if (
+      isStablePlayback &&
+      currentTrack &&
+      !currentTrack.isLocal &&
+      activeStreamUrlForCurrentTrack &&
+      !activeStreamUrlForCurrentTrack.startsWith('blob:') &&
+      !recentTracksCache.has(currentTrack.id) &&
+      currentLoadingTrackId !== currentTrack.id
+    ) {
+      cacheCurrentTrack(currentTrack, activeStreamUrlForCurrentTrack, activeResolutionIdForCurrentTrack);
+    }
+
     const nextIdx = queueIndex + 1 < queue.length ? queueIndex + 1 : -1;
     if (
       nextIdx !== -1 &&
@@ -264,8 +287,8 @@ function initAudioEngine(state: PlayerState) {
       !nextLoadingTrackId
     ) {
       const currentDur = audioElement.duration || 0;
-      // Preload next track once current track is stably playing (at least 3s or 15% elapsed)
-      if (time >= 3 || (currentDur > 0 && time / currentDur >= 0.15)) {
+      // Preload next track once current track is stably playing (at least 5s or 15% elapsed)
+      if (isStablePlayback && (time >= 5 || (currentDur > 0 && time / currentDur >= 0.15))) {
         preloadNextTrack();
       }
     }
@@ -314,10 +337,18 @@ function initAudioEngine(state: PlayerState) {
   });
 
   audioElement.addEventListener('canplay', () => {
+    if (waitingUiTimer) {
+      clearTimeout(waitingUiTimer);
+      waitingUiTimer = null;
+    }
     usePlayerStore.setState({ isLoading: false });
   });
 
   audioElement.addEventListener('canplaythrough', () => {
+    if (waitingUiTimer) {
+      clearTimeout(waitingUiTimer);
+      waitingUiTimer = null;
+    }
     usePlayerStore.setState({ isLoading: false });
   });
 
@@ -355,17 +386,37 @@ function initAudioEngine(state: PlayerState) {
     const expectedDur = currentTrack?.durationSeconds || dur;
 
     // If currentTime is significantly before the expected duration (> 5s remaining),
-    // the stream ended prematurely due to a network glitch. Reconnect and finish the song!
-    if (expectedDur > 12 && cur > 0 && cur < expectedDur - 5) {
+    // the stream ended prematurely due to an upstream drop. Reconnect at exact position!
+    if (expectedDur > 12 && cur > 0 && cur < expectedDur - 5 && recoveryAttemptsForCurrentTrack < 2) {
       console.warn(`[Player] Premature 'ended' event at ${cur.toFixed(1)}s of ${expectedDur}s. Reconnecting rather than skipping!`);
+      recoveryAttemptsForCurrentTrack++;
+      isStreamRecovering = true;
       usePlayerStore.setState({ isLoading: true });
+      if (currentSongAbortController) {
+        currentSongAbortController.abort();
+        currentSongAbortController = null;
+      }
       if (currentTrack && audioElement) {
         const vid = currentTrack.videoId || currentTrack.id;
         const tParam = encodeURIComponent(currentTrack.title || '');
         const aParam = encodeURIComponent(currentTrack.artist || '');
-        audioElement.src = `${API_BASE}/api/stream/${encodeURIComponent(vid)}/audio?title=${tParam}&artist=${aParam}&quality=standard&resume=${Date.now()}`;
-        audioElement.currentTime = cur;
-        audioElement.play().catch(() => {});
+        const resumeUrl = `${API_BASE}/api/stream/${encodeURIComponent(vid)}/audio?title=${tParam}&artist=${aParam}&quality=standard&resume=${Date.now()}`;
+        activeStreamUrlForCurrentTrack = resumeUrl;
+        audioElement.src = resumeUrl;
+        const onResumeReady = () => {
+          if (audioElement) {
+            try {
+              if (cur > 0 && Math.abs(audioElement.currentTime - cur) > 0.5) {
+                audioElement.currentTime = cur;
+              }
+            } catch {}
+            if (!userExplicitlyPaused) {
+              audioElement.play().catch(() => {});
+            }
+          }
+          isStreamRecovering = false;
+        };
+        audioElement.addEventListener('canplay', onResumeReady, { once: true });
       }
       return;
     }
@@ -391,6 +442,16 @@ function initAudioEngine(state: PlayerState) {
 
     recoveryAttemptsForCurrentTrack++;
     isStreamRecovering = true;
+    if (waitingUiTimer) {
+      clearTimeout(waitingUiTimer);
+      waitingUiTimer = null;
+    }
+    if (recoveryWatchdogTimer) clearTimeout(recoveryWatchdogTimer);
+    if (currentSongAbortController) {
+      currentSongAbortController.abort();
+      currentSongAbortController = null;
+    }
+
     usePlayerStore.setState({ isLoading: true });
     console.warn(`[Player] Triggering seamless audio stream failover (${reason}, attempt ${recoveryAttemptsForCurrentTrack})...`);
 
@@ -398,14 +459,23 @@ function initAudioEngine(state: PlayerState) {
     const vid = currentTrack.videoId || currentTrack.id;
     const tParam = encodeURIComponent(currentTrack.title || '');
     const aParam = encodeURIComponent(currentTrack.artist || '');
-    
-    // Failover directly to rock-solid standard YouTube Opus stream
+
+    // Failover directly to rock-solid standard YouTube stream (bypassing any broken addon/cache)
     const fallbackUrl = `${API_BASE}/api/stream/${encodeURIComponent(vid)}/audio?title=${tParam}&artist=${aParam}&quality=standard&recovery=${Date.now()}`;
+    activeStreamUrlForCurrentTrack = fallbackUrl;
     audioElement.src = fallbackUrl;
 
+    // Ensure recovery lock can never wedge permanently if network stalls
+    recoveryWatchdogTimer = setTimeout(() => {
+      isStreamRecovering = false;
+    }, 10000);
+
     const onRecoveredCanPlay = () => {
+      if (recoveryWatchdogTimer) {
+        clearTimeout(recoveryWatchdogTimer);
+        recoveryWatchdogTimer = null;
+      }
       if (audioElement) {
-        audioElement.removeEventListener('canplay', onRecoveredCanPlay);
         try {
           if (cur > 0 && Math.abs(audioElement.currentTime - cur) > 0.5) {
             audioElement.currentTime = cur;
@@ -415,29 +485,56 @@ function initAudioEngine(state: PlayerState) {
           audioElement.play().catch(() => {});
         }
       }
+      usePlayerStore.setState({
+        audioStats: {
+          codec: 'opus',
+          bitrate: 160,
+          duration: currentTrack.durationSeconds || 0,
+          provider: 'YouTube Native Failover (160k Opus)',
+          isLossless: false,
+          sampleRate: 48000,
+          bitDepth: 16,
+          qualityTier: 'standard',
+        },
+      });
       isStreamRecovering = false;
     };
     audioElement.addEventListener('canplay', onRecoveredCanPlay, { once: true });
   };
 
   audioElement.addEventListener('waiting', () => {
-    usePlayerStore.setState({ isLoading: true });
+    // Debounce spinner UI by 400ms so micro-buffers never flicker the Play/Pause icon
+    if (!waitingUiTimer) {
+      waitingUiTimer = setTimeout(() => {
+        waitingUiTimer = null;
+        if (audioElement && !userExplicitlyPaused && !audioElement.ended && audioElement.readyState < 3) {
+          usePlayerStore.setState({ isLoading: true });
+        }
+      }, 400);
+    }
     if (streamStallTimer) clearTimeout(streamStallTimer);
     streamStallTimer = setTimeout(() => {
-      if (!userExplicitlyPaused && audioElement && !audioElement.ended) {
+      if (!userExplicitlyPaused && audioElement && !audioElement.ended && audioElement.readyState < 3) {
         triggerStreamRecovery('buffer_waiting_timeout');
       }
-    }, 3500);
+    }, 3000);
   });
 
   audioElement.addEventListener('stalled', () => {
-    usePlayerStore.setState({ isLoading: true });
+    if (!waitingUiTimer) {
+      waitingUiTimer = setTimeout(() => {
+        waitingUiTimer = null;
+        if (audioElement && !userExplicitlyPaused && !audioElement.ended && audioElement.readyState < 3) {
+          usePlayerStore.setState({ isLoading: true });
+        }
+      }, 400);
+    }
     if (streamStallTimer) clearTimeout(streamStallTimer);
     streamStallTimer = setTimeout(() => {
       if (!userExplicitlyPaused && audioElement && !audioElement.ended) {
         triggerStreamRecovery('network_stalled_timeout');
       }
-    }, 3500);
+    }, 3000);
   });
 
   audioElement.addEventListener('playing', () => {
@@ -453,11 +550,36 @@ function initAudioEngine(state: PlayerState) {
     }
     userExplicitlyPaused = false;
     isStreamRecovering = false;
-    if (streamStallTimer) clearTimeout(streamStallTimer);
+    if (waitingUiTimer) {
+      clearTimeout(waitingUiTimer);
+      waitingUiTimer = null;
+    }
+    if (streamStallTimer) {
+      clearTimeout(streamStallTimer);
+      streamStallTimer = null;
+    }
+    if (recoveryWatchdogTimer) {
+      clearTimeout(recoveryWatchdogTimer);
+      recoveryWatchdogTimer = null;
+    }
     if (audioContext && audioContext.state === 'suspended') {
       audioContext.resume().catch(() => {});
     }
     usePlayerStore.setState({ isPlaying: true, isLoading: false });
+    // Update Windows Taskbar thumbnail toolbar play/pause button
+    try {
+      if (typeof window !== 'undefined' && 'mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = 'playing';
+      }
+      const { currentTrack } = usePlayerStore.getState();
+      if (currentTrack) {
+        fetch(`${API_BASE}/api/player/taskbar-state`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ isPlaying: true, title: currentTrack.title, artist: currentTrack.artist }),
+        }).catch(() => {});
+      }
+    } catch {}
   });
 
   audioElement.addEventListener('pause', () => {
@@ -475,9 +597,8 @@ function initAudioEngine(state: PlayerState) {
     }
 
     // Unintended browser pause caused by buffer underrun:
-    // Do NOT loop src reassignments here! Only gently try to resume after buffer accumulates
+    // Gently resume after buffer accumulates, failing over cleanly if still stalled.
     if (currentTrack && audioElement && !audioElement.ended) {
-      usePlayerStore.setState({ isLoading: true });
       if (streamStallTimer) clearTimeout(streamStallTimer);
       streamStallTimer = setTimeout(() => {
         if (!userExplicitlyPaused && audioElement && audioElement.paused && !audioElement.ended) {
@@ -496,7 +617,9 @@ function initAudioEngine(state: PlayerState) {
     const { currentTrack, isVideoMode, activeVideoSource } = usePlayerStore.getState();
     if (isVideoMode || activeVideoSource === 'youtube_video' || userExplicitlyPaused) return;
 
-    if (currentTrack && audioElement && !isStreamRecovering) {
+    // Reset recovery lock if the fallback URL itself failed so a second attempt can proceed
+    isStreamRecovering = false;
+    if (currentTrack && audioElement) {
       triggerStreamRecovery('audio_element_error');
     } else {
       usePlayerStore.setState({ isLoading: false });
@@ -606,6 +729,13 @@ export const cacheCurrentTrack = async (
   const trackId = track.id;
   const videoId = track.videoId || track.id;
 
+  if (currentLoadingTrackId === trackId) return;
+  if (currentSongAbortController) {
+    currentSongAbortController.abort();
+    currentSongAbortController = null;
+  }
+  currentLoadingTrackId = trackId;
+
   try {
     const controller = new AbortController();
     currentSongAbortController = controller;
@@ -613,7 +743,7 @@ export const cacheCurrentTrack = async (
     if (!resp.ok) return;
     const blob = await resp.blob();
 
-    if (resolutionId !== currentTrackResolutionId) return;
+    if (resolutionId !== currentTrackResolutionId || blob.size < 32 * 1024) return;
 
     const blobUrl = URL.createObjectURL(blob);
     const state = usePlayerStore.getState();
@@ -651,6 +781,10 @@ export const cacheCurrentTrack = async (
     if (err.name !== 'AbortError') {
       console.debug('Background current song cache buffering completed or interrupted');
     }
+  } finally {
+    if (currentLoadingTrackId === trackId) {
+      currentLoadingTrackId = null;
+    }
   }
 };
 
@@ -659,17 +793,12 @@ export const loadCurrentTrackCompletely = async (
   streamUrl: string,
   resolutionId: number
 ) => {
-  usePlayerStore.setState((s) => ({
-    twoSongCache: {
-      ...s.twoSongCache,
-      currentLoaded: true,
-      currentBufferPercent: 100,
-    },
-  }));
-  // Buffer current track into RAM cache in parallel for instant 0ms back-navigation
-  cacheCurrentTrack(track, streamUrl, resolutionId);
-  // Initiate preloading the next track smoothly without delay
-  preloadNextTrack();
+  // Deferred: RAM caching and next-track preloading are triggered once playback
+  // is stable (>= 4s buffered) inside timeupdate, preventing concurrent download
+  // contention at song start. For local files, cache immediately.
+  if (track.isLocal) {
+    cacheCurrentTrack(track, streamUrl, resolutionId);
+  }
 };
 
 export const preloadNextTrack = async () => {
@@ -719,24 +848,7 @@ export const preloadNextTrack = async () => {
     },
   }));
 
-  // 1. Warm up backend audio cache on local disk
-  if (!nextTrack.isLocal) {
-    api.preloadTrack(videoId, nextTrack.title, nextTrack.artist, durParam, quality).then(() => {
-      if (slotNext && slotNext.trackId === nextId) {
-        slotNext.status = 'ready';
-        slotNext.isFullyLoaded = true;
-      }
-      usePlayerStore.setState((s) => ({
-        twoSongCache: {
-          ...s.twoSongCache,
-          nextReady: true,
-          nextTrackTitle: nextTrack.title,
-        },
-      }));
-    }).catch(() => {});
-  }
-
-  // 2. Pre-fetch stream metadata & stats
+  // 1. Pre-fetch stream metadata & stats (JSON only, no duplicate audio stream)
   let cachedStats: AudioStats | undefined;
   let cachedLyrics: any | undefined;
   let cachedSegments: any[] | undefined;
@@ -1062,6 +1174,14 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
   pause: () => {
     userExplicitlyPaused = true;
+    if (waitingUiTimer) {
+      clearTimeout(waitingUiTimer);
+      waitingUiTimer = null;
+    }
+    if (streamStallTimer) {
+      clearTimeout(streamStallTimer);
+      streamStallTimer = null;
+    }
     if (get().isVideoMode) {
       const iframes = document.querySelectorAll('iframe');
       iframes.forEach((iframe) => {
@@ -1078,10 +1198,27 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       audioElement.pause();
     }
     set({ isPlaying: false, isLoading: false });
+    try {
+      if (typeof window !== 'undefined' && 'mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = 'paused';
+      }
+      const { currentTrack } = get();
+      if (currentTrack) {
+        fetch(`${API_BASE}/api/player/taskbar-state`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ isPlaying: false, title: currentTrack.title, artist: currentTrack.artist }),
+        }).catch(() => {});
+      }
+    } catch {}
   },
 
   pauseAudio: () => {
     userExplicitlyPaused = true;
+    if (waitingUiTimer) {
+      clearTimeout(waitingUiTimer);
+      waitingUiTimer = null;
+    }
     if (audioElement && !audioElement.paused) {
       audioElement.pause();
     }
@@ -1091,6 +1228,23 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   stopAudio: () => {
     userExplicitlyPaused = true;
     currentTrackResolutionId++;
+    if (waitingUiTimer) {
+      clearTimeout(waitingUiTimer);
+      waitingUiTimer = null;
+    }
+    if (streamStallTimer) {
+      clearTimeout(streamStallTimer);
+      streamStallTimer = null;
+    }
+    if (recoveryWatchdogTimer) {
+      clearTimeout(recoveryWatchdogTimer);
+      recoveryWatchdogTimer = null;
+    }
+    if (currentSongAbortController) {
+      currentSongAbortController.abort();
+      currentSongAbortController = null;
+    }
+    activeStreamUrlForCurrentTrack = '';
     if (audioElement) {
       try {
         audioElement.pause();
@@ -1139,9 +1293,27 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     userExplicitlyPaused = false;
     recoveryAttemptsForCurrentTrack = 0;
     isStreamRecovering = false;
-    if (streamStallTimer) clearTimeout(streamStallTimer);
+    lastPlaybackProgressTime = 0;
+    if (waitingUiTimer) {
+      clearTimeout(waitingUiTimer);
+      waitingUiTimer = null;
+    }
+    if (streamStallTimer) {
+      clearTimeout(streamStallTimer);
+      streamStallTimer = null;
+    }
+    if (recoveryWatchdogTimer) {
+      clearTimeout(recoveryWatchdogTimer);
+      recoveryWatchdogTimer = null;
+    }
+    if (currentSongAbortController) {
+      currentSongAbortController.abort();
+      currentSongAbortController = null;
+    }
     initAudioEngine(get());
     const resolutionId = ++currentTrackResolutionId;
+    activeResolutionIdForCurrentTrack = resolutionId;
+    activeStreamUrlForCurrentTrack = '';
 
     // Immediately stop and close any active video so audio and video never overlap
     if (registeredVideoStopper) {
@@ -1312,28 +1484,29 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
         // Use range-aware audio streaming proxy with resilient fallback & backend cache
         streamUrl = `${API_BASE}/api/stream/${encodeURIComponent(videoId)}/audio?title=${titleParam}&artist=${artistParam}&duration=${durParam}&quality=${quality}`;
+        activeStreamUrlForCurrentTrack = streamUrl;
 
         // Reset cache slot for fresh playback
         slotCurrent = {
           trackId: effectiveTrack.id,
           blobUrl: '',
           sizeBytes: 0,
-          isFullyLoaded: true,
-          status: 'ready',
+          isFullyLoaded: false,
+          status: 'idle',
           lastAccessed: Date.now(),
         };
         slotNext = null;
 
         set({
           twoSongCache: {
-            currentLoaded: true,
+            currentLoaded: false,
             nextReady: false,
             currentBufferPercent: 0,
             nextTrackTitle: null,
           },
         });
 
-        // Buffer current track in background to RAM Blob for instant 0ms back-navigation
+        // Deferred RAM caching & next-track preloading will trigger via timeupdate once playing stably
         loadCurrentTrackCompletely(effectiveTrack, streamUrl, resolutionId);
 
         // Fetch stream metadata with Lossless Addon details in background
@@ -1422,21 +1595,43 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       // Update OS / Windows MediaSession metadata & hardware keys
       if (typeof window !== 'undefined' && 'mediaSession' in navigator) {
         try {
+          // Build artwork array — prefer proxied thumbnail for Electron/pywebview compatibility
+          const vid = track.videoId || track.id;
+          const is11Char = vid && typeof vid === 'string' && vid.length === 11 && !/[/?&=#\s]/.test(vid);
+          const thumbSrc = track.thumbnail ||
+            (is11Char ? `https://i.ytimg.com/vi/${vid}/hqdefault.jpg` : '');
+          // Also proxy through backend for environments that block external image requests
+          const proxyThumb = thumbSrc
+            ? `${API_BASE}/api/proxy/thumbnail?url=${encodeURIComponent(thumbSrc)}`
+            : '';
+          const artworkList = thumbSrc
+            ? [
+                { src: thumbSrc, sizes: '480x360', type: 'image/jpeg' },
+                ...(proxyThumb ? [{ src: proxyThumb, sizes: '480x360', type: 'image/jpeg' }] : []),
+              ]
+            : [];
+
           navigator.mediaSession.metadata = new MediaMetadata({
             title: track.title,
             artist: track.artist || 'YT-Z Artist',
             album: track.album || 'YT-Z Lossless Stream',
-            artwork: track.thumbnail
-              ? [
-                  { src: track.thumbnail, sizes: '96x96', type: 'image/jpeg' },
-                  { src: track.thumbnail, sizes: '256x256', type: 'image/jpeg' },
-                  { src: track.thumbnail, sizes: '512x512', type: 'image/jpeg' },
-                ]
-              : [],
+            artwork: artworkList,
           });
 
-          navigator.mediaSession.setActionHandler('play', () => get().play());
-          navigator.mediaSession.setActionHandler('pause', () => get().pause());
+          navigator.mediaSession.playbackState = 'playing';
+
+          navigator.mediaSession.setActionHandler('play', () => {
+            get().play();
+            navigator.mediaSession.playbackState = 'playing';
+          });
+          navigator.mediaSession.setActionHandler('pause', () => {
+            get().pause();
+            navigator.mediaSession.playbackState = 'paused';
+          });
+          navigator.mediaSession.setActionHandler('stop', () => {
+            get().pause();
+            navigator.mediaSession.playbackState = 'paused';
+          });
           navigator.mediaSession.setActionHandler('previoustrack', () => get().previous());
           navigator.mediaSession.setActionHandler('nexttrack', () => get().next());
           navigator.mediaSession.setActionHandler('seekto', (details) => {
