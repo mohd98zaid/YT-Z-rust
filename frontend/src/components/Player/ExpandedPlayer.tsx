@@ -35,6 +35,8 @@ import {
   MoreHorizontal,
   Heart,
   Share2,
+  RotateCcw,
+  RotateCw,
 } from 'lucide-react';
 import { usePlayerStore } from '../../stores/usePlayerStore';
 import { useDownloadStore } from '../../stores/useDownloadStore';
@@ -55,6 +57,10 @@ export const ExpandedPlayer: React.FC = () => {
     volume,
     isMuted,
     playbackSpeed,
+    skipStepSeconds,
+    setSkipStepSeconds,
+    skipForward,
+    skipBackward,
     shuffle,
     repeatMode,
     isExpanded,
@@ -1630,29 +1636,38 @@ export const ExpandedPlayer: React.FC = () => {
           </span>
         </div>
 
-        {/* Transport Buttons: Shuffle, Prev, Big Play/Pause, Next, Repeat */}
-        <div className="flex items-center justify-between w-full max-w-sm px-3 pt-0.5">
+        {/* Transport Buttons: Shuffle, Prev, Skip Back, Play/Pause, Skip Fwd, Next, Repeat */}
+        <div className="flex items-center justify-between w-full max-w-sm px-1 pt-0.5">
           <button
             onClick={toggleShuffle}
-            className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors active:scale-90 ${
+            className={`w-9 h-9 flex items-center justify-center rounded-full transition-colors active:scale-90 ${
               shuffle ? 'text-primary' : 'text-foreground-muted hover:text-foreground'
             }`}
             title="Toggle shuffle"
           >
-            <Shuffle className="w-5 h-5" />
+            <Shuffle className="w-4 h-4" />
           </button>
 
           <button
             onClick={previous}
-            className="w-11 h-11 flex items-center justify-center text-foreground active:scale-90 transition-transform"
+            className="w-10 h-10 flex items-center justify-center text-foreground active:scale-90 transition-transform"
             title="Previous track"
           >
-            <SkipBack className="w-7 h-7 fill-current" />
+            <SkipBack className="w-6 h-6 fill-current" />
+          </button>
+
+          <button
+            onClick={() => skipBackward()}
+            className="flex flex-col items-center justify-center w-10 h-10 rounded-full text-foreground/90 hover:text-foreground hover:bg-white/10 active:scale-90 transition-all cursor-pointer"
+            title={`Skip backward ${skipStepSeconds}s`}
+          >
+            <RotateCcw className="w-4 h-4" />
+            <span className="text-[9px] font-mono font-bold leading-none mt-0.5">-{skipStepSeconds}s</span>
           </button>
 
           <button
             onClick={togglePlay}
-            className="w-14 h-14 rounded-full bg-primary hover:bg-primary-hover text-white flex items-center justify-center shadow-xl shadow-primary/35 active:scale-90 transition-all cursor-pointer"
+            className="w-14 h-14 rounded-full bg-primary hover:bg-primary-hover text-white flex items-center justify-center shadow-xl shadow-primary/35 active:scale-90 transition-all cursor-pointer shrink-0"
             title={isPlaying ? "Pause" : "Play"}
           >
             {isLoading ? (
@@ -1665,22 +1680,51 @@ export const ExpandedPlayer: React.FC = () => {
           </button>
 
           <button
+            onClick={() => skipForward()}
+            className="flex flex-col items-center justify-center w-10 h-10 rounded-full text-foreground/90 hover:text-foreground hover:bg-white/10 active:scale-90 transition-all cursor-pointer"
+            title={`Skip forward ${skipStepSeconds}s`}
+          >
+            <RotateCw className="w-4 h-4" />
+            <span className="text-[9px] font-mono font-bold leading-none mt-0.5">+{skipStepSeconds}s</span>
+          </button>
+
+          <button
             onClick={next}
-            className="w-11 h-11 flex items-center justify-center text-foreground active:scale-90 transition-transform"
+            className="w-10 h-10 flex items-center justify-center text-foreground active:scale-90 transition-transform"
             title="Next track"
           >
-            <SkipForward className="w-7 h-7 fill-current" />
+            <SkipForward className="w-6 h-6 fill-current" />
           </button>
 
           <button
             onClick={cycleRepeat}
-            className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors active:scale-90 ${
+            className={`w-9 h-9 flex items-center justify-center rounded-full transition-colors active:scale-90 ${
               repeatMode !== 'off' ? 'text-primary' : 'text-foreground-muted hover:text-foreground'
             }`}
             title={`Repeat mode: ${repeatMode}`}
           >
-            {repeatMode === 'one' ? <Repeat1 className="w-5 h-5" /> : <Repeat className="w-5 h-5" />}
+            {repeatMode === 'one' ? <Repeat1 className="w-4 h-4" /> : <Repeat className="w-4 h-4" />}
           </button>
+        </div>
+
+        {/* Skip Step Interval Selector (10s / 20s / 30s) */}
+        <div className="flex items-center justify-center gap-1.5">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-foreground-muted">Skip Step</span>
+          <div className="inline-flex items-center gap-0.5 p-0.5 rounded-full bg-white/10 border border-white/15">
+            {([10, 20, 30] as const).map((sec) => (
+              <button
+                key={sec}
+                onClick={() => setSkipStepSeconds(sec)}
+                className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold transition-all cursor-pointer ${
+                  skipStepSeconds === sec
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'text-foreground-muted hover:text-white'
+                }`}
+              >
+                {sec}s
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Touch-Friendly Volume Slider (Mobile) */}
@@ -1935,23 +1979,38 @@ export const ExpandedPlayer: React.FC = () => {
           </div>
 
           {/* Primary Buttons */}
-          <div className="flex items-center gap-4 sm:gap-6 mx-auto sm:mx-0">
+          <div className="flex items-center gap-2.5 sm:gap-4 mx-auto sm:mx-0">
             <button
               onClick={toggleShuffle}
               className={`p-1.5 rounded-full ${
                 shuffle ? 'text-primary' : 'text-foreground-muted hover:text-foreground'
               }`}
+              title="Toggle shuffle"
             >
               <Shuffle className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
 
-            <button onClick={previous} className="text-foreground hover:scale-110 active:scale-95 transition-transform">
+            <button
+              onClick={previous}
+              className="text-foreground hover:scale-110 active:scale-95 transition-transform"
+              title="Previous track"
+            >
               <SkipBack className="w-6 h-6 sm:w-7 sm:h-7 fill-current" />
             </button>
 
             <button
+              onClick={() => skipBackward()}
+              className="flex flex-col items-center justify-center px-1.5 py-1 rounded-xl text-foreground-muted hover:text-foreground hover:bg-white/10 active:scale-95 transition-all cursor-pointer"
+              title={`Skip backward ${skipStepSeconds}s (J / ←)`}
+            >
+              <RotateCcw className="w-4 h-4" />
+              <span className="text-[9px] font-mono font-bold leading-none mt-0.5">-{skipStepSeconds}s</span>
+            </button>
+
+            <button
               onClick={togglePlay}
-              className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-primary hover:bg-primary-hover text-white flex items-center justify-center shadow-xl shadow-primary/30 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+              className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-primary hover:bg-primary-hover text-white flex items-center justify-center shadow-xl shadow-primary/30 hover:scale-105 active:scale-95 transition-all cursor-pointer shrink-0"
+              title={isPlaying ? 'Pause' : 'Play'}
             >
               {isLoading ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -1962,7 +2021,20 @@ export const ExpandedPlayer: React.FC = () => {
               )}
             </button>
 
-            <button onClick={next} className="text-foreground hover:scale-110 active:scale-95 transition-transform">
+            <button
+              onClick={() => skipForward()}
+              className="flex flex-col items-center justify-center px-1.5 py-1 rounded-xl text-foreground-muted hover:text-foreground hover:bg-white/10 active:scale-95 transition-all cursor-pointer"
+              title={`Skip forward ${skipStepSeconds}s (L / →)`}
+            >
+              <RotateCw className="w-4 h-4" />
+              <span className="text-[9px] font-mono font-bold leading-none mt-0.5">+{skipStepSeconds}s</span>
+            </button>
+
+            <button
+              onClick={next}
+              className="text-foreground hover:scale-110 active:scale-95 transition-transform"
+              title="Next track"
+            >
               <SkipForward className="w-6 h-6 sm:w-7 sm:h-7 fill-current" />
             </button>
 
@@ -1971,6 +2043,7 @@ export const ExpandedPlayer: React.FC = () => {
               className={`p-1.5 rounded-full ${
                 repeatMode !== 'off' ? 'text-primary' : 'text-foreground-muted hover:text-foreground'
               }`}
+              title={`Repeat mode: ${repeatMode}`}
             >
               {repeatMode === 'one' ? <Repeat1 className="w-4 h-4 sm:w-5 sm:h-5" /> : <Repeat className="w-4 h-4 sm:w-5 sm:h-5" />}
             </button>
@@ -2013,9 +2086,9 @@ export const ExpandedPlayer: React.FC = () => {
           </button>
         </div>
 
-        {/* BitChord Signature: Volume Slider & Audio Pipeline Card */}
-        <div className="w-full max-w-sm sm:max-w-md mx-auto px-2 sm:px-4 mt-2 sm:mt-3 space-y-2.5">
-          {/* Volume Control */}
+        {/* BitChord Signature: Skip Interval, Volume Slider & Audio Pipeline Card */}
+        <div className="w-full max-w-md sm:max-w-lg mx-auto px-2 sm:px-4 mt-1.5 sm:mt-2 space-y-2">
+          {/* Volume Control + Skip Interval Selector (10s / 20s / 30s) */}
           <div className="flex items-center gap-3 w-full px-1">
             <button
               onClick={toggleMute}
@@ -2038,6 +2111,24 @@ export const ExpandedPlayer: React.FC = () => {
                 onChange={(e) => setVolume(parseFloat(e.target.value))}
                 className="w-full h-1 bg-foreground/15 hover:bg-foreground/25 rounded-lg appearance-none cursor-pointer accent-primary focus:outline-none transition-colors"
               />
+            </div>
+            <div
+              className="inline-flex items-center gap-0.5 p-0.5 rounded-full bg-surface-elevated/90 border border-border shrink-0"
+              title="Quick skip interval"
+            >
+              {([10, 20, 30] as const).map((sec) => (
+                <button
+                  key={sec}
+                  onClick={() => setSkipStepSeconds(sec)}
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold transition-all cursor-pointer ${
+                    skipStepSeconds === sec
+                      ? 'bg-primary text-white shadow-xs'
+                      : 'text-foreground-muted hover:text-foreground'
+                  }`}
+                >
+                  {sec}s
+                </button>
+              ))}
             </div>
           </div>
 

@@ -6,9 +6,9 @@ export const KeyboardShortcutsModal: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const {
     togglePlay,
-    seek,
-    currentTime,
-    duration,
+    skipForward,
+    skipBackward,
+    skipStepSeconds,
     next,
     previous,
     toggleMute,
@@ -54,12 +54,12 @@ export const KeyboardShortcutsModal: React.FC = () => {
         case 'j':
         case 'arrowleft':
           e.preventDefault();
-          seek(Math.max(0, currentTime - 10));
+          skipBackward();
           break;
         case 'l':
         case 'arrowright':
           e.preventDefault();
-          seek(Math.min(duration, currentTime + 10));
+          skipForward();
           break;
         case 'n':
           e.preventDefault();
@@ -112,7 +112,7 @@ export const KeyboardShortcutsModal: React.FC = () => {
 
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [isOpen, currentTime, duration, isExpanded, togglePlay, seek, next, previous, toggleMute, toggleShuffle, cycleRepeat, setExpanded, toggleLyrics, toggleEqualizer, toggleSleepTimer]);
+  }, [isOpen, isExpanded, togglePlay, skipForward, skipBackward, next, previous, toggleMute, toggleShuffle, cycleRepeat, setExpanded, toggleLyrics, toggleEqualizer, toggleSleepTimer]);
 
   if (!isOpen) return null;
 
@@ -121,8 +121,8 @@ export const KeyboardShortcutsModal: React.FC = () => {
       category: 'Playback Controls',
       items: [
         { key: 'Space / K', desc: 'Play / Pause', icon: Play },
-        { key: 'J / ←', desc: 'Seek backwards 10s', icon: SkipBack },
-        { key: 'L / →', desc: 'Seek forwards 10s', icon: SkipForward },
+        { key: 'J / ←', desc: `Seek backwards ${skipStepSeconds}s`, icon: SkipBack },
+        { key: 'L / →', desc: `Seek forwards ${skipStepSeconds}s`, icon: SkipForward },
         { key: 'N', desc: 'Next track', icon: SkipForward },
         { key: 'P', desc: 'Previous track', icon: SkipBack },
         { key: 'M', desc: 'Mute / Unmute', icon: Volume2 },

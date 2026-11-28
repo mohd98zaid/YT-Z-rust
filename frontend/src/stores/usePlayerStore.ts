@@ -41,6 +41,7 @@ interface PlayerState {
   volume: number;
   isMuted: boolean;
   playbackSpeed: number;
+  skipStepSeconds: 10 | 20 | 30;
   shuffle: boolean;
   repeatMode: 'off' | 'all' | 'one';
   crossfadeSeconds: number;
@@ -116,6 +117,9 @@ interface PlayerState {
   next: () => Promise<void>;
   previous: () => Promise<void>;
   seek: (seconds: number) => void;
+  skipForward: (seconds?: number) => void;
+  skipBackward: (seconds?: number) => void;
+  setSkipStepSeconds: (seconds: 10 | 20 | 30) => void;
   setVolume: (volume: number) => void;
   toggleMute: () => void;
   setPlaybackSpeed: (speed: number) => void;
@@ -1068,6 +1072,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   volume: initialSession.volume,
   isMuted: initialSession.isMuted,
   playbackSpeed: initialSession.playbackSpeed,
+  skipStepSeconds: ((): 10 | 20 | 30 => {
+    const raw = Number(localStorage.getItem('ytz_skip_step_seconds'));
+    return raw === 20 || raw === 30 ? raw : 10;
+  })(),
   shuffle: initialSession.shuffle,
   repeatMode: initialSession.repeatMode,
   crossfadeSeconds: 3,
@@ -1638,10 +1646,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
             if (details.seekTime !== undefined) get().seek(details.seekTime);
           });
           navigator.mediaSession.setActionHandler('seekbackward', (details) => {
-            get().seek(Math.max(0, (audioElement?.currentTime || 0) - (details.seekOffset || 10)));
+            get().skipBackward(details.seekOffset || get().skipStepSeconds);
           });
           navigator.mediaSession.setActionHandler('seekforward', (details) => {
-            get().seek((audioElement?.currentTime || 0) + (details.seekOffset || 10));
+            get().skipForward(details.seekOffset || get().skipStepSeconds);
           });
         } catch {}
       }
@@ -1815,6 +1823,34 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       localStorage.setItem('ytz_persisted_current_time', String(Math.floor(seconds)));
     } catch {}
     set({ currentTime: seconds });
+  },
+
+  skipForward: (seconds?: number) => {
+    const step = seconds ?? get().skipStepSeconds;
+    const cur = get().isVideoMode
+      ? get().currentTime
+      : (audioElement && !isNaN(audioElement.currentTime) ? audioElement.currentTime : get().currentTime);
+    const dur = get().isVideoMode
+      ? get().duration
+      : (audioElement && audioElement.duration ? audioElement.duration : get().duration);
+    const target = dur > 0 ? Math.min(Math.max(0, dur - 0.5), cur + step) : cur + step;
+    get().seek(target);
+  },
+
+  skipBackward: (seconds?: number) => {
+    const step = seconds ?? get().skipStepSeconds;
+    const cur = get().isVideoMode
+      ? get().currentTime
+      : (audioElement && !isNaN(audioElement.currentTime) ? audioElement.currentTime : get().currentTime);
+    const target = Math.max(0, cur - step);
+    get().seek(target);
+  },
+
+  setSkipStepSeconds: (seconds: 10 | 20 | 30) => {
+    try {
+      localStorage.setItem('ytz_skip_step_seconds', String(seconds));
+    } catch {}
+    set({ skipStepSeconds: seconds });
   },
 
   setVolume: (val: number) => {

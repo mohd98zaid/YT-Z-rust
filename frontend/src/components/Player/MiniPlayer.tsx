@@ -26,6 +26,8 @@ import {
   RefreshCw,
   MoreHorizontal,
   Activity,
+  RotateCcw,
+  RotateCw,
 } from 'lucide-react';
 import { usePlayerStore } from '../../stores/usePlayerStore';
 import { useDownloadStore } from '../../stores/useDownloadStore';
@@ -62,6 +64,9 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
     next,
     previous,
     seek,
+    skipStepSeconds,
+    skipForward,
+    skipBackward,
     setVolume,
     toggleMute,
     toggleShuffle,
@@ -452,6 +457,16 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
               <SkipBack className="w-5 h-5 fill-current" />
             </button>
 
+            {/* Skip Backward */}
+            <button
+              onClick={() => skipBackward()}
+              className="hidden lg:inline-flex items-center gap-0.5 px-1.5 py-1 rounded-full text-zinc-300 hover:text-white hover:bg-white/10 active:scale-95 transition-all cursor-pointer"
+              title={`Skip backward ${skipStepSeconds}s`}
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span className="text-[10px] font-mono font-bold">-{skipStepSeconds}s</span>
+            </button>
+
             {/* Play / Pause Button - Solid High-Contrast White Circle */}
             <button
               onClick={togglePlay}
@@ -465,6 +480,16 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ mode = 'both' }) => {
               ) : (
                 <Play className="w-5 h-5 fill-current ml-0.5" />
               )}
+            </button>
+
+            {/* Skip Forward */}
+            <button
+              onClick={() => skipForward()}
+              className="hidden lg:inline-flex items-center gap-0.5 px-1.5 py-1 rounded-full text-zinc-300 hover:text-white hover:bg-white/10 active:scale-95 transition-all cursor-pointer"
+              title={`Skip forward ${skipStepSeconds}s`}
+            >
+              <span className="text-[10px] font-mono font-bold">+{skipStepSeconds}s</span>
+              <RotateCw className="w-3.5 h-3.5" />
             </button>
 
             {/* Next */}

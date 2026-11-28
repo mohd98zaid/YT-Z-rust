@@ -32,6 +32,8 @@ export const SettingsPage: React.FC = () => {
   const {
     crossfadeSeconds,
     setCrossfade,
+    skipStepSeconds,
+    setSkipStepSeconds,
     skipSilence,
     toggleSkipSilence,
     volumeNormalization,
@@ -325,6 +327,31 @@ export const SettingsPage: React.FC = () => {
               <span className="font-mono text-xs font-bold text-primary w-8">
                 {crossfadeSeconds}s
               </span>
+            </div>
+          </div>
+
+          {/* Quick Skip Interval (10s / 20s / 30s) */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-4 border-t border-border/50">
+            <div>
+              <h4 className="font-bold text-sm text-foreground">Quick Skip Forward / Backward</h4>
+              <p className="text-xs text-foreground-muted">
+                Choose how many seconds the quick skip buttons and keyboard shortcuts jump.
+              </p>
+            </div>
+            <div className="inline-flex items-center gap-1 p-1 rounded-full bg-surface-elevated border border-border">
+              {([10, 20, 30] as const).map((sec) => (
+                <button
+                  key={sec}
+                  onClick={() => setSkipStepSeconds(sec)}
+                  className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    skipStepSeconds === sec
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-foreground-muted hover:text-foreground'
+                  }`}
+                >
+                  {sec}s
+                </button>
+              ))}
             </div>
           </div>
 
